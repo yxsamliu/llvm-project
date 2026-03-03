@@ -2,11 +2,11 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding -comment-column=0 %s | FileCheck --strict-whitespace --check-prefix=GFX13 %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1300 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgcn -mcpu=gfx1300 -disassemble -show-encoding -comment-column=0 | FileCheck --strict-whitespace --check-prefix=GFX13 %s
 
-v_convolve_f32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:512 clamp supr
-// GFX13: v_convolve_f32_iu8 v[2:5], v[2:5], v[6:23], v[24:26], v[34:36], v[30:32] aux_data:512 clamp supr ; encoding: [0x02,0x70,0x38,0xde,0x02,0xc4,0x80,0x2c,0x18,0x80,0x00,0x00,0x22,0xe0,0x01,0x00]
+v_convolve_f32_iu8 v[2:5], v[6:23], [v[24:26], v[34:36], v[30:32]], v[2:5] shape:SHAPE_4X2X16 filter:FILTER_3X3 accum_chan_order clamp supr
+// GFX13: v_convolve_f32_iu8 v[2:5], v[6:23], [v[24:26], v[34:36], v[30:32]], v[2:5] shape:SHAPE_4X2X16 filter:FILTER_3X3 accum_chan_order clamp supr ; encoding: [0x02,0x70,0x38,0xde,0x02,0xc4,0x80,0x2c,0x18,0x80,0x00,0x00,0x22,0xe0,0x01,0x00]
 
-v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:512 supr
-// GFX13: v_convolve_f16_fp8_fp8 v[2:3], v[2:3], v[4:11], v12, v13, v14, v15 aux_data:512 supr ; encoding: [0x02,0xa0,0x3a,0xdf,0x02,0x84,0x80,0x0c,0x0c,0x80,0xfc,0x00,0x0d,0xe0,0x00,0x00]
+v_convolve_f16_fp8_fp8 v[2:3], v[4:11], [v12, v13, v14, v15], v[2:3] shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:4 supr
+// GFX13: v_convolve_f16_fp8_fp8 v[2:3], v[4:11], [v12, v13, v14, v15], v[2:3] shape:SHAPE_4X2X16 filter:FILTER_1X1 accum_chan_order iter:4 supr ; encoding: [0x02,0xa0,0x3a,0xdf,0x02,0x84,0x80,0x0c,0x0c,0x80,0xfc,0x00,0x0d,0xe0,0x00,0x00]
 
 v_bpermute_b32 v10, v30, v20 supr
 // GFX13: v_bpermute_b32 v10, v30, v20 supr ; encoding: [0x0a,0xe0,0x00,0xdc,0x1e,0x84,0x82,0x00]
@@ -29,20 +29,20 @@ v_permute_pair_2src_interleave_b64 v5, v6, v2, v3 supr
 v_permute_pack_tensor_2src_b64 v5, v6, v2, v3 supr
 // GFX13: v_permute_pack_tensor_2src_b64 v5, v6, v2, v3 supr ; encoding: [0x05,0x60,0x04,0xdd,0x02,0x64,0x80,0x00,0x06,0x00,0x00,0x00]
 
-v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 aux_data:131 supr
-// GFX13: v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 aux_data:131 supr ; encoding: [0x05,0x20,0x08,0xdd,0x05,0x64,0x80,0x0c,0x00,0x20,0x00,0x01]
+v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X2X16 accum_chan_order supr
+// GFX13: v_scale_bias_activate_f32 v[5:8], v[5:8], s1, v3 shape:SHAPE_4X2X16 accum_chan_order supr ; encoding: [0x05,0x20,0x08,0xdd,0x05,0x64,0x80,0x0c,0x00,0x20,0x00,0x01]
 
-v_scale_bias_activate_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr
-// GFX13: v_scale_bias_activate_f16 v5, v6, v[5:6], 4.0, v3 aux_data:131 supr ; encoding: [0x05,0x60,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
+v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order supr
+// GFX13: v_scale_bias_activate_f16 [v5, v6], v[5:6], 4.0, v3 shape:SHAPE_4X2X16 accum_chan_order supr ; encoding: [0x05,0x60,0x08,0xdd,0x05,0x64,0x80,0x0c,0x06,0x20,0x00,0xf6]
 
-v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr
-// GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
+v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr
+// GFX13: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp supr ; encoding: [0x04,0x30,0x1d,0xdd,0x04,0x04,0x80,0x00,0x02,0x00,0x00,0x00]
 
-v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp supr
-// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 sparse_index_odd clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
+v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 k:32 index_set:MATRIX_SPARSE_INDEX_ODD clamp supr
+// GFX13: v_swmma_f32_16x16_fp8_fp8 v[6:13], v[0:1], v[2:5], v[6:13], v14 k:32 index_set:MATRIX_SPARSE_INDEX_ODD clamp supr ; encoding: [0x06,0x30,0x2d,0xde,0x06,0x04,0x80,0x00,0x02,0x00,0x00,0x00,0x0e,0x00,0x00,0x01]
 
-v_fma_from_tensor_bf16_bf16 v[2:3], v[2:3], v4, v5, v[6:7] aux_data:1024 clamp supr
-// GFX13: v_fma_from_tensor_bf16_bf16 v[2:3], v[2:3], v4, v5, v[6:7] aux_data:1024 clamp supr ; encoding: [0x02,0xf0,0x19,0xde,0x02,0x84,0x80,0x00,0x05,0x00,0x01,0x7c,0x06,0x00,0x00,0x00]
+v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr
+// GFX13: v_fma_from_tensor_bf16_bf16 v[2:3], [v4, v5], v[6:7], v[2:3] layout:LAYOUT_CONVOLVE_8X4 clamp supr ; encoding: [0x02,0xf0,0x19,0xde,0x02,0x84,0x80,0x00,0x05,0x00,0x00,0x7c,0x06,0x00,0x00,0x00]
 
-v_cvt_to_tensor_i4_f32 v1, v[5:8], s42 aux_data:128 clamp supr
-// GFX13: v_cvt_to_tensor_i4_f32 v1, v[5:8], s42 aux_data:128 clamp supr ; encoding: [0x01,0x30,0x0c,0xdd,0x05,0x04,0x00,0x0c,0x00,0x20,0x00,0x2a]
+v_cvt_to_tensor_i4_f32 v1, v[5:8], s42 shape:SHAPE_4X2X16 clamp supr
+// GFX13: v_cvt_to_tensor_i4_f32 v1, v[5:8], s42 shape:SHAPE_4X2X16 clamp supr ; encoding: [0x01,0x30,0x0c,0xdd,0x05,0x04,0x00,0x0c,0x00,0x00,0x00,0x2a]

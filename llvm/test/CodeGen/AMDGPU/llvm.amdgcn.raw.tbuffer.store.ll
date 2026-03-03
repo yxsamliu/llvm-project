@@ -4,9 +4,9 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck -check-prefix=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefix=GFX12 %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefix=GFX13 %s
-;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefix=GFX12 %s
-;RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefix=GFX13 %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefixes=GFX13,GFX13-SDAG %s
+;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefix=GFX12 %s
+;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefixes=GFX13,GFX13-GISEL %s
 
 define amdgpu_ps void @tbuffer_store(<4 x i32> inreg, <4 x float>, <4 x float>, <4 x float>) {
 ; PREGFX10-LABEL: tbuffer_store:
@@ -114,10 +114,19 @@ define amdgpu_ps void @tbuffer_store_scalar_and_imm_offs(<4 x i32> inreg, <4 x f
 ; GFX12-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], s4 format:117 offset:42
 ; GFX12-NEXT:    s_endpgm
 ;
-; GFX13-LABEL: tbuffer_store_scalar_and_imm_offs:
-; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    tbuffer_store_format_xyzw v[0:3], off, s[0:3], s4 format:117 offset:42
-; GFX13-NEXT:    s_endpgm
+; GFX13-SDAG-LABEL: tbuffer_store_scalar_and_imm_offs:
+; GFX13-SDAG:       ; %bb.0: ; %main_body
+; GFX13-SDAG-NEXT:    v_mov_b32_e32 v4, s4
+; GFX13-SDAG-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:117 offen offset:42
+; GFX13-SDAG-NEXT:    s_endpgm
+;
+; GFX13-GISEL-LABEL: tbuffer_store_scalar_and_imm_offs:
+; GFX13-GISEL:       ; %bb.0: ; %main_body
+; GFX13-GISEL-NEXT:    s_add_co_i32 s4, s4, 42
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    v_mov_b32_e32 v4, s4
+; GFX13-GISEL-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], null format:117 offen
+; GFX13-GISEL-NEXT:    s_endpgm
 main_body:
   %in1 = bitcast <4 x float> %vdata to <4 x i32>
   call void @llvm.amdgcn.raw.tbuffer.store.v4i32(<4 x i32> %in1, <4 x i32> %0, i32 42, i32 %soffset, i32 117, i32 0)

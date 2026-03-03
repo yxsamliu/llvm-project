@@ -81,6 +81,7 @@ class VNBR_Pseudo<string opName, bit EnableWrite = 0>
   let isCodeGenOnly = 1;
   let Uses = [MODE, EXEC];
   let UseNamedOperandTable = 1;
+  let hasSideEffects = 1;
 
   string Mnemonic = !tolower(opName);
   string AsmRegOps =

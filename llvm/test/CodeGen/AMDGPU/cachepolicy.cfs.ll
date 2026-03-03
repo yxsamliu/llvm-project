@@ -8,9 +8,12 @@ define amdgpu_kernel void @vbuffer_mtbuf_CFS128B(ptr addrspace(1) %out, <4 x i32
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], s7 format:78 offen cfs:CFS_128B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], null format:78 offen cfs:CFS_128B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -28,9 +31,12 @@ define amdgpu_kernel void @vbuffer_mtbuf_CFS64B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], s7 format:78 offen cfs:CFS_64B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], null format:78 offen cfs:CFS_64B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -48,9 +54,12 @@ define amdgpu_kernel void @vbuffer_mtbuf_CFS32B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v3, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], s7 format:78 offen cfs:CFS_32B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    tbuffer_load_format_xyz v[0:2], v0, s[0:3], null format:78 offen cfs:CFS_32B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -68,9 +77,12 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS128B(ptr addrspace(1) %out, <4 x i32
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], s7 offen cfs:CFS_128B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen cfs:CFS_128B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -87,9 +99,12 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS64B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], s7 offen cfs:CFS_64B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen cfs:CFS_64B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -106,9 +121,12 @@ define amdgpu_kernel void @vbuffer_mubuf_CFS32B(ptr addrspace(1) %out, <4 x i32>
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], s7 offen cfs:CFS_32B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen cfs:CFS_32B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -125,9 +143,12 @@ define amdgpu_kernel void @vbuffer_mubuf_format_CFS128B(ptr addrspace(1) %out, <
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], s7 offen cfs:CFS_128B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], null offen cfs:CFS_128B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -145,9 +166,12 @@ define amdgpu_kernel void @vbuffer_mubuf_format_CFS64B(ptr addrspace(1) %out, <4
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], s7 offen cfs:CFS_64B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], null offen cfs:CFS_64B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
@@ -165,9 +189,12 @@ define amdgpu_kernel void @vbuffer_mubuf_format_CFS32B(ptr addrspace(1) %out, <4
 ; GFX13-NEXT:    s_clause 0x1
 ; GFX13-NEXT:    s_load_b64 s[6:7], s[4:5], 0x44
 ; GFX13-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34
+; GFX13-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, s6
-; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], s7 offen cfs:CFS_32B
+; GFX13-NEXT:    s_add_co_i32 s6, s6, s7
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    v_mov_b32_e32 v0, s6
+; GFX13-NEXT:    buffer_load_format_x v0, v0, s[0:3], null offen cfs:CFS_32B
 ; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    s_wait_loadcnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0

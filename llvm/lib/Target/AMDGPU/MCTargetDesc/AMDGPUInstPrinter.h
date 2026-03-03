@@ -48,6 +48,8 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
                            const MCSubtargetInfo &STI, raw_ostream &O);
+  void printExtendMatrixFmt(const MCInst *MI, unsigned OpNo,
+                            const MCSubtargetInfo &STI, raw_ostream &O);
   void printGlobalSReg32(const MCInst *MI, unsigned OpNo,
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printGlobalSReg64(const MCInst *MI, unsigned OpNo,
@@ -204,8 +206,26 @@ private:
 
   void printScaleSel(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
-  void printAuxData(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O);
+  void printModsConvolve(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsTensor(unsigned Imm, ArrayRef<int32_t> ChannelOffsetInts,
+                       raw_ostream &O);
+  void printModsCvtTensor(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsScaleActivate(const MCInst *MI, unsigned OpNo,
+                         const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsFmaTensor(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModNamed(unsigned Value, const char *Name,
+                     ArrayRef<const char *> Mods, raw_ostream &O);
+  void printModsWmma(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsSwmma(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printModsWmmaBase(const MCInst *MI, unsigned OpNo, bool IsSwmma,
+                         raw_ostream &O);
+  void printModsWmmaBlockScale(const MCInst *MI, unsigned OpNo,
+                               const MCSubtargetInfo &STI, raw_ostream &O);
 
   void printSema(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                  StringRef Prefix, bool AlwaysPrint);

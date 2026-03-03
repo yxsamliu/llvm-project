@@ -675,9 +675,9 @@ def VGPR_16_STAGING : SIRegisterClass<"AMDGPU", Reg16Types.types, 16,
 def VGPR_16_Lo128 : SIRegisterClass<"AMDGPU",  Reg16Types.types, 16,
                             (add (interleave (sequence "VGPR%u_LO16", 0, 127),
                                              (sequence "VGPR%u_HI16", 0, 127)))> {
+  let AllocationPriority = !add(2, !mul(BaseClassPriority, BaseClassScaleFactor));
   let Size = 16;
   let GeneratePressureSet = 0;
-  let isAllocatable = 0;
 
   // This is the base class for VGPR{0..127}_{LO16,HI16}.
   let BaseClassOrder = 16;
@@ -1723,6 +1723,8 @@ def VSrc_NoInline_v2f16  : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_V2FP16
 def VSrc_NoInline_b16    : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_INT16">;
 def VSrcT_NoInline_b16   : SrcRegOrImm9_t16 <"OPERAND_REG_IMM_NOINLINE_INT16">;
 def VSrc_NoInline_b32    : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_NOINLINE_INT32">;
+
+def VSrc_v2f16_splat : SrcRegOrImm9 <VS_32, "OPERAND_REG_IMM_V2FP16_SPLAT">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR

@@ -1297,10 +1297,6 @@ def LWE : NamedBitOperand<"lwe">;
 def exp_compr : NamedBitOperand<"compr", "ExpCompr">;
 def exp_vm : NamedBitOperand<"vm", "ExpVM">;
 
-def SignedA : NamedBitOperand<"signed_a">;
-def SignedB : NamedBitOperand<"signed_b">;
-def SparseIndexOdd : NamedBitOperand<"sparse_index_odd">;
-
 def FORMAT : CustomOperand<i8>;
 
 let PrintInHex = 1 in
@@ -1391,7 +1387,19 @@ def PredXDL : NamedBitOperand<"pred_xdl">;
 def ScaleSel : NamedIntOperand<"scale_sel"> {
   let Validator = "isUInt<4>";
 }
-def AuxData : NamedIntOperand<"aux_data">;
+
+def ModsCvtTensor : CustomOperand<i32, 1>;      // VOPM: v_cvt_to_tensor_*,
+def ModsScaleActivate : CustomOperand<i32, 1>;  // VOPM: v_scale_bias_activate_*,
+                                                //       v_uniform_scale_activate_*
+def ModsFmaTensor : CustomOperand<i32, 1>;      // VOPM: v_fma_from_tensor_*
+def ModsConvolve : CustomOperand<i32, 1>;       // VOPM: v_convolve_*
+def ModsWmmaBlockScale : CustomOperand<i32, 1>; // VOPM: v_wmma_*_f8f6f4_*
+def ModsWmma : CustomOperand<i32, 1>;           // VOPM: v_wmma_*
+def ModsSwmma : CustomOperand<i32, 1>;          // VOPM: v_swmma_*
+def ModsPermute : NamedIntOperand<"pattern"> { // VOPM: v_permute_*
+  let Validator = "isUInt<6>";
+}
+
 let PrintInHex = 1 in
 def Idxs : NamedIntOperand<"idxs">;
 def Idxs0 : DefaultOperand<Idxs, 0>;
@@ -1735,6 +1743,10 @@ def WMMAVISrc  : ComplexPattern<untyped, 1, "SelectWMMAVISrc">;
 def SWMMACIndex8  : ComplexPattern<untyped, 2, "SelectSWMMACIndex8">;
 def SWMMACIndex16  : ComplexPattern<untyped, 2, "SelectSWMMACIndex16">;
 def SWMMACIndex32  : ComplexPattern<untyped, 2, "SelectSWMMACIndex32">;
+
+def WMMASigned : ComplexPattern<untyped, 1, "SelectWMMASignedMods">;
+def SWMMAIndexSet : ComplexPattern<untyped, 1, "SelectSWMMAIndexSet">;
+def SWMMASignedIndexSet : ComplexPattern<untyped, 1, "SelectSWMMASignedIndexSet">;
 
 def VOP3OpSel  : ComplexPattern<untyped, 2, "SelectVOP3OpSel">;
 

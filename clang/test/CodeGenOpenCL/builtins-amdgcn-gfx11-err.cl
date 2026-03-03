@@ -8,6 +8,6 @@ void builtin_test_unsupported(int a, int b, void *sem) {
 
   __builtin_amdgcn_s_sema_set_state(sem, 1); // expected-error {{'__builtin_amdgcn_s_sema_set_state' needs target feature semaphores}}
   __builtin_amdgcn_s_sema_set_limit(sem, 1); // expected-error {{'__builtin_amdgcn_s_sema_set_limit' needs target feature semaphores}}
-  __builtin_amdgcn_s_sema_signal(sem); // expected-error {{'__builtin_amdgcn_s_sema_signal' needs target feature semaphores}}
+  __builtin_amdgcn_s_sema_signal(sem, 0); // expected-error {{'__builtin_amdgcn_s_sema_signal' needs target feature semaphores}}
   __builtin_amdgcn_s_sema_wait(sem); // expected-error {{'__builtin_amdgcn_s_sema_wait' needs target feature semaphores}}
 }

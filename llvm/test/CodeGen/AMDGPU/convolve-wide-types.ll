@@ -30,7 +30,7 @@ define <4 x half> @test_1(i1 %arg) {
 ; GFX13-NEXT:    v_dual_mov_b32 v15, v0 :: v_dual_mov_b32 v16, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v17, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], 0, v[0:17], v[18:20], v[18:20], v[18:20]
+; GFX13-NEXT:    v_convolve_f16_f16 v[0:1], v[0:17], [v[18:20], v[18:20], v[18:20]], 0 shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:
   %i = select i1 %arg, <36 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <36 x half> zeroinitializer
@@ -60,7 +60,7 @@ define <8 x half> @test_2(i1 %arg) {
 ; GFX13-NEXT:    v_dual_mov_b32 v2, v0 :: v_dual_mov_b32 v3, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], 0, v[0:4], v[5:8], v[5:8], v[5:8]
+; GFX13-NEXT:    v_convolve_f16_f16 v[0:3], v[0:4], [v[5:8], v[5:8], v[5:8]], 0 shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
 bb:
   %i = select i1 %arg, <10 x half> <half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00, half 0xH3C00>, <10 x half> zeroinitializer

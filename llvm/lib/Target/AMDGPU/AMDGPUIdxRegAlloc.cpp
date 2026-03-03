@@ -14,7 +14,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineInstrs.h"
-#include "AMDGPUVGPRIndexingAnalysis.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -210,18 +209,6 @@ bool AMDGPUIdxRegAlloc::processMBB(MachineBasicBlock &MBB) {
         Setter.addImm(DefMI->getOperand(1).getImm());
       else
         Setter.addReg(SRegIdx);
-
-      // It's much easier to track which S_ADD_I32 instr is being used by this
-      // setter if we check it here. If idx0 is known to be 0 during frame
-      // lowering, then the add instruction is not needed
-      if (DefMI->getOpcode() == AMDGPU::S_ADD_I32 &&
-          ((DefMI->getOperand(2).isReg() &&
-            DefMI->getOperand(2).getReg() == PrivateVgprBase) ||
-           (DefMI->getOperand(1).isReg() &&
-            DefMI->getOperand(1).getReg() == PrivateVgprBase))) {
-        // TODO-GFX13: This is a problematic hack, get rid of this.
-        MFI->getIdx0PrivateComputations()[Setter] = DefMI;
-      }
 
       IdxInfo[FreeIdx].SetIdxMI = Setter;
       IdxInfo[FreeIdx].IdxSrc = SRegIdx;

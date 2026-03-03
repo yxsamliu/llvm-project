@@ -1302,7 +1302,6 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
 ; GFX1260-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX1260-NEXT:    s_wait_storecnt 0x0
-; GFX1260-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1260-NEXT:    s_wait_expcnt 0x0
 ; GFX1260-NEXT:    s_wait_xcnt 0x0
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -1319,7 +1318,6 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX1300-NEXT:    s_wait_rtscnt 0x0
 ; GFX1300-NEXT:    s_wait_samplecnt 0x0
 ; GFX1300-NEXT:    s_wait_storecnt 0x0
-; GFX1300-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1300-NEXT:    s_wait_expcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1300-NEXT:    flat_store_b32 v0, v1, s[0:1]

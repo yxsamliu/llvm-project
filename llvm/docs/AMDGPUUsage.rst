@@ -517,7 +517,7 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                         work-item                       Add product
                                                                         IDs                             names.
 
-     **GCN GFX11.7 (RDNA 3.7)**
+     **GCN GFX11.7 (RDNA 4m)**
      -----------------------------------------------------------------------------------------------------------------------
      ``gfx1170``                 ``amdgcn``   APU   - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
@@ -578,6 +578,8 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
+     **GCN GFX13 (RDNA 5)**
+     -----------------------------------------------------------------------------------------------------------------------
      ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
                                                     - wavefrontsize64   flat
                                                                         scratch                       .. TODO::
@@ -1447,9 +1449,22 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    0: Target default preference,
                                                    1: `Iterative strategy`, and
                                                    2: `DPP`.
-                                                   If target does not support the DPP operations (e.g. gfx6/7),
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
-                                                   Intrinsic is currently only implemented for i32.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.min                      Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a signed min
+                                                   reduction on signed integers.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fmin                     Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a floating point min
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+                                                   Intrinsic is modelled similar to `llvm.minnum` intrinsic.
+                                                   For a reduction between two NAN values, a NAN is returned.
+                                                   For a reduction between a NAN and a number, the number is returned.
+                                                   -0.0 < +0.0 is true for this reduction.
+                                                   The ordering behaviour of SNANs is non-deterministic.
 
   llvm.amdgcn.wave.reduce.umax                     Performs an arithmetic unsigned max reduction on the unsigned values
                                                    provided by each lane in the wavefront.
@@ -1457,9 +1472,68 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    0: Target default preference,
                                                    1: `Iterative strategy`, and
                                                    2: `DPP`.
-                                                   If target does not support the DPP operations (e.g. gfx6/7),
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
-                                                   Intrinsic is currently only implemented for i32.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.max                      Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a signed max
+                                                   reduction on signed integers.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fmax                     Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a floating point max
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+                                                   Intrinsic is modelled similar to `llvm.maxnum` intrinsic.
+                                                   For a reduction between two NAN values, a NAN is returned.
+                                                   For a reduction between a NAN and a number, the number is returned.
+                                                   -0.0 < +0.0 is true for this reduction.
+                                                   The ordering behaviour of SNANs is non-deterministic.
+
+  llvm.amdgcn.wave.reduce.add                      Performs an arithmetic add reduction on the signed/unsigned values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for signed/unsigned i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fadd                     Similar to `llvm.amdgcn.wave.reduce.add`, but performs a floating point add
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+
+  llvm.amdgcn.wave.reduce.sub                      Performs an arithmetic sub reduction on the signed/unsigned values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for signed/unsigned i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fsub                     Similar to `llvm.amdgcn.wave.reduce.sub`, but performs a floating point sub
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+
+  llvm.amdgcn.wave.reduce.and                      Performs a bitwise-and reduction on the values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.or                       Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-or
+                                                   reduction on the values provided by each wavefront.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.xor                      Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-xor
+                                                   reduction on the values provided by each wavefront.
+                                                   Intrinsic is implemented for i32 and i64 types.
 
   llvm.amdgcn.permlane16                           Provides direct access to v_permlane16_b32. Performs arbitrary gather-style
                                                    operation within a row (16 contiguous lanes) of the second input operand.
@@ -1691,12 +1765,24 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    wavegroup within the spatial cluster. Otherwise the return value is undefined.
                                                    The next neighbor has an id one greater, and the previous has one less.
 
+<<<<<<< HEAD
   llvm.amdgcn.global.load.b128                 This intrinsic is supported on gfx942, gfx950.
+=======
+  llvm.amdgcn.s.sema.signal                        Provides access to the s_sema_signal instruction.
+                                                   The first argument is a pointer to a semaphore.
+                                                   The second argument is an unsigned 32-bit integer, indicating a mask of SIMDs to signal.
+                                                   This is a 4-bit mask that is encoded within the bits 31:28 of the argument.
+                                                   The supported range of values for the mask is 0 to 15.
+                                                   It is undefined behavior if the low 28 bits of the argument are non-zero.
+                                                   This mask argument must be 0 for GFX13.
+  llvm.amdgcn.global.load.b128                     This intrinsic is supported on gfx9, gfx10, gfx11, and gfx12 targets.
+>>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   
                                                    Signature:
                                                    
                                                    .. code-block:: llvm
                                                       
+<<<<<<< HEAD
                                                       <4 x i32> @llvm.amdgcn.raw.load.store.b128(
                                                           ptr addrspace(1), ; source
                                                           metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
@@ -1731,6 +1817,55 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Instruction Set Architecture Reference.
                                                                                                       
   llvm.amdgcn.global.store.b128                This intrinsic is supported on gfx942, gfx950.
+=======
+                                                      <4 x i32> @llvm.amdgcn.global.load.b128(
+                                                          ptr addrspace(1), ; source
+                                                          metadata)         ; scope    - e.g. '!0' where '!0 = !{!"wavegroup"}'
+
+                                                   Reads the value from the source address with cache behavior specified by the scope.
+
+                                                   The following table shows the mapping between valid scope values and target
+                                                   instruction flags or field values.
+
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+                                                   targets        instruction                           ``"wavefront"``            ``"workgroup"``              ``"cluster"``                ``"agent"``      ``""`` (empty string)
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+                                                   gfx90*         ``global_load_dwordx4``                                                                             ``glc``                    ``glc``                    ``glc``
+                                                                                                                                                                                                         
+                                                   gfx942, gfx950 ``global_load_dwordx4``                        (wave)            ``sc0`` (group)           ``sc1`` (device)           ``sc1`` (device)       ``sc0 sc1`` (system)
+                                                                                                                                                                                                         
+                                                   gfx10*         ``global_load_dwordx4``                                                  ``glc``                ``glc dlc``                ``glc dlc``                ``glc dlc``
+                                                                                                                                                                                                         
+                                                   gfx11*         ``global_load_dwordx4``                                                  ``glc``                    ``glc``                    ``glc``                    ``glc``
+                                                                                                                                                                                                         
+                                                   gfx120*        ``global_load_b128``                             (CU)    ``scope:SCOPE_SE`` (SE)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_SYS`` (SYS)
+                                                                                                                                                                                                         
+                                                   gfx125*        ``global_load_b128``                             (CU)                               ``scope:SCOPE_SE`` (SE)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_SYS`` (SYS)
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+                                                   
+                                                   For gfx90*, see "GLC Bit Explained" in the appropriate instruction set reference
+                                                   (e.g. Chapter 9.1.10 in "AMD Instinct MI100" Instruction Set Architecture Reference
+                                                   Guide).
+                                                   
+                                                   For gfx942 and gfx950 targets, see "Memory Scope and Temporal Controls" in the
+                                                   appropriate instruction set reference (e.g. Chapter 9.1.10.2 in the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference Guide).
+
+                                                   For gfx10* targets, see "GLC, DLC and SLC Bit Explained" in the appropriate
+                                                   instruction set reference (e.g. Chapter 8.1.10 in "RDNA 2" Instruction Set Architecture
+                                                   Reference Guide)
+                                                   
+                                                   For gfx11* targets, see "Cache Controls: SLC, GLC and DLC" in the appropriate
+                                                   instruction set reference (e.g. Chapter 4.1.1 in "RDNA3" Instruction Set Architecture
+                                                   Reference Guide).
+                                                   
+                                                   For gfx12* targets, see "Cache Controls: SCOPE and Temporal-Hint" in the
+                                                   appropriate instruction set reference (e.g. Chapter 4.1.1 in the "RDNA4"
+                                                   Instruction Set Architecture Reference Guide).
+
+                                                                                                      
+  llvm.amdgcn.global.store.b128                    This intrinsic is supported on gfx9, gfx10, gfx11, and gfx12 targets.
+>>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   
                                                    Signature:
                                                    
@@ -1744,6 +1879,7 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    Writes the value to the destination address with cache
                                                    behavior specified by the scope.
 
+<<<<<<< HEAD
                                                    For gfc942 and gfx950 devices, this emits a
                                                    ``global_store_dwordx4`` instruction with the appropriate
                                                    ``SC0`` and ``SC1`` bits set.
@@ -1770,6 +1906,60 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    "Memory Scope and Temporal Controls" of the CDNA4
                                                    Instruction Set Architecture Reference.
                                                                                                       
+=======
+                                                   The following table shows the mapping between valid scope values and target
+                                                   instruction flags or field values.
+
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+                                                   targets        instruction                           ``"wavefront"``            ``"workgroup"``              ``"cluster"``                ``"agent"``      ``""`` (empty string)
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+                                                   gfx90*         ``global_store_dwordx4``                                                                                                               
+                                                                                                                                                                                                         
+                                                   gfx942, gfx950 ``global_store_dwordx4``                       (wave)            ``sc0`` (group)           ``sc1`` (device)           ``sc1`` (device)       ``sc0 sc1`` (system)
+                                                                                                                                                                                                         
+                                                   gfx10*         ``global_store_dwordx4``                                                                                                               
+                                                                                                                                                                                                         
+                                                   gfx11*         ``global_store_dwordx4``                                                                                                               
+                                                                                                                                                                                                         
+                                                   gfx120*        ``global_store_b128``                            (CU)    ``scope:SCOPE_SE`` (SE)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_SYS`` (SYS)
+                                                                                                                                                                                                         
+                                                   gfx125*        ``global_store_b128``                            (CU)                               ``scope:SCOPE_SE`` (SE)  ``scope:SCOPE_DEV`` (DEV)  ``scope:SCOPE_SYS`` (SYS)
+                                                   ============== ========================== ========================== ========================== ========================== ========================== ==========================
+
+                                                   For gfx90*, see "GLC Bit Explained" in the appropriate instruction set reference
+                                                   (e.g. Chapter 9.1.10 in "AMD Instinct MI100" Instruction Set Architecture Reference
+                                                   Guide).
+                                                   
+                                                   For gfx942 and gfx950 targets, see "Memory Scope and Temporal Controls" in the
+                                                   appropriate instruction set reference (e.g. Chapter 9.1.10.2 in the "AMD Instinct
+                                                   MI300" Instruction Set Architecture Reference Guide).
+
+                                                   For gfx10* targets, see "GLC, DLC and SLC Bit Explained" in the appropriate
+                                                   instruction set reference (e.g. Chapter 8.1.10 in "RDNA 2" Instruction Set
+                                                   Architecture Reference Guide)
+                                                   
+                                                   For gfx11* targets, see "Cache Controls: SLC, GLC and DLC" in the appropriate
+                                                   instruction set reference (e.g. Chapter 4.1.1 in "RDNA3" Instruction Set
+                                                   Architecture Reference Guide).
+                                                   
+                                                   For gfx12* targets, see "Cache Controls: SCOPE and Temporal-Hint" in the
+                                                   appropriate instruction set reference (e.g. Chapter 4.1.1 in the "RDNA4"
+                                                   Instruction Set Architecture Reference Guide).
+                                                                   
+
+  llvm.amdgcn.s.barrier                            Performs a barrier *signal* operation immediately followed
+                                                   by a barrier *wait* operation on the *workgroup barrier* object.
+                                                   see :ref:`amdgpu-amdhsa-execution-barriers`.
+
+  llvm.amdgcn.s.barrier.signal                     Performs a barrier *signal* operation on the barrier *object* determined by the ``i32`` immediate argument.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.
+
+  llvm.amdgcn.s.barrier.wait                       Performs a barrier *wait* operation on the barrier *object* determined by the ``i16`` immediate argument.
+                                                   See :ref:`amdgpu-amdhsa-execution-barriers`.
+                                                   Available starting GFX12.
+
+>>>>>>> a8ccaa90ebdb71f2b83cfb5da6f137bf595df2ee
   ==============================================   ==========================================================
 
 .. TODO::
@@ -2207,6 +2397,17 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       `!reqd_work_group_size` metadata on the kernel function.
 
      "amdgpu-wavegroup-rank-function"                 GFX13+ only. Indicate it is a rank-specialized function for wavegroup.
+
+     "amdgpu-expert-scheduling-mode" true/false.      Enable expert scheduling mode 2 for this function. This is a hardware execution
+                                                      mode introduced in GFX12.
+
+                                                      This is only relevant on GFX12+.
+
+     "amdgpu-expand-waitcnt-profiling"                Enable expansion of s_waitcnt instructions for profiling purposes.
+                                                      When enabled, each s_waitcnt instruction that waits on multiple counter
+                                                      types is expanded into a sequence of s_waitcnt instructions, each waiting
+                                                      on a single counter type. This allows PC-sampling based profilers to
+                                                      attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 
      ================================================ ==========================================================
 
@@ -5232,7 +5433,8 @@ with the changes defined in table
      String Key                       Value Type Required?  Description
      ================================ ========== ========== =======================================
      ".laneshared_segment_fixed_size" integer               (GFX13+) The amount of fixed lane-shared
-                                                            address space memory for a lane in bytes.
+                                                            address space memory for a lane in bytes
+                                                            that is reserved in scratch memory.
                                                             A non-zero value requires enable_wavegroup
                                                             to be set to true.
      ".enable_wavegroup"              boolean               (GFX13+) Whether wavegroup launch is enabled.
@@ -5517,7 +5719,7 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      GFX13
                                                        The amount of fixed
                                                        lane-shared memory required
-                                                       per wavegroup.
+                                                       per lane in scratch memory.
 
                                                        Must be 0 if ENABLE_WAVEGROUP
                                                        is not set.
@@ -6838,6 +7040,310 @@ base index of the wave's private VGPRs.
 Hardware initializes IDX0 to 0, so no setup is required in kernels that do not
 use wavegroups.
 
+.. _amdgpu-amdhsa-execution-barriers:
+
+Execution Barriers
+~~~~~~~~~~~~~~~~~~
+
+.. note::
+
+  This specification is a work-in-progress (see lines annotated with :sup:`WIP`), and is not complete for GFX12.5.
+
+Threads can synchronize execution by performing barrier operations on barrier *objects* as described below:
+
+* Each barrier *object* has the following state:
+
+  * An unsigned positive integer *expected count*: counts the number of *signal* operations
+    expected for this barrier *object*.
+  * An unsigned non-negative integer *signal count*: counts the number of *signal* operations
+    already performed on this barrier *object*.
+
+      * The initial value of *signal count* is zero.
+      * When an operation causes *signal count* to be equal to *expected count*, the barrier is completed,
+        and the *signal count* is reset to zero.
+
+* Barrier operations are performed on barrier *objects*. A barrier operation is a dynamic instance
+  of one of the following:
+
+  * Barrier *init*.
+  * Barrier *join*.
+  * Barrier *leave*.
+
+    * Decrements *expected count* of the barrier *object* by one.
+
+  * Barrier *signal*.
+
+    * Increments *signal count* of the barrier *object* by one.
+
+  * Barrier *wait*.
+
+* Barrier modification operations are barrier operations that modify the barrier *object* state:
+
+  * Barrier *init*.
+  * Barrier *leave*.
+  * Barrier *signal*.
+
+* For a given barrier *object* ``BO``:
+
+  * There is exactly one barrier *init* for ``BO``. :sup:`WIP`
+  * *Thread-barrier-order<BO>* is the subset of *program-order* that only
+    relates barrier operations performed on ``BO``.
+  * Let ``S`` be the set of barrier modification operations on ``BO``, then
+    *barrier-modification-order<BO>* is a strict total order over ``S``. It is the order
+    in which ``BO`` observes barrier operations that change its state.
+
+    * *Barrier-modification-order<BO>* is consistent with *happens-before*.
+    * Let ``A`` and ``B`` be two barrier modification operations where ``A -> B`` in
+      *thread-barrier-order<BO>*, then ``A -> B`` in *barrier-modification-order<BO>*.
+    * The first element in *barrier-modification-order<BO>* is a barrier *init*.
+      There is only one barrier *init* in *barrier-modification-order<BO>*.
+
+  * *Barrier-joined-before<BO>* is a strict partial order over barrier operations on ``BO``.
+    A barrier *join* ``J`` is *barrier-joined-before<BO>* a barrier operation ``X`` if and only if all
+    of the following is true:
+
+    * ``J -> X`` in *thread-barrier-order<BO>*.
+    * There is no barrier *leave* ``L`` where ``J -> L -> X`` in *thread-barrier-order<BO>*.
+
+  * *Barrier-participates-in<BO>* is a partial order that relates barrier operations to barrier *waits*.
+    A barrier operation ``X`` may *barrier-participates-in<BO>* a barrier *wait* ``W`` if all of the following
+    is true:
+
+    * ``X`` and ``W`` are both performed on ``BO``.
+    * ``X`` is a barrier *signal* or *leave* operation.
+    * ``X`` does not *barrier-participates-in<BO>* another barrier *wait* ``W'`` in the same thread as ``W``.
+    * ``W -> X`` **not** in *thread-barrier-order<BO>*.
+
+  * *Barrier-participates-in<BO>* is consistent with *happens-before*.
+
+* Let ``S`` be the set of barrier operations that *barrier-participate-in<BO>* a barrier *wait* ``W`` for some
+  barrier *object* ``BO``, then all of the following is true:
+
+  * ``S`` cannot be empty.
+  * The elements of ``S`` all exist in a continuous interval of *barrier-modification-order<BO>*.
+  * Let ``A`` be the first operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* of ``BO``
+    is zero before ``A`` is performed.
+  * Let ``B`` be the last operation of ``S`` in *barrier-modification-order<BO>*, then the *signal count* and
+    *expected count* of ``BO`` are equal after ``B`` is performed. ``B`` is the only barrier operation in ``S``
+    that causes the *signal count* and *expected count* of ``BO`` to be equal.
+
+* For every barrier *signal* ``S`` performed on a barrier *object* ``BO``:
+
+  * The immediate successor of ``S`` in *thread-barrier-order<BO>* is a barrier *wait*. :sup:`WIP`
+
+* For every barrier *wait* ``W`` performed on a barrier *object* ``BO``:
+
+  * There is a barrier *join* ``J`` such that ``J -> W`` in *barrier-joined-before<BO>*. :sup:`WIP`
+
+* For every barrier *join* ``J`` performed on a barrier *object* ``BO``:
+
+  * ``J`` is not *barrier-joined-before<BO>* another barrier *join*.
+
+* *Barrier-executes-before* is a strict partial order defined over the union of all barrier operations
+  performed by all threads on all barriers. It is the transitive closure of all the following orders:
+
+  * *Thread-barrier-order<BO>* for every barrier object ``BO``.
+  * *Barrier-participates-in<BO>* for every barrier object ``BO``.
+
+* *Barrier-executes-before* is consistent with *program-order*.
+* For every barrier *object* ``BO``:
+
+  * *Barrier-modification-order<BO>* is consistent with *barrier-executes-before*.
+
+* For every barrier operation ``X`` on a barrier *object* ``BO``,
+  there is a barrier *init* ``I`` on ``BO`` such that ``I`` *barrier-executes-before* ``X``.
+
+  .. note::
+
+    Barriers only synchronize execution and do not affect the visibility of memory operations between threads.
+    Refer to the :ref:`execution barriers memory model<amdgpu-amdhsa-execution-barriers-memory-model>`
+    to determine how to synchronize memory operations through *barrier-executes-before*.
+
+Target-Specific Properties
+++++++++++++++++++++++++++
+
+This section covers properties of barrier operation and *objects* that are specific to the implementation of
+barriers in AMDGPU hardware.
+
+Barrier operations have the following additional target-specific properties:
+
+* Barrier operations are convergent within a wave. All threads of a wavefront use the same barrier *object* when
+  performing any barrier operation.
+
+  * Thus, barrier operations can only be performed in wave-uniform control flow.
+
+All barrier *objects* have the following additional target-specific properties:
+
+* Barrier *join* does not increment the *expected count* of a barrier *object*. The *expected count* is set
+  during initialization of the barrier by the hardware. :sup:`WIP`
+* Barrier *objects* are allocated and managed by the hardware.
+
+  * Barrier *objects* are stored in an unspecified memory region that does not alias with
+    any other address space. Updates to the barrier *object* are not done in order with any other
+    memory operation in any other :ref:`address space<amdgpu-address-spaces>`.
+
+* Barrier *objects* exist within a *scope* (see :ref:`amdgpu-amdhsa-llvm-sync-scopes-table`),
+  and can only be accessed by threads in that *scope*.
+
+See :ref:`amdgpu-llvm-ir-intrinsics-table` for more information on how to perform barrier operations using
+LLVM IR intrinsic calls, or see the sections below to perform barrier operations using machine code.
+
+.. _amdgpu-amdhsa-execution-barriers-workgroup-barriers:
+
+Workgroup Barrier Operations
+############################
+
+.. note::
+
+  This section only applies to entries of the target code sequence tables below that reference this section.
+
+This section covers properties of barrier operation on *workgroup barrier objects* implemented in AMDGPU
+hardware.
+
+The following barrier operations can never be performed by the shader on *workgroup barrier objects*.
+The hardware will instead perform them automatically under certain conditions.
+
+* Barrier *init*:
+
+  * The hardware automatically initializes *workgroup barrier objects* when a workgroup is launched:
+    The *expected count* of the barrier object is set to the number of waves in the workgroup.
+
+* Barrier *join*:
+
+  * Any thread launched within a workgroup automatically *joins* *workgroup barrier objects*.
+
+* Barrier *leave*
+
+  * When a thread ends, it automatically *leaves* any *workgroup barrier object* it had previously *joined*.
+
+Additionally, no barrier *wait* operation on a *workgroup barrier object* can complete before all waves of
+the workgroup have launched.
+
+Informational Notes
++++++++++++++++++++
+
+Informally, we can deduce from the above formal model that execution barriers behave as follows:
+
+* Synchronization of threads always happens at a wavefront granularity.
+* *Barrier-executes-before* relates the dynamic instances of operations from different threads together.
+  For example, if ``A -> B`` in *barrier-executes-before*, then the execution of ``A`` must complete
+  before the execution of ``B`` can complete.
+* When a barrier *signal* or *leave* causes the *signal count* of a barrier *object* to be identical to the
+  *expected count*, the *signal count* is reset to zero, and threads that have *joined* the barrier *object*
+  will:
+
+  * Wake-up if they were sleeping because of a barrier *wait*, **or**
+  * Skip the next barrier *wait* operation if they have not previously *waited*.
+
+* Barriers do not complete "out-of-thin-air"; a barrier *wait* ``W`` cannot depend on a barrier operation
+  ``X`` to complete if ``W -> X`` in *barrier-executes-before*.
+* It is undefined behavior to operate on an uninitialized barrier.
+* It is undefined behavior for a barrier *wait* to never complete.
+
+Execution Barrier GFX6-11
++++++++++++++++++++++++++
+
+Targets from GFX6 through GFX11 included do not have the split barrier feature.
+The barrier *signal* and barrier *wait* operations cannot be performed independently.
+
+There is only one *workgroup barrier* object of ``workgroup`` scope that is implicitly used
+by all barrier operations.
+
+  .. table:: AMDHSA Execution Barriers Code Sequences GFX6-GFX11
+     :name: amdgpu-amdhsa-execution-barriers-code-sequences-gfx6-gfx11-table
+
+     ===================== ====================== ===========================================================
+     Barrier Operation(s)  Barrier *Object*       AMDGPU Machine Code
+     ===================== ====================== ===========================================================
+     **Init, Join and Leave**
+     --------------------------------------------------------------------------------------------------------
+     *init*                - *Workgroup barrier*  See barrier *init* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     *join*                - *Workgroup barrier*  See barrier *join* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     *leave*               - *Workgroup barrier*  See barrier *leave* in
+                                                  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     **Signal and Wait**
+     --------------------------------------------------------------------------------------------------------
+     *signal* then *wait*  - *Workgroup barrier*  | **BackOffBarrier**
+                                                  | ``s_barrier``
+                                                  | **No BackOffBarrier**
+                                                  | ``s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)``
+                                                  | ``s_waitcnt_vscnt null, 0x0``
+                                                  | ``s_barrier``
+
+                                                  - If the target does not have the BackOffBarrier feature,
+                                                    then there cannot be any outstanding memory operations
+                                                    before issuing the ``s_barrier`` instruction.
+                                                  - The waitcnts can independently be moved earlier, or
+                                                    removed entirely as long as the associated
+                                                    counter remains at zero before issuing the
+                                                    ``s_barrier`` instruction.
+
+     *signal*              - *Workgroup barrier*  Not available separately, see *signal* then *wait*
+
+     *wait*                - *Workgroup barrier*  Not available separately, see *signal* then *wait*
+     ===================== ====================== ===========================================================
+
+Execution Barrier GFX12
++++++++++++++++++++++++
+
+.. note::
+
+  This is incomplete for GFX12.5.
+
+GFX12 targets have the split-barrier feature, and also offer multiple barrier *objects* per workgroup
+(see :ref:`amdgpu-amdhsa-execution-barriers-ids-gfx12-table`).
+
+  .. table:: AMDHSA Execution Barriers Code Sequences GFX12
+     :name: amdgpu-amdhsa-execution-barriers-code-sequences-gfx12-table
+
+     ===================== =========================== ===========================================================
+     Barrier Operation(s)  Barrier *Object*            AMDGPU Machine Code
+     ===================== =========================== ===========================================================
+     **Init, Join and Leave**
+     -------------------------------------------------------------------------------------------------------------
+     *init*                - *Workgroup barrier*       See barrier *init* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     *join*                - *Workgroup barrier*       See barrier *join* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     *leave*               - *Workgroup barrier*       See barrier *leave* in
+                           - *Workgroup trap barrier*  :ref:`amdgpu-amdhsa-execution-barriers-workgroup-barriers`.
+
+     **Signal and Wait**
+     -------------------------------------------------------------------------------------------------------------
+
+     *signal*              - *Workgroup barrier*       | ``s_barrier_signal -1``
+                                                       | Or
+                                                       | ``s_barrier_signal_isfirst -1``
+
+
+     *wait*                - *Workgroup barrier*       ``s_barrier_wait -1``.
+
+     *signal*              - *Workgroup trap barrier*  Not available to the shader.
+
+     *wait*                - *Workgroup trap barrier*  Not available to the shader.
+     ===================== =========================== ===========================================================
+
+
+  .. table:: AMDHSA Execution Barriers IDs GFX12
+     :name: amdgpu-amdhsa-execution-barriers-ids-gfx12-table
+
+     =========== ============== ==============================================================
+     Barrier ID  Scope          Description
+     =========== ============== ==============================================================
+     ``-2``      ``workgroup``  *Workgroup trap barrier*, dedicated for the trap handler and
+                                only available in privileged execution mode
+                                (not accessible by the shader).
+
+     ``-1``      ``workgroup``  *Workgroup barrier*.
+     =========== ============== ==============================================================
+
 .. _amdgpu-amdhsa-memory-model:
 
 Memory Model
@@ -6962,6 +7468,33 @@ following sections:
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 * :ref:`amdgpu-amdhsa-memory-model-gfx12`
 * :ref:`amdgpu-amdhsa-memory-model-gfx125x`
+
+.. _amdgpu-amdhsa-execution-barriers-memory-model:
+
+Execution Barriers
+++++++++++++++++++
+
+.. note::
+  See :ref:`amdgpu-amdhsa-execution-barriers` for definitions of the terminology used
+  in this section.
+
+* A barrier *signal* operation ``S`` can pair with a release fence program-ordered before it
+  to form a ``barrier-signal-release`` ``BR``. The synchronization scope and the set of address
+  spaces affected are determined by the release fence.
+* A barrier *wait* operation ``W`` can pair with an acquire fence program-ordered after it to
+  form a ``barrier-wait-acquire`` ``BA``. The synchronization scope and the set of address
+  spaces affected are determined by the acquire fence.
+
+A ``BR`` *synchronizes-with* ``BA`` in an address space *AS* if and only if:
+
+* ``S`` *barrier-executes-before* ``W``.
+* *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>` overlap.
+* *BA* and *BR*'s :ref:`synchronization scope<amdgpu-memory-scopes>`
+  allow cross address space synchronization (they cannot have ``one-as``) :sup:`1`.
+* *BA* and *BR*'s address spaces both include *AS*.
+
+:sup:`1`: This is a requirement due to how current hardware implements barrier operations.
+This limitation may be lifted in the future.
 
 .. _amdgpu-fence-as:
 
@@ -7248,6 +7781,10 @@ with MTYPE NC_NV (non-coherent non-volatile). Since the private address space is
 only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L1 cache. Hence all cache
 invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
+
+A wave waiting on a ``s_barrier`` is unable to handle traps or exceptions,
+thus a ``s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)`` is required before entering
+the barrier so that no memory exception can occur during the barrier.
 
 The code sequences used to implement the memory model for GFX6-GFX9 are defined
 in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx6-gfx9-table`.
@@ -18220,11 +18757,41 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          2. ds_store
-     store atomic release      - agent        - global   1. ``global_wb``
-                               - system       - generic
+     store atomic release      - agent        - global   1. | ``s_wait_loadcnt 0x0``
+                               - system       - generic     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
+
                                                              - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
@@ -18265,12 +18832,12 @@ the instruction in the code sequence that references the table.
                                                              store that is being
                                                              released.
 
-                                                         3. ``s_wait_xcnt 0x0``
+                                                         4. ``s_wait_xcnt 0x0``
 
                                                            - Ensure operation remains atomic even during a xnack replay.
                                                            - Only needed for ``flat`` and ``global`` operations.
 
-                                                         4. buffer/global/flat_store
+                                                         5. buffer/global/flat_store
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
@@ -18361,11 +18928,41 @@ the instruction in the code sequence that references the table.
                                                              released.
 
                                                          2. ds_atomic
-     atomicrmw    release      - agent        - global   1. ``global_wb``
-                               - system       - generic
+     atomicrmw    release      - agent        - global   1. | ``s_wait_loadcnt 0x0``
+                               - system       - generic     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
+
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
@@ -18405,12 +19002,12 @@ the instruction in the code sequence that references the table.
                                                              the atomicrmw that
                                                              is being released.
 
-                                                         3. ``s_wait_xcnt 0x0``
+                                                         4. ``s_wait_xcnt 0x0``
 
                                                            - Ensure operation remains atomic even during a xnack replay.
                                                            - Only needed for ``flat`` and ``global`` operations.
 
-                                                         4. buffer/global/flat_atomic
+                                                         5. buffer/global/flat_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
@@ -18470,11 +19067,41 @@ the instruction in the code sequence that references the table.
                                                              following
                                                              fence-paired-atomic.
 
-     fence        release      - agent        *none*     1. ``global_wb``
-                               - system
+     fence        release      - agent        *none*     1. | ``s_wait_loadcnt 0x0``
+                               - system                     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
+
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **OpenCL:**
@@ -18717,11 +19344,41 @@ the instruction in the code sequence that references the table.
                                                              acquired.
 
 
-     atomicrmw    acq_rel      - agent        - global   1. ``global_wb``
-                               - system
+     atomicrmw    acq_rel      - agent        - global   1. | ``s_wait_loadcnt 0x0``
+                               - system                     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
+
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
@@ -18758,18 +19415,18 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         2. ``s_wait_xcnt 0x0``
+                                                         4. ``s_wait_xcnt 0x0``
 
                                                            - Ensure operation remains atomic even during a xnack replay.
                                                            - Only needed for ``global`` operations.
 
-                                                         3. buffer/global_atomic
+                                                         6. buffer/global_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
                                                            - If atomic with return, use
                                                              ``th:TH_ATOMIC_RETURN``.
 
-                                                         4. | **Atomic with return:**
+                                                         6. | **Atomic with return:**
                                                             | ``s_wait_loadcnt 0x0``
                                                             | **Atomic without return:**
                                                             | ``s_wait_storecnt 0x0``
@@ -18783,7 +19440,7 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         5. ``global_inv``
+                                                         7. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
                                                            - Must happen before
@@ -18796,16 +19453,45 @@ the instruction in the code sequence that references the table.
                                                              will not see stale
                                                              global data.
 
-                                                         6.  ``s_wait_loadcnt 0x0``
+                                                         8.  ``s_wait_loadcnt 0x0``
                                                              must happen after
                                                              ``global_inv`` and before
                                                              subsequent memory operations.
 
-     atomicrmw    acq_rel      - agent        - generic  1. ``global_wb``
-                               - system
+     atomicrmw    acq_rel      - agent        - generic  1. | ``s_wait_loadcnt 0x0``
+                               - system                     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
                                                              - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
@@ -18842,17 +19528,17 @@ the instruction in the code sequence that references the table.
                                                              atomicrmw that is
                                                              being released.
 
-                                                         3. ``s_wait_xcnt 0x0``
+                                                         4. ``s_wait_xcnt 0x0``
 
                                                            - Ensure operation remains atomic even during a xnack replay.
 
-                                                         4. flat_atomic
+                                                         5. flat_atomic
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
                                                            - If atomic with return, use
                                                              ``th:TH_ATOMIC_RETURN``.
 
-                                                         5. | **Atomic with return:**
+                                                         6. | **Atomic with return:**
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
                                                             | **Atomic without return:**
@@ -18871,7 +19557,7 @@ the instruction in the code sequence that references the table.
                                                              invalidating the
                                                              caches.
 
-                                                         5. ``global_inv``
+                                                         7. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
                                                            - Must happen before
@@ -18884,7 +19570,7 @@ the instruction in the code sequence that references the table.
                                                              will not see stale
                                                              global data.
 
-                                                         6.  ``s_wait_loadcnt 0x0``
+                                                         8.  ``s_wait_loadcnt 0x0``
                                                              must happen after
                                                              ``global_inv`` and before
                                                              subsequent memory operations.
@@ -18991,11 +19677,40 @@ the instruction in the code sequence that references the table.
                                                              the
                                                              acquire-fence-paired-atomic.
 
-     fence        acq_rel      - agent        *none*     1.  ``global_wb``
-                               - system
+     fence        acq_rel      - agent        *none*     1. | ``s_wait_loadcnt 0x0``
+                               - system                     | ``s_wait_storecnt 0x0``
+
+                                                           - The waits can be
+                                                             independently moved
+                                                             according to the
+                                                             following rules:
+
+                                                             - ``s_wait_loadcnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               atomicrmw-with-return-value.
+                                                             - ``s_wait_storecnt 0x0``
+                                                               must happen after
+                                                               any preceding
+                                                               global/generic
+                                                               store/store
+                                                               atomic/
+                                                               atomicrmw-no-return-value.
+
+                                                           - Must happen before the
+                                                             following ``global_wb``.
+                                                           - Ensures that all
+                                                             global memory store/rmw
+                                                             operations have
+                                                             completed before
+                                                             their data is written
+                                                             back.
+
+                                                         2. ``global_wb``
                                                              - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
 
-                                                         2. | ``s_wait_storecnt 0x0``
+                                                         3. | ``s_wait_storecnt 0x0``
                                                             | ``s_wait_loadcnt 0x0``
                                                             | ``s_wait_dscnt 0x0``
 
@@ -19071,7 +19786,7 @@ the instruction in the code sequence that references the table.
                                                              requirements of
                                                              release.
 
-                                                         3. ``global_inv``
+                                                         4. ``global_inv``
 
                                                            - Apply :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx125x-scopes-table`.
                                                            - Must happen before
@@ -19088,7 +19803,7 @@ the instruction in the code sequence that references the table.
                                                              requirements of
                                                              acquire.
 
-                                                         4.  ``s_wait_loadcnt 0x0``
+                                                         5.  ``s_wait_loadcnt 0x0``
                                                              must happen after
                                                              ``global_inv`` and before
                                                              subsequent memory operations.

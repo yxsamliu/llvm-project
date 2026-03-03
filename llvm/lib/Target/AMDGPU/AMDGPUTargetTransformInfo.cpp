@@ -80,7 +80,8 @@ static cl::opt<size_t> InlineMaxBB(
 static cl::opt<unsigned> MemcpyLoopUnroll(
     "amdgpu-memcpy-loop-unroll",
     cl::desc("Unroll factor (affecting 4x32-bit operations) to use for memory "
-             "operations when lowering memcpy as a loop"),
+             "operations when lowering statically-sized memcpy, memmove, or"
+             "memset as a loop"),
     cl::init(16), cl::Hidden);
 
 static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
@@ -206,9 +207,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
             dyn_cast<AllocaInst>(getUnderlyingObject(Ptr));
         if (!Alloca || !Alloca->isStaticAlloca())
           continue;
-        Type *Ty = Alloca->getAllocatedType();
-        unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
-        if (AllocaSize > MaxAlloca)
+        auto AllocaSize = Alloca->getAllocationSize(DL);
+        if (!AllocaSize || AllocaSize->getFixedValue() > MaxAlloca)
           continue;
       } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
                  AS == AMDGPUAS::REGION_ADDRESS) {
@@ -285,7 +285,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
 
@@ -300,7 +300,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureSRAMECC,
 
     // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
+    AMDGPU::FeatureFastFMAF32, AMDGPU::FeatureHalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
@@ -831,7 +831,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       InstRate = getFullRateInstrCost();
 
     static const auto ValidSatTys = {MVT::v2i16, MVT::v4i16};
-    if (any_of(ValidSatTys, [&LT](MVT M) { return M == LT.second; }))
+    if (any_of(ValidSatTys, equal_to(LT.second)))
       NElts = 1;
     break;
   }
@@ -910,10 +910,9 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   return LT.first * getHalfRateInstrCost(CostKind);
 }
 
-InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost GCNTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -922,8 +921,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0,
-                                       Op1);
+      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                       VIC);
     }
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -934,7 +933,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return Index == ~0u ? 2 : 0;
   }
   default:
-    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                     VIC);
   }
 }
 
@@ -1158,6 +1158,52 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_make_buffer_rsrc:
     OpIndexes.push_back(0);
     return true;
+  case Intrinsic::amdgcn_spatial_cluster_send_next:
+  case Intrinsic::amdgcn_spatial_cluster_send_prev:
+    OpIndexes.push_back(1);
+    OpIndexes.push_back(3);
+    return true;
+  case Intrinsic::amdgcn_query_shared_rank:
+  case Intrinsic::amdgcn_map_shared_rank:
+    OpIndexes.push_back(0);
+    return true;
+  // LS pointer <- global ptr
+  case Intrinsic::amdgcn_load_mcast_b32:
+  case Intrinsic::amdgcn_load_mcast_b64:
+  case Intrinsic::amdgcn_load_mcast_b128:
+    OpIndexes.push_back(0);
+    return true;
+  // global ptr <- LDS pointer (AMDGPUAsyncGlobalStoreFromLDS)
+  case Intrinsic::amdgcn_global_store_async_from_lds_b8:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b32:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b64:
+  case Intrinsic::amdgcn_global_store_async_from_lds_b128:
+  // global ptr -> LDS pointer (AMDGPUAsyncClusterLoadLDS)
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  // global ptr -> LDS pointer (AMDGPUAsyncGlobalLoadToLDS)
+  case Intrinsic::amdgcn_global_load_async_to_lds_b8:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_global_load_async_to_lds_b128:
+  // DDS pointer -> LDS pointer (AMDGPUAsyncDDSLoadMCASTLDS)
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b128:
+  // DDS pointer -> LDS pointer (AMDGPUAsyncDDSLoadLDS)
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_to_lds_b128:
+    OpIndexes.push_back(1);
+    return true;
+  case Intrinsic::amdgcn_s_sema_set_limit:
+  case Intrinsic::amdgcn_s_sema_set_state:
+  case Intrinsic::amdgcn_s_sema_signal:
+  case Intrinsic::amdgcn_s_sema_wait:
+    OpIndexes.push_back(0);
+    return true;
   default:
     return false;
   }
@@ -1177,41 +1223,6 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     ConstantInt *NewVal = (TrueAS == NewAS) ?
       ConstantInt::getTrue(Ctx) : ConstantInt::getFalse(Ctx);
     return NewVal;
-  }
-  case Intrinsic::ptrmask: {
-    unsigned OldAS = OldV->getType()->getPointerAddressSpace();
-    unsigned NewAS = NewV->getType()->getPointerAddressSpace();
-    Value *MaskOp = II->getArgOperand(1);
-    Type *MaskTy = MaskOp->getType();
-
-    bool DoTruncate = false;
-
-    const GCNTargetMachine &TM =
-        static_cast<const GCNTargetMachine &>(getTLI()->getTargetMachine());
-    if (!TM.isNoopAddrSpaceCast(OldAS, NewAS)) {
-      // All valid 64-bit to 32-bit casts work by chopping off the high
-      // bits. Any masking only clearing the low bits will also apply in the new
-      // address space.
-      if (DL.getPointerSizeInBits(OldAS) != 64 ||
-          DL.getPointerSizeInBits(NewAS) != 32)
-        return nullptr;
-
-      // TODO: Do we need to thread more context in here?
-      KnownBits Known = computeKnownBits(MaskOp, DL, nullptr, II);
-      if (Known.countMinLeadingOnes() < 32)
-        return nullptr;
-
-      DoTruncate = true;
-    }
-
-    IRBuilder<> B(II);
-    if (DoTruncate) {
-      MaskTy = B.getInt32Ty();
-      MaskOp = B.CreateTrunc(MaskOp, MaskTy);
-    }
-
-    return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
-                             {NewV, MaskOp});
   }
   case Intrinsic::amdgcn_flat_atomic_fmax_num:
   case Intrinsic::amdgcn_flat_atomic_fmin_num: {
@@ -1518,7 +1529,8 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
     if (!AI || !AI->isStaticAlloca() || !AIVisited.insert(AI).second)
       continue;
 
-    AllocaSize += DL.getTypeAllocSize(AI->getAllocatedType());
+    if (auto Size = AI->getAllocationSize(DL))
+      AllocaSize += Size->getFixedValue();
   }
   return AllocaSize;
 }
@@ -1572,10 +1584,13 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
     Threshold += Threshold / 2;
   }
 
-  auto ArgAllocaSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  auto ArgAllocaSize = AI->getAllocationSize(DL);
+  if (!ArgAllocaSize)
+    return 0;
 
   // Attribute the bonus proportionally to the alloca size
-  unsigned AllocaThresholdBonus = (Threshold * ArgAllocaSize) / AllocaSize;
+  unsigned AllocaThresholdBonus =
+      (Threshold * ArgAllocaSize->getFixedValue()) / AllocaSize;
 
   return AllocaThresholdBonus;
 }

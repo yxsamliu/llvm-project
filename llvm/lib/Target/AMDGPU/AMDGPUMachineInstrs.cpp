@@ -18,7 +18,8 @@ using namespace AMDGPUMI;
 unsigned VLoadStoreIdxInst::getBitWidth() const {
   switch (getOpcode()) {
   case AMDGPU::V_LOAD_IDX_BITS:
-    return 16; // Not a well defined value.
+  case AMDGPU::V_LOAD_IDX_BITS_D16:
+    report_fatal_error("V_LOAD_IDX_BITS has no well defined bit width");
   case AMDGPU::V_LOAD_IDX_B32:
     return 32;
   case AMDGPU::V_LOAD_IDX_B64:
@@ -50,7 +51,8 @@ unsigned VLoadStoreIdxInst::getBitWidth() const {
   case AMDGPU::V_LOAD_IDX_B1024:
     return 1024;
   case AMDGPU::V_STORE_IDX_BITS:
-    return 16; // Not a well defined value.
+  case AMDGPU::V_STORE_IDX_BITS_D16:
+    report_fatal_error("V_STORE_IDX_BITS has no well defined bit width");
   case AMDGPU::V_STORE_IDX_B32:
     return 32;
   case AMDGPU::V_STORE_IDX_B64:
@@ -89,9 +91,8 @@ unsigned VLoadStoreIdxInst::getBitWidth() const {
 unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits) {
   switch (Bits) {
   case 8:
-    return AMDGPU::V_LOAD_IDX_BITS;
   case 16:
-    return AMDGPU::V_LOAD_IDX_BITS;
+    report_fatal_error("V_LOAD_IDX_BITS has no well defined bit width");
   case 32:
     return AMDGPU::V_LOAD_IDX_B32;
   case 64:
@@ -130,9 +131,8 @@ unsigned VLoadIdxInst::getOpcodeForBitWidth(unsigned Bits) {
 unsigned VStoreIdxInst::getOpcodeForBitWidth(unsigned Bits) {
   switch (Bits) {
   case 8:
-    return AMDGPU::V_STORE_IDX_BITS;
   case 16:
-    return AMDGPU::V_STORE_IDX_BITS;
+    report_fatal_error("V_STORE_IDX_BITS has no well defined bit width");
   case 32:
     return AMDGPU::V_STORE_IDX_B32;
   case 64:

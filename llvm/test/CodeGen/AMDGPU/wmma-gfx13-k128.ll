@@ -4,7 +4,7 @@
 define amdgpu_ps void @test_wmma_f32_16x16x128_fp8_fp8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x128_fp8_fp8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_fp8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -18,7 +18,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x128_fp8_bf8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x128_fp8_bf8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_fp8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -32,7 +32,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x128_bf8_fp8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x128_bf8_fp8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_bf8_fp8 v[32:39], v[0:15], v[16:31], v[32:39] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -46,7 +46,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x128_bf8_bf8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x128_bf8_bf8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_bf8_bf8 v[32:39], v[0:15], v[16:31], v[32:39] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[36:39], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[40:41], v[32:35], off
@@ -60,7 +60,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x128_f8f6f4_clamp(<16 x i32> %A, <16 x i32> %B, <8 x float> %C, i32 %scale_a, i32 %scale_b, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x128_f8f6f4_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v41 aux_data:1152 clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_f8f6f4 v[32:39], v[0:15], v[16:31], v[32:39], v40, v41 k:64 matrix_a_fmt:MATRIX_FMT_FP6 matrix_b_fmt:MATRIX_FMT_FP6 matrix_a_scale:MATRIX_SCALE_LO_EVEN matrix_b_scale:MATRIX_SCALE_LO_EVEN clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[42:43], v[32:35], off
@@ -74,7 +74,7 @@ entry:
 define amdgpu_ps void @test_wmma_f16_16x16x128_fp8_fp8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x128_fp8_fp8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f16_16x16_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] clamp
+; GFX1370-NEXT:    v_wmma_f16_16x16_fp8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1370-NEXT:    s_endpgm
 entry:
@@ -86,7 +86,7 @@ entry:
 define amdgpu_ps void @test_wmma_f16_16x16x128_fp8_bf8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x128_fp8_bf8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f16_16x16_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] clamp
+; GFX1370-NEXT:    v_wmma_f16_16x16_fp8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1370-NEXT:    s_endpgm
 entry:
@@ -98,7 +98,7 @@ entry:
 define amdgpu_ps void @test_wmma_f16_16x16x128_bf8_fp8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x128_bf8_fp8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f16_16x16_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] clamp
+; GFX1370-NEXT:    v_wmma_f16_16x16_bf8_fp8 v[32:35], v[0:15], v[16:31], v[32:35] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1370-NEXT:    s_endpgm
 entry:
@@ -110,7 +110,7 @@ entry:
 define amdgpu_ps void @test_wmma_f16_16x16x128_bf8_bf8_clamp(<16 x i32> %A, <16 x i32> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x128_bf8_bf8_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f16_16x16_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] clamp
+; GFX1370-NEXT:    v_wmma_f16_16x16_bf8_bf8 v[32:35], v[0:15], v[16:31], v[32:35] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[36:37], v[32:35], off
 ; GFX1370-NEXT:    s_endpgm
 entry:
@@ -122,7 +122,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x32_f16_clamp(<16 x half> %A, <16 x half> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x32_f16_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_f16 v[16:23], v[0:7], v[8:15], v[16:23] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[24:25], v[16:19], off
@@ -136,7 +136,7 @@ entry:
 define amdgpu_ps void @test_wmma_f16_16x16x32_f16_clamp(<16 x half> %A, <16 x half> %B, <8 x half> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f16_16x16x32_f16_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f16_16x16_f16 v[16:19], v[0:7], v[8:15], v[16:19] clamp
+; GFX1370-NEXT:    v_wmma_f16_16x16_f16 v[16:19], v[0:7], v[8:15], v[16:19] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1370-NEXT:    s_endpgm
 entry:
@@ -148,7 +148,7 @@ entry:
 define amdgpu_ps void @test_wmma_f32_16x16x32_bf16_clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x float> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_f32_16x16x32_bf16_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_f32_16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] clamp
+; GFX1370-NEXT:    v_wmma_f32_16x16_bf16 v[16:23], v[0:7], v[8:15], v[16:23] k:16 clamp
 ; GFX1370-NEXT:    s_clause 0x1
 ; GFX1370-NEXT:    global_store_b128 v[24:25], v[20:23], off offset:16
 ; GFX1370-NEXT:    global_store_b128 v[24:25], v[16:19], off
@@ -162,7 +162,7 @@ entry:
 define amdgpu_ps void @test_wmma_bf16_16x16x32_bf16_clamp(<16 x bfloat> %A, <16 x bfloat> %B, <8 x bfloat> %C, ptr addrspace(1) %out) {
 ; GFX1370-LABEL: test_wmma_bf16_16x16x32_bf16_clamp:
 ; GFX1370:       ; %bb.0: ; %entry
-; GFX1370-NEXT:    v_wmma_bf16_16x16_bf16 v[16:19], v[0:7], v[8:15], v[16:19] clamp
+; GFX1370-NEXT:    v_wmma_bf16_16x16_bf16 v[16:19], v[0:7], v[8:15], v[16:19] k:16 clamp
 ; GFX1370-NEXT:    global_store_b128 v[20:21], v[16:19], off
 ; GFX1370-NEXT:    s_endpgm
 entry:

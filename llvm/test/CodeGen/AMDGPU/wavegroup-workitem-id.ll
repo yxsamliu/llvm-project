@@ -25,6 +25,8 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; ISEL-NEXT:    v_or3_b32 v0, v1, v0, v3
 ; ISEL-NEXT:    s_wait_kmcnt 0x0
 ; ISEL-NEXT:    global_store_b32 v0, v2, s[0:1] scale_offset
+; ISEL-NEXT:    s_barrier_signal -1
+; ISEL-NEXT:    s_barrier_wait -1
 ; ISEL-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: wavegroup_kernel_3x64x2:
@@ -54,6 +56,8 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) #0 "amdg
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; GISEL-NEXT:    s_barrier_signal -1
+; GISEL-NEXT:    s_barrier_wait -1
 ; GISEL-NEXT:    s_endpgm
 entry:
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
@@ -84,6 +88,8 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; ISEL-NEXT:    v_lshl_or_b32 v0, s2, 5, v0
 ; ISEL-NEXT:    s_wait_kmcnt 0x0
 ; ISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; ISEL-NEXT:    s_barrier_signal -1
+; ISEL-NEXT:    s_barrier_wait -1
 ; ISEL-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: wavegroup_kernel_128x1x1:
@@ -102,6 +108,8 @@ define amdgpu_kernel void @wavegroup_kernel_128x1x1(ptr addrspace(1) %p) #0 "amd
 ; GISEL-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    global_store_b32 v0, v1, s[0:1] scale_offset
+; GISEL-NEXT:    s_barrier_signal -1
+; GISEL-NEXT:    s_barrier_wait -1
 ; GISEL-NEXT:    s_endpgm
 entry:
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()

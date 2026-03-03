@@ -132,7 +132,7 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64_STAGING_AlignTarget:$vdst),
+def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64_STAGING:$vdst),
                                       (ins VSrc_b64:$src0)> {
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
@@ -329,7 +329,7 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
 
 multiclass
     AMDGPUWaveReducePseudoGenerator<string Op, string DataType, ValueType ty, RegisterClass RetReg, SrcRegOrImm9 Reg> {
-  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, UseNamedOperandTable = 1, Uses = [EXEC] in {
     def !toupper(Op) #"_PSEUDO_" #DataType
         : VPseudoInstSI<(outs RetReg : $sdst),
                         (ins Reg : $src, VSrc_b32 : $strategy),
@@ -374,9 +374,13 @@ defvar Operations = [
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
@@ -945,6 +949,7 @@ multiclass si_cs_chain_tc_dvgpr_patterns<
 
 defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
+let Defs = [SCC] in {
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
   [(callseq_start timm:$amt0, timm:$amt1)],
@@ -954,7 +959,6 @@ def ADJCALLSTACKUP : SPseudoInstSI<
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
   let SchedRW = [WriteSALU];
-  let Defs = [SCC];
 }
 
 def ADJCALLSTACKDOWN : SPseudoInstSI<
@@ -965,8 +969,15 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
   let SchedRW = [WriteSALU];
-  let Defs = [SCC];
 }
+
+// Get the offset of the base of the stack, skipping any reserved areas.
+def GET_STACK_BASE : SPseudoInstSI<(outs SGPR_32:$dst), (ins),
+  [(set p5:$dst, (sponentry))]> {
+  let Size = 16; // Worst case (s_getreg, s_cmp, s_cselect + constant).
+  let SchedRW = [WriteSALU];
+}
+} // End Defs = [SCC]
 
 let Defs = [M0, EXEC, SCC],
   UseNamedOperandTable = 1 in {
@@ -1401,6 +1412,26 @@ def : GCNPat <
 // VGPR Indexing Instructions
 //===----------------------------------------------------------------------===//
 
+/// Pseudo instructions marking the start and end of the lifetime of a private
+/// registers-as-memory allocation.
+///
+/// These must have an MMO that refers to an alloca instruction with
+/// !amdgpu.allocated.vgprs metadata and will carry implicit defs and uses of
+/// physical VGPRs to prevent conflicts with regular register allocation.
+///
+/// These instructions conceptually overwrite the referenced memory with
+/// "undef".
+def VGPR_LIFETIME_START : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+def VGPR_LIFETIME_END : SPseudoInstSI<(outs), (ins)> {
+  let hasSideEffects = false;
+  let mayStore = true;
+  let isMeta = true;
+}
+
 // Pseudo-instruction for reading idx0 that gets expanded to s_getreg_b32
 def SI_GET_IDX0 : SPseudoInstSI<(outs SReg_32:$sdst), (ins)> {
   let Size = 4;
@@ -1436,8 +1467,8 @@ foreach rc = [VGPR_32_STAGING, VReg_64_STAGING, VReg_96_STAGING,
 // sign-extended loads. Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported and must be a compile-time
 // constant.
-def V_LOAD_IDX_BITS
-    : VPseudoInstSI<(outs VGPR_32:$data_op),
+class V_LOAD_IDX_BITS<RegisterClass data_op_rc>
+    : VPseudoInstSI<(outs data_op_rc:$data_op),
                     (ins VGPR_IDX_IDX_OP:$idx, i32imm:$offset, i32imm:$bitsize,
                         SSrc_b32:$bitoffset, i32imm:$is_sext_load)> {
   let mayLoad = 1;
@@ -1446,18 +1477,24 @@ def V_LOAD_IDX_BITS
   let hasSideEffects = 0;
 }
 
+def V_LOAD_IDX_BITS : V_LOAD_IDX_BITS<VGPR_32>;
+def V_LOAD_IDX_BITS_D16 : V_LOAD_IDX_BITS<VGPR_16>;
+
 // Used for byte or short stores.
 // Only bitoffset of 0, 8, 16, or 24 bits are supported.
 // Only bitsize of 8 or 16 bits are supported and must be a compile-time constant.
-def V_STORE_IDX_BITS
-    : VPseudoInstSI<(outs), (ins VGPR_32:$data_op,
-                                VGPR_IDX_IDX_OP:$idx, i32imm:$offset,
-                                i32imm:$bitsize, SSrc_b32:$bitoffset)> {
+class V_STORE_IDX_BITS<RegisterClass data_op_rc>
+    : VPseudoInstSI<(outs), (ins data_op_rc:$data_op, VGPR_IDX_IDX_OP:$idx,
+                                i32imm:$offset, i32imm:$bitsize,
+                                SSrc_b32:$bitoffset)> {
   let mayStore = 1;
   let VALU = 1;
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0;
 }
+
+def V_STORE_IDX_BITS : V_STORE_IDX_BITS<VGPR_32>;
+def V_STORE_IDX_BITS_D16 : V_STORE_IDX_BITS<VGPR_16>;
 
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
@@ -1471,22 +1508,22 @@ multiclass f16_to_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
+    (f32 (any_f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
+    (f32 (any_f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)))
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (or_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG_ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
@@ -3958,8 +3995,6 @@ def : GCNPat <
                   SRCMODS.NONE, $src2)
 >;
 
-// COPY is workaround tablegen bug from multiple outputs
-// from S_LSHL_B32's multiple outputs from implicit scc def.
 let AddedComplexity = 1 in {
 def : GCNPat <
   (v2i16 (UniformBinFrag<build_vector> (i16 0), (i16 SReg_32:$src1))),
@@ -3978,7 +4013,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 fpimm_pos_zero))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 }
@@ -3989,7 +4024,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 fpimm_pos_zero))),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
@@ -5040,6 +5075,13 @@ def G_AMDGPU_COPY_VCC_SCC : AMDGPUGenericInstruction {
 def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins type0:$src0);
+  let hasSideEffects = 0;
+}
+
+// llvm.sponentry
+def G_AMDGPU_SPONENTRY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
   let hasSideEffects = 0;
 }
 

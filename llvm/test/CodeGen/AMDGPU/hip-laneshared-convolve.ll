@@ -45,7 +45,7 @@ define amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() "amdgpu-w
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_6]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_6]]
   ; CHECK-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY8]], %subreg.sub0, [[COPY9]], %subreg.sub1, [[COPY10]], %subreg.sub2, [[COPY11]], %subreg.sub3
-  ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE1]], killed [[REG_SEQUENCE]], killed [[SCRATCH_LOAD_DWORDX3_SADDR]], killed [[SCRATCH_LOAD_DWORDX3_SADDR1]], killed [[SCRATCH_LOAD_DWORDX3_SADDR2]], 42, -1, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE1]], killed [[REG_SEQUENCE]], killed [[SCRATCH_LOAD_DWORDX3_SADDR]], killed [[SCRATCH_LOAD_DWORDX3_SADDR1]], killed [[SCRATCH_LOAD_DWORDX3_SADDR2]], 10, -1, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 88
   ; CHECK-NEXT:   SCRATCH_STORE_DWORDX4_SADDR killed [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], killed [[S_MOV_B32_7]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s128) into @out, !tbaa !7, addrspace 10)
   ; CHECK-NEXT:   S_ENDPGM 0
@@ -70,7 +70,7 @@ define amdgpu_kernel void @_Z36test_amdgcn_convolve_f16_fp8_3x3_4x4v() "amdgpu-w
   ; VIDX-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; VIDX-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
   ; VIDX-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-  ; VIDX-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX_B288_]], killed [[V_LOAD_IDX_B96_]], killed [[V_LOAD_IDX_B96_1]], killed [[V_LOAD_IDX_B96_2]], 42, -1, 0, 0, implicit $exec
+  ; VIDX-NEXT:   [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_:%[0-9]+]]:vreg_128 = contract V_CONVOLVE_F16_FP8_FP8_3x3_4x4 killed [[REG_SEQUENCE]], killed [[V_LOAD_IDX_B288_]], killed [[V_LOAD_IDX_B96_]], killed [[V_LOAD_IDX_B96_1]], killed [[V_LOAD_IDX_B96_2]], 10, -1, 0, 0, implicit $exec
   ; VIDX-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 88
   ; VIDX-NEXT:   [[S_LSHR_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_5]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   V_STORE_IDX_B128 [[V_CONVOLVE_F16_FP8_FP8_3x3_4x4_]], [[S_LSHR_B32_4]], 0, implicit $exec :: (store (s128) into @out, !tbaa !7, addrspace 10)
@@ -80,7 +80,7 @@ entry:
   %vec31 = load <3 x i32>, ptr addrspace(10) @col_left, align 16
   %vec32 = load <3 x i32>, ptr addrspace(10) @col_right, align 16
   %wei = load <9 x i32>, ptr addrspace(10) @weights, align 64
-  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
+  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 10, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4
   ret void
 }

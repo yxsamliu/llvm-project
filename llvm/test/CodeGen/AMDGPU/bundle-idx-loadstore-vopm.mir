@@ -216,7 +216,7 @@ body:             |
     ; GCN-NEXT:   $stg_srcc = V_LOAD_IDX_B256 [[S_LSHL_B32_1]], 16, implicit $exec :: (dereferenceable load (s256) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, align 16, addrspace 10)
     ; GCN-NEXT:   $stg_srcb = V_LOAD_IDX_B64 [[S_LSHL_B32_1]], 8, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 8)`, addrspace 10)
     ; GCN-NEXT:   $stg_srca = V_LOAD_IDX_B64 [[S_LSHL_B32_1]], 12, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 12)`, addrspace 10)
-    ; GCN-NEXT:   early-clobber $stg_dsta = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr internal $stg_srca, internal $stg_srcb, internal $stg_srcc, -1, 0, 0, implicit $exec
+    ; GCN-NEXT:   early-clobber $stg_dsta = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr internal $stg_srca, internal $stg_srcb, internal $stg_srcc, 0, -1, 0, 0, implicit $exec
     ; GCN-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, [[S_LSHL_B32_]], 0, implicit $exec :: (store (s256) into @laneshared, align 16, addrspace 10)
     ; GCN-NEXT: }
     ;
@@ -229,7 +229,7 @@ body:             |
     ; ALLOC-NEXT:   $stg_srcc = V_LOAD_IDX_B256 $idx2, 16, implicit $exec :: (dereferenceable load (s256) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, align 16, addrspace 10)
     ; ALLOC-NEXT:   $stg_srcb = V_LOAD_IDX_B64 $idx2, 8, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 8)`, addrspace 10)
     ; ALLOC-NEXT:   $stg_srca = V_LOAD_IDX_B64 $idx2, 12, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 12)`, addrspace 10)
-    ; ALLOC-NEXT:   early-clobber $stg_dsta = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr internal $stg_srca, internal $stg_srcb, internal $stg_srcc, -1, 0, 0, implicit $exec
+    ; ALLOC-NEXT:   early-clobber $stg_dsta = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr internal $stg_srca, internal $stg_srcb, internal $stg_srcc, 0, -1, 0, 0, implicit $exec
     ; ALLOC-NEXT:   V_STORE_IDX_B256 internal $stg_dsta, $idx1, 0, implicit $exec :: (store (s256) into @laneshared, align 16, addrspace 10)
     ; ALLOC-NEXT: }
     ;
@@ -243,13 +243,13 @@ body:             |
     ; LOWERED-NEXT: renamable $sgpr1 = S_LSHL_B32 1, 4, implicit-def dead $scc
     ; LOWERED-NEXT: $idx1 = S_SET_GPR_IDX_U32 killed renamable $sgpr0
     ; LOWERED-NEXT: $idx2 = S_SET_GPR_IDX_U32 killed renamable $sgpr1
-    ; LOWERED-NEXT: undef early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr undef $vgpr12_vgpr13, undef $vgpr8_vgpr9, undef $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, -1, 8737, 0, <0x{{[0-9a-f]+}}>, implicit $exec
+    ; LOWERED-NEXT: undef early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = V_WMMA_F32_16X16X16_FP8_FP8_threeaddr undef $vgpr12_vgpr13, undef $vgpr8_vgpr9, undef $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, -1, 8737, 0, <0x{{[0-9a-f]+}}>, implicit $exec
     %0:sreg_32_xexec_hi = S_LSHL_B32 1, 2, implicit-def $scc
     %1:sreg_32_xexec_hi = S_LSHL_B32 1, 4, implicit-def $scc
     %2:vreg_64_align2 = V_LOAD_IDX_B64 %1:sreg_32_xexec_hi, 12, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 12)`, addrspace 10)
     %3:vreg_64_align2 = V_LOAD_IDX_B64 %1:sreg_32_xexec_hi, 8, implicit $exec :: (dereferenceable load (s64) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 8)`, addrspace 10)
     %4:vreg_256_align2 = V_LOAD_IDX_B256 %1:sreg_32_xexec_hi, 16, implicit $exec :: (dereferenceable load (s256) from `ptr addrspace(10) getelementptr (i32, ptr addrspace(10) @laneshared, i32 16)`, align 16, addrspace 10)
-    early-clobber %5:vreg_256_align2 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr %2:vreg_64_align2, %3:vreg_64_align2, %4:vreg_256_align2, -1, 0, 0,implicit $exec
+    early-clobber %5:vreg_256_align2 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr %2:vreg_64_align2, %3:vreg_64_align2, %4:vreg_256_align2, 0, -1, 0, 0,implicit $exec
     V_STORE_IDX_B256 %5:vreg_256_align2, %0:sreg_32_xexec_hi, 0, implicit $exec :: (store (s256) into @laneshared, align 16, addrspace 10)
 ...
 

@@ -21,7 +21,7 @@ define amdgpu_kernel void @_Z37test_amdgcn_wmma_f32_16x16x16_f16_w32v() "amdgpu-
   ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX4_SADDR:%[0-9]+]]:vreg_128 = SCRATCH_LOAD_DWORDX4_SADDR killed [[S_MOV_B32_]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s128) from @a, align 2147483648, !tbaa !5, addrspace 10)
   ; CHECK-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
   ; CHECK-NEXT:   [[SCRATCH_LOAD_DWORDX4_SADDR1:%[0-9]+]]:vreg_128 = SCRATCH_LOAD_DWORDX4_SADDR killed [[S_MOV_B32_1]], 0, 0, implicit $exec, implicit $flat_scr :: (dereferenceable load (s128) from @b, !tbaa !5, addrspace 10)
-  ; CHECK-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[SCRATCH_LOAD_DWORDX4_SADDR]], killed [[SCRATCH_LOAD_DWORDX4_SADDR1]], 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[SCRATCH_LOAD_DWORDX4_SADDR]], killed [[SCRATCH_LOAD_DWORDX4_SADDR1]], 0, 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY %10.sub7
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY %10.sub6
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY %10.sub5
@@ -46,7 +46,7 @@ define amdgpu_kernel void @_Z37test_amdgcn_wmma_f32_16x16x16_f16_w32v() "amdgpu-
   ; VIDX-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 16
   ; VIDX-NEXT:   [[S_LSHR_B32_1:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_1]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   [[V_LOAD_IDX_B128_1:%[0-9]+]]:vreg_128 = V_LOAD_IDX_B128 [[S_LSHR_B32_1]], 0, implicit $exec :: (dereferenceable load (s128) from @b, !tbaa !5, addrspace 10)
-  ; VIDX-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[V_LOAD_IDX_B128_]], killed [[V_LOAD_IDX_B128_1]], 0, 0, 0, 0, implicit $exec
+  ; VIDX-NEXT:   early-clobber %10:vreg_256 = contract V_WMMA_F32_16X16X16_F16_threeaddr killed [[V_LOAD_IDX_B128_]], killed [[V_LOAD_IDX_B128_1]], 0, 0, 0, 0, 0, implicit $exec
   ; VIDX-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 32
   ; VIDX-NEXT:   [[S_LSHR_B32_2:%[0-9]+]]:sreg_32_xexec_hi = S_LSHR_B32 [[S_MOV_B32_2]], 2, implicit-def dead $scc
   ; VIDX-NEXT:   V_STORE_IDX_B256 %10, [[S_LSHR_B32_2]], 0, implicit $exec :: (store (s256) into @out, !tbaa !5, addrspace 10)

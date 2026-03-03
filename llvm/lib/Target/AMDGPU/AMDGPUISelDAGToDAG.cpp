@@ -1306,7 +1306,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
 
           // FIXME: Select to VOP3 version for with-carry.
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1491,7 +1491,7 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1886,7 +1886,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
             Opnds.push_back(N0);
             Opnds.push_back(AddOffsetLo);
             unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
-            if (Subtarget->hasAddNoCarry()) {
+            if (Subtarget->hasAddNoCarryInsts()) {
               AddOp = AMDGPU::V_ADD_U32_e64;
               Opnds.push_back(Clamp);
             }
@@ -3359,6 +3359,204 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(MCast), {LoadMMO});
 }
 
+void AMDGPUDAGToDAGISel::SelectTILED_LOAD_MCAST(SDNode *N, unsigned IntrID) {
+  unsigned Opcode;
+  bool IsGlobal = false;
+  bool IsExtend = false;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_HALF_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_B128;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+    Opcode = AMDGPU::GLOBAL_TILED_LOAD_MCAST_2X2_B128;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr4_b64:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR4_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr6_b96:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR6_B96;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr8_b64:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR8_B64;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_global_load_mcast_tr16_b128:
+    Opcode = AMDGPU::GLOBAL_LOAD_MCAST_TR16_B128;
+    IsGlobal = true;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_HALF_B64;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_B64;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_B128;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_B128;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr4_b64:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR4_B64;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr6_b96:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR6_B96;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr8_b64:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR8_B64;
+    break;
+  case Intrinsic::amdgcn_ds_load_mcast_tr16_b128:
+    Opcode = AMDGPU::DS_LOAD_MCAST_TR16_B128;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_EXTEND_B64;
+    IsExtend = true;
+    break;
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128:
+    Opcode = AMDGPU::DS_TILED_LOAD_MCAST_2X2_EXTEND_B128;
+    IsExtend = true;
+    break;
+  default:
+    llvm_unreachable("tiled load mcast selection error");
+  }
+
+  SDLoc SL(N);
+  EVT VT = N->getValueType(0);
+
+  // Pointer (for INTRINSIC_W_CHAIN: 0=chain, 1=ID, 2=ptr)
+  SDValue PtrOp = N->getOperand(2);
+
+  // For extend instructions: operand 3 = format, operand 4 = mask
+  SDValue Mask = N->getOperand(IsExtend ? 4 : 3);
+
+  // Extract base and offset from address
+  SDValue Addr;
+  SDValue Offset;
+  if (IsGlobal) {
+    if (!SelectGlobalOffset(N, PtrOp, Addr, Offset)) {
+      SelectCode(N); // Let this error
+      return;
+    }
+  } else {
+    if (!SelectDS1Addr1Offset(PtrOp, Addr, Offset)) {
+      // Couldn't match address pattern, use base with zero offset
+      Addr = PtrOp;
+      Offset = CurDAG->getTargetConstant(0, SL, MVT::i16);
+    }
+  }
+
+  // Load mask into M0 and add chain/glue
+  glueCopyToM0(N, Mask);
+
+  // global_* sets 0 for CPol; ds_* sets 0 for gds; ds_*_extend_* uses format
+  SDValue Imm;
+  if (IsGlobal) {
+    Imm = CurDAG->getTargetConstant(0, SL, MVT::i32);
+  } else if (IsExtend) {
+    uint64_t FormatVal = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+    Imm = CurDAG->getTargetConstant(FormatVal, SL, MVT::i8);
+  } else {
+    Imm = CurDAG->getTargetConstant(0, SL, MVT::i1);
+  }
+
+  SmallVector<SDValue, 6> Ops = {
+      Addr, Offset, Imm,
+      N->getOperand(0),                      // Chain
+      N->getOperand(N->getNumOperands() - 1) // Glue
+  };
+  SDNode *Result = CurDAG->SelectNodeTo(N, Opcode, VT, MVT::Other, Ops);
+
+  // Preserve memory operand if this is a MemIntrinsicSDNode
+  if (auto *MemNode = dyn_cast<MemIntrinsicSDNode>(N)) {
+    MachineMemOperand *MMO = MemNode->getMemOperand();
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Result), {MMO});
+  }
+}
+
+
+bool AMDGPUDAGToDAGISel::selectVGPRIdxOffset(SDValue In, SDValue &Base,
+                                             SDValue &Offset) const {
+  SDLoc SL(In);
+
+  if (isa<ConstantSDNode>(In)) {
+    Base = In;
+    Offset = CurDAG->getTargetConstant(0, SL, MVT::i32);
+    return true;
+  }
+
+  if (In->isAnyAdd()) {
+    SDValue LHS = In->getOperand(0);
+    SDValue RHS = In->getOperand(1);
+    if (auto RHSC = dyn_cast<ConstantSDNode>(RHS)) {
+      Base = LHS;
+      Offset =
+          CurDAG->getTargetConstant(RHSC->getZExtValue() / 4, SL, MVT::i32);
+      return true;
+    }
+    if (auto LHSC = dyn_cast<ConstantSDNode>(LHS)) {
+      Base = RHS;
+      Offset =
+          CurDAG->getTargetConstant(LHSC->getZExtValue() / 4, SL, MVT::i32);
+      return true;
+    }
+  }
+
+  return false;
+}
+
+void AMDGPUDAGToDAGISel::SelectBlockLOAD_MCAST(SDNode *N,
+                                               unsigned IntrID) {
+  unsigned Opcode;
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_block_load_mcast_b128:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B128_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b256:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B256_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b512:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B512_LANESHARED;
+    break;
+  case Intrinsic::amdgcn_ds_block_load_mcast_b1024:
+    Opcode = AMDGPU::DS_BLOCK_LOAD_MCAST_B1024_LANESHARED;
+    break;
+  default:
+    llvm_unreachable("ds bock load mcast selection error");
+  }
+
+  SmallVector<SDValue, 5> MCastOps;
+  SDLoc DL(N);
+
+  MCastOps.push_back(N->getOperand(3)); // L#
+  MCastOps.push_back(N->getOperand(4)); // LDS address offset
+  MCastOps.push_back(CurDAG->getTargetConstant(0, DL, MVT::i1));  // isGDS bit
+
+  SDValue Base, Offset;
+  if (!selectVGPRIdxOffset(N->getOperand(2), Base, Offset)) {
+    Base = N->getOperand(2);
+    Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
+  }
+
+  // V_STORE_IDX operands
+  MCastOps.push_back(Base);   // idx
+  MCastOps.push_back(Offset); // offset
+
+  MCastOps.push_back(N->getOperand(0)); // Chain
+  (void )CurDAG->SelectNodeTo(N, Opcode, MVT::Other, MCastOps);
+}
+
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
   if (Subtarget->getLDSBankCount() != 16) {
     // This is a single instruction with a pattern.
@@ -3916,6 +4114,64 @@ void AMDGPUDAGToDAGISel::SelectCvtTensor(SDNode *N, unsigned IntrID) {
       break;
     }
     break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f32_scatter2:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F32_4x2x16;
+      break;
+    default:
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2_double:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x2x16;
+      break;
+    case Shape::Pixel_4x4x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x4x16;
+      break;
+    case Shape::Pixel_4x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_4x4x8;
+      break;
+    case Shape::Pixel_8x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_I16_F16_8x4x8;
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f32_scatter2:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F32_4x2x16;
+      break;
+    default:
+      break;
+    }
+    break;
+
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2_double:
+    switch (shape) {
+    case Shape::Pixel_4x2x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x2x16;
+      break;
+    case Shape::Pixel_4x4x16:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x4x16;
+      break;
+    case Shape::Pixel_4x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_4x4x8;
+      break;
+    case Shape::Pixel_8x4x8:
+      Opc = AMDGPU::V_CVT_TO_TENSOR_U16_F16_8x4x8;
+      break;
+    }
+    break;
   }
 
   if (Opc == -1) {
@@ -3948,6 +4204,26 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_W_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
   case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn:
     SelectDSBvhStackIntrinsic(N, IntrID);
+    return;
+  case Intrinsic::amdgcn_global_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_global_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_half_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_b128:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_extend_b64:
+  case Intrinsic::amdgcn_ds_tiled_load_mcast_2x2_extend_b128:
+  case Intrinsic::amdgcn_ds_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_ds_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_ds_load_mcast_tr16_b128:
+  case Intrinsic::amdgcn_global_load_mcast_tr4_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr6_b96:
+  case Intrinsic::amdgcn_global_load_mcast_tr8_b64:
+  case Intrinsic::amdgcn_global_load_mcast_tr16_b128:
+    SelectTILED_LOAD_MCAST(N, IntrID);
     return;
   case Intrinsic::amdgcn_init_whole_wave:
     CurDAG->getMachineFunction()
@@ -4085,6 +4361,14 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_WO_CHAIN(SDNode *N) {
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16:
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_scatter2:
   case Intrinsic::amdgcn_cvt_to_tensor_sr_bf8_bf16_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_i16_f16_scatter2_double:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f32_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter4:
+  case Intrinsic::amdgcn_cvt_to_tensor_u16_f16_scatter2_double:
     SelectCvtTensor(N, IntrID);
     return;
   default:
@@ -4165,25 +4449,28 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
   auto [SemReflID, SemReflWaveID] = GetSemNodes(SemRefl);
   SDValue WaitVDst = CurDAG->getTargetConstant(0xf, SL, MVT::i32);
   if (IsSend) {
+    MemIntrinsicSDNode *NMem = cast<MemIntrinsicSDNode>(N);
     SmallVector<SDValue, 11> SendOps = {// regIns
-                                        N->getOperand(2),
+                                        NMem->getOperand(2),
                                         // ins
                                         SemID, WaveID, SemReflID, SemReflWaveID,
                                         WaitVDst};
     SDNode *Shift =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(3), // offset
+                               {NMem->getOperand(3), // offset
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
     SendOps.push_back(SDValue(Shift, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
     SDNode *ShiftRefl =
         CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(5), // offset refl
+                               {NMem->getOperand(5), // offset refl
                                 CurDAG->getTargetConstant(2, SL, MVT::i32)});
     SendOps.push_back(SDValue(ShiftRefl, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-    SendOps.push_back(N->getOperand(0));
-    CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
+    SendOps.push_back(NMem->getOperand(0));
+    SDNode *Send = CurDAG->SelectNodeTo(NMem, Opcode, MVT::Other, SendOps);
+    MachineMemOperand *StoreMMO = NMem->getMemOperand();
+    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Send), {StoreMMO});
   } else {
     CurDAG->SelectNodeTo(
         N, Opcode, N->getVTList(),
@@ -4215,6 +4502,13 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   case Intrinsic::amdgcn_load_mcast_b64:
   case Intrinsic::amdgcn_load_mcast_b128: {
     SelectLOAD_MCAST(cast<MemIntrinsicSDNode>(N), IntrID);
+    return;
+  }
+  case Intrinsic::amdgcn_ds_block_load_mcast_b128:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b256:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b512:
+  case Intrinsic::amdgcn_ds_block_load_mcast_b1024: {
+    SelectBlockLOAD_MCAST(N, IntrID);
     return;
   }
   case Intrinsic::amdgcn_spatial_cluster_send_next:
@@ -5028,6 +5322,64 @@ bool AMDGPUDAGToDAGISel::SelectSWMMACIndex32(SDValue In, SDValue &Src,
   return true;
 }
 
+static bool getI1Constant(SDValue Val, uint64_t &Out) {
+  if (auto *C = dyn_cast<ConstantSDNode>(Val)) {
+    Out = C->getZExtValue() & 0x1;
+    return true;
+  }
+  return false;
+}
+
+static SDNode *findIntrinsicUser(SDValue In) {
+  for (SDNode *User : In->users()) {
+    if (User->getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+        User->getOpcode() == ISD::INTRINSIC_W_CHAIN)
+      return User;
+  }
+  return nullptr;
+}
+
+bool AMDGPUDAGToDAGISel::SelectWMMASignedMods(SDValue In, SDValue &Src) const {
+  SDNode *User = findIntrinsicUser(In);
+  uint64_t SignedA, SignedB;
+
+  if (!User || !getI1Constant(User->getOperand(1), SignedA) ||
+      !getI1Constant(User->getOperand(3), SignedB))
+    return false;
+
+  const uint32_t Val = (SignedA ? AMDGPU::VOPMMods::MATRIX_A_SIGNED : 0) |
+                       (SignedB ? AMDGPU::VOPMMods::MATRIX_B_SIGNED : 0);
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMAIndexSet(SDValue In, SDValue &Src) const {
+  uint64_t IndexSet;
+  if (!getI1Constant(In, IndexSet))
+    return false;
+
+  const uint32_t Val = IndexSet ? AMDGPU::VOPMMods::INDEX_SET : 0;
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectSWMMASignedIndexSet(SDValue In,
+                                                   SDValue &Src) const {
+  SDNode *User = findIntrinsicUser(In);
+  uint64_t SignedA, SignedB, IndexSet;
+
+  if (!User || !getI1Constant(User->getOperand(1), SignedA) ||
+      !getI1Constant(User->getOperand(3), SignedB) ||
+      !getI1Constant(User->getOperand(7), IndexSet))
+    return false;
+
+  const uint32_t Val = (SignedA ? AMDGPU::VOPMMods::MATRIX_A_SIGNED : 0) |
+                       (SignedB ? AMDGPU::VOPMMods::MATRIX_B_SIGNED : 0) |
+                       (IndexSet ? AMDGPU::VOPMMods::INDEX_SET : 0);
+  Src = CurDAG->getTargetConstant(Val, SDLoc(In), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectVOP3OpSel(SDValue In, SDValue &Src,
                                          SDValue &SrcMods) const {
   Src = In;
@@ -5268,7 +5620,7 @@ static std::pair<unsigned, uint8_t> BitOp3_Op(SDValue In,
     SmallVector<SDValue, 3> Backup(Src.begin(), Src.end());
     if (!getOperandBits(LHS, LHSBits) ||
         !getOperandBits(RHS, RHSBits)) {
-      Src = Backup;
+      Src = std::move(Backup);
       return std::make_pair(0, 0);
     }
 

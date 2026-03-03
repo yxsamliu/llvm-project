@@ -14,6 +14,7 @@ typedef unsigned short __attribute__((ext_vector_type(8))) ushort8;
 typedef unsigned short __attribute__((ext_vector_type(32))) ushort32;
 typedef __bf16 __attribute__((ext_vector_type(4))) bfloat4;
 typedef half __attribute__((ext_vector_type(4))) half4;
+typedef float __attribute__((ext_vector_type(8))) float8;
 
 // CHECK-LABEL: @test_wavegroup_id(
 // CHECK-NEXT:  entry:
@@ -304,4 +305,26 @@ void test_pk4(half4 a, half4 b, half4 c, bfloat4 ba, bfloat4 bb, bfloat4 bc, hal
 void test_wmma_tr(ushort8 a, ushort32 b, ushort8* outa, ushort32* outb) {
   *outa = __builtin_amdgcn_wmma_tr_16x16_b16(a);
   *outb = __builtin_amdgcn_wmma_tr_32x32_b16(b);
+}
+
+// CHECK-LABEL: @test_cvt_e5m3scale_pk8_fp4_f32(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[OUT_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
+// CHECK-NEXT:    [[SRC_ADDR:%.*]] = alloca <8 x float>, align 32, addrspace(5)
+// CHECK-NEXT:    [[SCALE_ADDR:%.*]] = alloca float, align 4, addrspace(5)
+// CHECK-NEXT:    [[OUT_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR]] to ptr
+// CHECK-NEXT:    [[SRC_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SRC_ADDR]] to ptr
+// CHECK-NEXT:    [[SCALE_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SCALE_ADDR]] to ptr
+// CHECK-NEXT:    store ptr addrspace(1) [[OUT:%.*]], ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <8 x float> [[SRC:%.*]], ptr [[SRC_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    store float [[SCALE:%.*]], ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x float>, ptr [[SRC_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.amdgcn.cvt.e5m3scale.pk8.fp4.f32(<8 x float> [[TMP0]], float [[TMP1]])
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store i32 [[TMP2]], ptr addrspace(1) [[TMP3]], align 4
+// CHECK-NEXT:    ret void
+//
+void test_cvt_e5m3scale_pk8_fp4_f32(global uint *out, float8 src, float scale) {
+  *out = __builtin_amdgcn_cvt_e5m3scale_pk8_fp4_f32(src, scale);
 }

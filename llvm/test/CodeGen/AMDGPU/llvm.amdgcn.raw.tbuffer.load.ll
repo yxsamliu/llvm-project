@@ -4,9 +4,9 @@
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck -check-prefix=GFX10 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1100 | FileCheck -check-prefix=GFX11 %s
 ;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefix=GFX12 %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefix=GFX13 %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefixes=GFX13,GFX13-SDAG %s
 ;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 | FileCheck -check-prefix=GFX12 %s
-;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefix=GFX13 %s
+;RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1300 | FileCheck -check-prefixes=GFX13,GFX13-GISEL %s
 
 define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>, <4 x float>} @tbuffer_load(<4 x i32> inreg) {
 ; PREGFX10-LABEL: tbuffer_load:
@@ -327,14 +327,26 @@ define amdgpu_vs {<4 x float>, <4 x float>, <4 x float>} @tbuffer_load_immoffs_l
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
-; GFX13-LABEL: tbuffer_load_immoffs_large:
-; GFX13:       ; %bb.0:
-; GFX13-NEXT:    s_mov_b32 s5, 61
-; GFX13-NEXT:    s_clause 0x2
-; GFX13-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s[0:3], s5 format:[BUF_FMT_8_8_8_8_SINT] offset:4095
-; GFX13-NEXT:    tbuffer_load_format_xyzw v[4:7], off, s[0:3], s4 format:[BUF_FMT_32_32_32_32_SINT] offset:73
-; GFX13-NEXT:    tbuffer_load_format_xyzw v[8:11], off, s[0:3], s4 format:77 offset:1
-; GFX13-NEXT:    ; return to shader part epilog
+; GFX13-SDAG-LABEL: tbuffer_load_immoffs_large:
+; GFX13-SDAG:       ; %bb.0:
+; GFX13-SDAG-NEXT:    v_dual_mov_b32 v0, 61 :: v_dual_mov_b32 v8, s4
+; GFX13-SDAG-NEXT:    s_clause 0x2
+; GFX13-SDAG-NEXT:    tbuffer_load_format_xyzw v[0:3], v0, s[0:3], null format:[BUF_FMT_8_8_8_8_SINT] offen offset:4095
+; GFX13-SDAG-NEXT:    tbuffer_load_format_xyzw v[4:7], v8, s[0:3], null format:[BUF_FMT_32_32_32_32_SINT] offen offset:73
+; GFX13-SDAG-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], null format:77 offen offset:1
+; GFX13-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX13-GISEL-LABEL: tbuffer_load_immoffs_large:
+; GFX13-GISEL:       ; %bb.0:
+; GFX13-GISEL-NEXT:    s_add_co_i32 s5, s4, 0x49
+; GFX13-GISEL-NEXT:    s_add_co_i32 s4, s4, 1
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-NEXT:    v_dual_mov_b32 v4, s5 :: v_dual_mov_b32 v8, s4
+; GFX13-GISEL-NEXT:    s_clause 0x2
+; GFX13-GISEL-NEXT:    tbuffer_load_format_xyzw v[0:3], off, s[0:3], null format:[BUF_FMT_8_8_8_8_SINT] offset:4156
+; GFX13-GISEL-NEXT:    tbuffer_load_format_xyzw v[4:7], v4, s[0:3], null format:[BUF_FMT_32_32_32_32_SINT] offen
+; GFX13-GISEL-NEXT:    tbuffer_load_format_xyzw v[8:11], v8, s[0:3], null format:77 offen
+; GFX13-GISEL-NEXT:    ; return to shader part epilog
     %vdata     = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 4095, i32 61, i32 47, i32 0)
     %vdata_glc = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 73, i32 %soffs, i32 62, i32 0)
     %vdata_slc = call <4 x i32> @llvm.amdgcn.raw.tbuffer.load.v4i32(<4 x i32> %0, i32 1, i32 %soffs, i32 77, i32 0)

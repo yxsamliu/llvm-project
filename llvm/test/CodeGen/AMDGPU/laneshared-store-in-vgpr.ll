@@ -44,9 +44,9 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    s_add_co_i32 s3, s3, 4
 ; GFX1300-NEXT:    s_set_gpr_idx_u32 idx1, s6
 ; GFX1300-NEXT:    s_cmp_eq_u32 s5, s4
+; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
-; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    global_load_b32 g1[0], v1, s[0:1] scale_offset
 ; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    s_cbranch_scc1 .LBB0_3
@@ -55,8 +55,8 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    s_lshr_b32 s6, s3, 2
 ; GFX1300-NEXT:    s_add_co_i32 s3, s3, 4
 ; GFX1300-NEXT:    s_set_gpr_idx_u32 idx1, s6
-; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    global_load_b32 g1[0], v1, s[0:1] scale_offset
 ; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    s_branch .LBB0_3
@@ -67,9 +67,9 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    s_add_co_i32 s4, s4, 1
 ; GFX1300-NEXT:    s_set_gpr_idx_u32 idx1, s3
 ; GFX1300-NEXT:    s_cmp_eq_u32 s4, s2
+; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    s_wait_kmcnt 0x0
 ; GFX1300-NEXT:    s_wait_loadcnt 0x0
-; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    global_load_b32 g1[0], v0, s[0:1] scale_offset
 ; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:    s_cbranch_scc1 .LBB0_8
@@ -81,11 +81,13 @@ define private amdgpu_kernel void @_Z11wasp_kernelPiPKii_0_rank(ptr addrspace(1)
 ; GFX1300-NEXT:    v_add_co_u32 v0, vcc_lo, s0, v0
 ; GFX1300-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1300-NEXT:    v_add_co_ci_u32_e64 v1, null, s1, v1, vcc_lo
-; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    s_set_vgpr_frames 64 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; GFX1300-NEXT:    s_wait_loadcnt 0x0
 ; GFX1300-NEXT:    global_load_b32 g1[1], v[0:1], off offset:4
 ; GFX1300-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; GFX1300-NEXT:  .LBB0_8:
+; GFX1300-NEXT:    s_barrier_signal -1
+; GFX1300-NEXT:    s_barrier_wait -1
 ; GFX1300-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.signal(i32 -1)
   %4 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -179,6 +181,8 @@ define protected amdgpu_kernel void @_Z11wasp_kernelPiPKii(ptr addrspace(1) noun
 ; GFX1300-NEXT:    s_add_pc_i64 .L_Z11wasp_kernelPiPKii_0_rank@rel64-8
 ; GFX1300-NEXT:  .LBB1_2:
 ; GFX1300-NEXT:    s_add_gpr_idx_u32 idx0, 2
+; GFX1300-NEXT:    s_barrier_signal -1
+; GFX1300-NEXT:    s_barrier_wait -1
 ; GFX1300-NEXT:    s_endpgm
   call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @_Z11wasp_kernelPiPKii_0_rank)
   ret void

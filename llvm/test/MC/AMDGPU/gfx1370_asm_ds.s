@@ -4,17 +4,105 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1370 -mattr=+wavefrontsize64 -show-encoding < %s 2>&1 | FileCheck -check-prefix=GFX1370-W64-ERR -implicit-check-not=error: %s
 
 ds_tiled_load_half_b64 v1, v0
-// GFX1370: ds_tiled_load_half_b64 v1, v0 ; encoding: [0x00,0x00,0xc4,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370: ds_tiled_load_half_b64 v1, v0 ; encoding: [0x00,0x00,0x58,0xdb,0x00,0x00,0x00,0x01]
 // GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 ds_tiled_load_b64 v[1:2], v0
-// GFX1370: ds_tiled_load_b64 v[1:2], v0 ; encoding: [0x00,0x00,0xc8,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370: ds_tiled_load_b64 v[1:2], v0 ; encoding: [0x00,0x00,0x5c,0xdb,0x00,0x00,0x00,0x01]
 // GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 ds_tiled_load_2x2_b128 v[1:4], v0
-// GFX1370: ds_tiled_load_2x2_b128 v[1:4], v0 ; encoding: [0x00,0x00,0xcc,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370: ds_tiled_load_2x2_b128 v[1:4], v0 ; encoding: [0x00,0x00,0x64,0xdb,0x00,0x00,0x00,0x01]
 // GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
 
 ds_tiled_load_b128 v[1:4], v0
-// GFX1370: ds_tiled_load_b128 v[1:4], v0 ; encoding: [0x00,0x00,0xc0,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370: ds_tiled_load_b128 v[1:4], v0 ; encoding: [0x00,0x00,0x60,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_half_b64 v1, v0
+// GFX1370: ds_tiled_load_mcast_half_b64 v1, v0 ; encoding: [0x00,0x00,0x68,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_b64 v[1:2], v0
+// GFX1370: ds_tiled_load_mcast_b64 v[1:2], v0 ; encoding: [0x00,0x00,0x6c,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_b128 v[1:4], v0
+// GFX1370: ds_tiled_load_mcast_b128 v[1:4], v0 ; encoding: [0x00,0x00,0x70,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_b128 v[1:4], v0
+// GFX1370: ds_tiled_load_mcast_2x2_b128 v[1:4], v0 ; encoding: [0x00,0x00,0x74,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U1
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U1 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I1
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I1 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x01,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U2
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U2 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x02,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I2
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I2 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x03,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U4
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U4 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x04,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[0:1], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[0:1], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4 ; encoding: [0x00,0x00,0x4c,0xdb,0x02,0x00,0x05,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_extend_b64 v[254:255], v255 offset:65535 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4
+// GFX1370: ds_tiled_load_mcast_extend_b64 v[254:255], v255 offset:65535 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4 ; encoding: [0xff,0xff,0x4c,0xdb,0xff,0x00,0x05,0xfe]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U1
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U1 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x00,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I1
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I1 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x01,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U2
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U2 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x02,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I2
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I2 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x03,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_U4
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_U4 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x04,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 offset:0 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[0:3], v2 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4 ; encoding: [0x00,0x00,0x50,0xdb,0x02,0x00,0x05,0x00]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_tiled_load_mcast_2x2_extend_b128 v[252:255], v255 offset:65535 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4
+// GFX1370: ds_tiled_load_mcast_2x2_extend_b128 v[252:255], v255 offset:65535 extend_matrix_fmt:EXTEND_MATRIX_FMT_I4 ; encoding: [0xff,0xff,0x50,0xdb,0xff,0x00,0x05,0xfc]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_load_mcast_tr4_b64 v[1:2], v0
+// GFX1370: ds_load_mcast_tr4_b64 v[1:2], v0 ; encoding: [0x00,0x00,0x94,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_load_mcast_tr6_b96 v[1:3], v0
+// GFX1370: ds_load_mcast_tr6_b96 v[1:3], v0 ; encoding: [0x00,0x00,0x98,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_load_mcast_tr8_b64 v[1:2], v0
+// GFX1370: ds_load_mcast_tr8_b64 v[1:2], v0 ; encoding: [0x00,0x00,0x90,0xdb,0x00,0x00,0x00,0x01]
+// GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32
+
+ds_load_mcast_tr16_b128 v[1:4], v0
+// GFX1370: ds_load_mcast_tr16_b128 v[1:4], v0 ; encoding: [0x00,0x00,0x8c,0xdb,0x00,0x00,0x00,0x01]
 // GFX1370-W64-ERR: :[[@LINE-2]]:1: error: instruction requires wavesize=32

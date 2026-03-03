@@ -31,10 +31,10 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(36), 0
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(37), 0xbc614e
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0xbc614e
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-NEXT:    s_setreg_b32 hwreg(36), s0
+; GFX1260-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
 ; GFX1260-NEXT:    s_sema_set_limit 0x2000
 ; GFX1260-NEXT:    s_sema_set_limit 0x4000
 ; GFX1260-NEXT:    s_sema_set_limit 0x2003
@@ -51,9 +51,9 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem, i32 poison)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 u0xF0000000)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 %arg)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)
@@ -86,9 +86,9 @@ define void @test_sema_non_kernel(i32 inreg %arg) {
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(36), 0
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(37), 0xbc614e
-; GFX1260-NEXT:    s_setreg_b32 hwreg(36), s0
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0xbc614e
+; GFX1260-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
 ; GFX1260-NEXT:    s_sema_set_limit 0x2000
 ; GFX1260-NEXT:    s_sema_set_limit 0x4000
 ; GFX1260-NEXT:    s_sema_set_limit 0x2003
@@ -105,9 +105,9 @@ define void @test_sema_non_kernel(i32 inreg %arg) {
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 0)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem, i32 poison)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 %arg)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 u0x10000000)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem3)
@@ -132,14 +132,14 @@ define void @test_sema_callee_func() {
 ; GFX1260:       ; %bb.0:
 ; GFX1260-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(37), 0x43
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0x43
 ; GFX1260-NEXT:    s_sema_set_limit 0x4012
 ; GFX1260-NEXT:    s_sema_signal 2
 ; GFX1260-NEXT:    s_sema_wait 1
 ; GFX1260-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem2, i32 67)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 18)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   ret void
 }
@@ -169,7 +169,7 @@ define amdgpu_kernel void @test_sema_calling_kernel_1(i32 %arg) {
 ; GFX1260-NEXT:    s_mov_b32 s32, 0
 ; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1260-NEXT:    s_mov_b64 s[10:11], s[6:7]
-; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(36), 0x63
+; GFX1260-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0x63
 ; GFX1260-NEXT:    s_get_pc_i64 s[6:7]
 ; GFX1260-NEXT:    s_add_nc_u64 s[6:7], s[6:7], test_sema_callee_func@gotpcrel+4
 ; GFX1260-NEXT:    v_mov_b32_e32 v31, v0
@@ -186,7 +186,7 @@ define amdgpu_kernel void @test_sema_calling_kernel_1(i32 %arg) {
 ; GFX1260-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 99)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 poison)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
   call void @test_sema_callee_func()
   ret void
@@ -221,7 +221,7 @@ define amdgpu_kernel void @test_sema_calling_kernel_2(i32 %arg) {
 ; GFX1260-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; GFX1260-NEXT:    s_load_b32 s6, s[4:5], 0x24
 ; GFX1260-NEXT:    s_wait_kmcnt 0x0
-; GFX1260-NEXT:    s_setreg_b32 hwreg(36), s6
+; GFX1260-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s6
 ; GFX1260-NEXT:    s_get_pc_i64 s[6:7]
 ; GFX1260-NEXT:    s_add_nc_u64 s[6:7], s[6:7], test_sema_callee_func@gotpcrel+4
 ; GFX1260-NEXT:    v_mov_b32_e32 v31, v0
@@ -238,7 +238,7 @@ define amdgpu_kernel void @test_sema_calling_kernel_2(i32 %arg) {
 ; GFX1260-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem3, i32 %arg)
   call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3, i32 poison)
   call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
   call void @test_sema_callee_func()
   ret void

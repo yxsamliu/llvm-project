@@ -214,6 +214,8 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry(i64 %idx0, i64 %idx1, 
   ; GFX13-NEXT:   $vgpr7 = COPY killed renamable $sgpr19, implicit $exec
   ; GFX13-NEXT:   $sgpr6_sgpr7 = COPY killed renamable $sgpr2_sgpr3
   ; GFX13-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr20_sgpr21, @test_nonentry, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit undef $sgpr12, implicit undef $sgpr13, implicit undef $sgpr14, implicit undef $sgpr15, implicit killed $vgpr31, implicit $vgpr0, implicit killed $vgpr1, implicit killed $vgpr2, implicit killed $vgpr3, implicit killed $vgpr4, implicit killed $vgpr5, implicit killed $vgpr6, implicit killed $vgpr7
+  ; GFX13-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; GFX13-NEXT:   S_BARRIER_WAIT -1
   ; GFX13-NEXT:   S_ENDPGM 0
 bb:
   %o.1 = getelementptr [40 x i32], ptr addrspace(10) @exchange, i64 0, i64 %idx0
@@ -246,6 +248,8 @@ define dso_local amdgpu_kernel void @test_wavegroup_entry_private(i64 %idx0, i64
   ; GFX13-NEXT:   $sgpr1 = S_ADD_U32 $sgpr1, 40, implicit-def $scc
   ; GFX13-NEXT:   $idx0 = S_SET_GPR_IDX_U32 $sgpr1
   ; GFX13-NEXT:   $sgpr33 = S_MUL_I32 $sgpr0, $sgpr8
+  ; GFX13-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; GFX13-NEXT:   S_BARRIER_WAIT -1
   ; GFX13-NEXT:   S_ENDPGM 0
 bb:
   %p = alloca [20 x i32], align 4, addrspace(5)

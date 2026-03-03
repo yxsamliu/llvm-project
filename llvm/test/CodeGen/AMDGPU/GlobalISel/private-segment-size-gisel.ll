@@ -15,6 +15,8 @@ define amdgpu_kernel void @wavegroup_kernel_3x64x2(ptr addrspace(1) %p) "amdgpu-
   ; CHECK-NEXT:   renamable $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM killed renamable $sgpr4_sgpr5, 0, 0 :: (dereferenceable invariant load (p1) from %ir.p.kernarg.offset1, align 16, addrspace 4)
   ; CHECK-NEXT:   renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
   ; CHECK-NEXT:   GLOBAL_STORE_DWORD_SADDR killed renamable $vgpr0, renamable $vgpr0, killed renamable $sgpr0_sgpr1, 0, 0, implicit $exec :: (store (s32) into %ir.p.load, addrspace 1)
+  ; CHECK-NEXT:   S_BARRIER_SIGNAL_IMM -1
+  ; CHECK-NEXT:   S_BARRIER_WAIT -1
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %p0 = getelementptr i32, ptr addrspace(1) %p, i32 0

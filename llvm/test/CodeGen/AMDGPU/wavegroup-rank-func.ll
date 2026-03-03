@@ -66,6 +66,8 @@ define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(
 ; CHECK-NEXT:    v_mov_b32_e32 g1[97], v16
 ; CHECK-NEXT:    v_mov_b32_e32 g1[98], v17
 ; CHECK-NEXT:    s_sema_signal 17
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %vec30 = load <3 x i32>, ptr addrspace(1) %inbuf, align 16
@@ -90,7 +92,7 @@ entry:
   %wei.p2 = getelementptr <3 x i32>, ptr addrspace(10) @weights, i64 24
   store <3 x i32> %wei32, ptr addrspace(10) %wei.p2, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -104,8 +106,10 @@ define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], 0, g1[0:8], g1[10:12], g1[14:16], g1[18:20] aux_data:42 clamp idxs:0x111101
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 g1[22:25], g1[0:8], [g1[10:12], g1[14:16], g1[18:20]], 0 shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp idxs:0x111101
 ; CHECK-NEXT:    s_sema_signal 33
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 7)
@@ -116,9 +120,9 @@ entry:
   %vec31 = load <3 x i32>, ptr addrspace(10) @col_left, align 16
   %vec32 = load <3 x i32>, ptr addrspace(10) @col_right, align 16
   %wei = load <9 x i32>, ptr addrspace(10) @weights, align 64
-  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
+  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 10, i1 true)
   store <8 x half> %0, ptr addrspace(10) @out, align 16, !tbaa !4
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 
@@ -134,9 +138,11 @@ define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace
 ; CHECK-NEXT:    s_barrier_wait 1
 ; CHECK-NEXT:    s_sema_wait 1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_set_vgpr_frames 4 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b128 v0, g1[22:25], s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
@@ -181,6 +187,8 @@ define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf,
 ; CHECK-NEXT:    s_add_pc_i64 .Loutput@rel64-8
 ; CHECK-NEXT:  .LBB3_6: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 1
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.wavegroup.rank(i32 0, ptr @input)
@@ -235,6 +243,8 @@ define private amdgpu_kernel void @input2(ptr addrspace(1) %inbuf, ptr addrspace
 ; CHECK-NEXT:    ds_store_b96 v18, v[12:14] offset:192
 ; CHECK-NEXT:    ds_store_b96 v18, v[15:17] offset:384
 ; CHECK-NEXT:    s_sema_signal 17
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   %vec30 = load <3 x i32>, ptr addrspace(1) %inbuf, align 16
@@ -259,7 +269,7 @@ entry:
   %wei.p2 = getelementptr <3 x i32>, ptr addrspace(3) @weights2, i64 24
   store <3 x i32> %wei32, ptr addrspace(3) %wei.p2, align 64
 
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem1, i32 poison)
   ret void
 }
 
@@ -280,9 +290,11 @@ define private amdgpu_kernel void @compute2(ptr addrspace(1) %inbuf, ptr addrspa
 ; CHECK-NEXT:    ds_load_b96 v[15:17], v18 offset:64
 ; CHECK-NEXT:    ds_load_b32 v8, v18 offset:32
 ; CHECK-NEXT:    s_wait_dscnt 0x0
-; CHECK-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], 0, v[0:8], v[15:17], v[9:11], v[12:14] aux_data:42 clamp
+; CHECK-NEXT:    v_convolve_f16_fp8_fp8 v[0:3], v[0:8], [v[15:17], v[9:11], v[12:14]], 0 shape:SHAPE_4X4X16 filter:FILTER_3X3 clamp
 ; CHECK-NEXT:    ds_store_b128 v18, v[0:3] offset:112
 ; CHECK-NEXT:    s_sema_signal 33
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar1, i32 7)
@@ -293,9 +305,9 @@ entry:
   %vec31 = load <3 x i32>, ptr addrspace(3) @col_left2, align 16
   %vec32 = load <3 x i32>, ptr addrspace(3) @col_right2, align 16
   %wei = load <9 x i32>, ptr addrspace(3) @weights2, align 64
-  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 42, i1 true)
+  %0 = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> %wei, <3 x i32> %vec30, <3 x i32> %vec31, <3 x i32> %vec32, i32 10, i1 true)
   store <8 x half> %0, ptr addrspace(3) @out2, align 16, !tbaa !4
-  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2, i32 poison)
   ret void
 }
 
@@ -314,6 +326,8 @@ define private amdgpu_kernel void @output2(ptr addrspace(1) %inbuf, ptr addrspac
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    global_store_b128 v4, v[0:3], s[0:1]
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) @bar2, i32 7)
@@ -356,6 +370,8 @@ define amdgpu_kernel void @main2(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf
 ; CHECK-NEXT:    s_add_pc_i64 .Loutput2@rel64-8
 ; CHECK-NEXT:  .LBB7_6: ; %entry
 ; CHECK-NEXT:    s_add_gpr_idx_u32 idx0, 5
+; CHECK-NEXT:    s_barrier_signal -1
+; CHECK-NEXT:    s_barrier_wait -1
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.wavegroup.rank(i32 0, ptr @input2)

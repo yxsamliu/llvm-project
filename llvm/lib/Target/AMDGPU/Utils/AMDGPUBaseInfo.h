@@ -99,7 +99,7 @@ struct GcnBufferFormatInfo {
 };
 
 struct MAIInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -127,9 +127,9 @@ struct True16D16Info {
 };
 
 struct WMMAInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_wmma_xdl;
-  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/1/2 = which neg_lo bit is used
+  uint8_t PredXDLIdx; // 0xff = no pred_xdl, 0/2 = which neg_lo bit is used
 };
 
 struct FLATInfo {
@@ -429,7 +429,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int getSOPPWithRelaxation(uint16_t Opcode);
+int64_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -536,8 +536,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
                            bool IsG16Supported);
 
 struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
+  uint32_t Opcode;
+  uint32_t BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
@@ -694,7 +694,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int getMCOpcode(uint16_t Opcode, unsigned Gen);
+int64_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -1181,6 +1181,26 @@ struct Waitcnt {
   friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait);
 };
 
+/// Represents the hardware counter limits for different wait count types.
+struct HardwareLimits {
+  unsigned LoadcntMax; // Corresponds to Vmcnt prior to gfx12.
+  unsigned ExpcntMax;
+  unsigned DscntMax;     // Corresponds to LGKMcnt prior to gfx12.
+  unsigned StorecntMax;  // Corresponds to VScnt in gfx10/gfx11.
+  unsigned SamplecntMax; // gfx12+ only.
+  unsigned BvhcntMax;    // gfx12+ only.
+  unsigned KmcntMax;     // gfx12+ only.
+  unsigned XcntMax;      // gfx1250.
+  unsigned SwccntMax;    //
+  unsigned VaVdstMax;    // gfx12+ expert mode only.
+  unsigned VmVsrcMax;    // gfx12+ expert mode only.
+
+  HardwareLimits() = default;
+
+  /// Initializes hardware limits from ISA version.
+  HardwareLimits(const IsaVersion &IV);
+};
+
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.
 
@@ -1346,8 +1366,23 @@ bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
 /// \returns Maximum VaVdst value that can be encoded.
 unsigned getVaVdstBitMask();
 
+/// \returns Maximum VaSdst value that can be encoded.
+unsigned getVaSdstBitMask();
+
+/// \returns Maximum VaSsrc value that can be encoded.
+unsigned getVaSsrcBitMask();
+
+/// \returns Maximum HoldCnt value that can be encoded.
+unsigned getHoldCntBitMask(const IsaVersion &Version);
+
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
+
+/// \returns Maximum VaVcc value that can be encoded.
+unsigned getVaVccBitMask();
+
+/// \returns Maximum SaSdst value that can be encoded.
+unsigned getSaSdstBitMask();
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
@@ -1368,7 +1403,7 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 unsigned decodeFieldVaSsrc(unsigned Encoded);
 
 /// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded);
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
@@ -1404,7 +1439,8 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
@@ -1648,10 +1684,13 @@ bool isGFX1170Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
 bool isGFX1250Only(const MCSubtargetInfo &STI);
+bool isGFX1250(const MCSubtargetInfo &STI);
 bool isGFX1250Plus(const MCSubtargetInfo &STI);
 bool isGFX13(const MCSubtargetInfo &STI);
 bool isGFX13Plus(const MCSubtargetInfo &STI);
 bool hasWavegroups(const MCSubtargetInfo &STI);
+bool hasSemaphores(const MCSubtargetInfo &STI);
+bool hasVGPRIndexingRegisters(const MCSubtargetInfo &STI);
 bool supportsWGP(const MCSubtargetInfo &STI);
 bool isNotGFX12Plus(const MCSubtargetInfo &STI);
 bool isNotGFX11Plus(const MCSubtargetInfo &STI);
@@ -1767,6 +1806,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
   case AMDGPU::OPERAND_REG_IMM_V4FP16:
   case AMDGPU::OPERAND_REG_IMM_V4BF16:
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
@@ -1816,6 +1856,10 @@ LLVM_READNONE
 std::optional<unsigned> getInlineEncodingV2F16(uint32_t Literal);
 
 LLVM_READNONE
+std::optional<unsigned> getPKFMACF16InlineEncoding(uint32_t Literal,
+                                                   bool IsGFX11Plus);
+
+LLVM_READNONE
 bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType);
 
 LLVM_READNONE
@@ -1826,6 +1870,9 @@ bool isInlinableLiteralV2BF16(uint32_t Literal);
 
 LLVM_READNONE
 bool isInlinableLiteralV2F16(uint32_t Literal);
+
+LLVM_READNONE
+bool isPKFMACF16InlineConstant(uint32_t Literal, bool IsGFX11Plus);
 
 LLVM_READNONE
 bool isValid32BitLiteral(uint64_t Val, bool IsFP64);

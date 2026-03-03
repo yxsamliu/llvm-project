@@ -31,12 +31,14 @@ void test_amdgcn_s_sema_set_limit(void *sem)
 // CHECK-GFX1300-LABEL: @test_amdgcn_s_sema_signal(
 // CHECK-GFX1300-NEXT:  entry:
 // CHECK-GFX1300-NEXT:    [[TMP0:%.*]] = addrspacecast ptr addrspace(5) [[SEM:%.*]] to ptr addrspace(3)
-// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) [[TMP0]])
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) [[TMP0]], i32 0)
+// CHECK-GFX1300-NEXT:    tail call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) [[TMP0]], i32 [[MASK:%.*]])
 // CHECK-GFX1300-NEXT:    ret void
 //
-void test_amdgcn_s_sema_signal(void *sem)
+void test_amdgcn_s_sema_signal(void *sem, uint mask)
 {
-  __builtin_amdgcn_s_sema_signal(sem);
+  __builtin_amdgcn_s_sema_signal(sem, 0);
+  __builtin_amdgcn_s_sema_signal(sem, mask);
 }
 
 // CHECK-GFX1300-LABEL: @test_amdgcn_s_sema_wait(

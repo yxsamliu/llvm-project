@@ -7,13 +7,13 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr_trans:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp
     ; CHECK-NEXT: v_exp_f32_e32 v16, v16
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1) | instskip(NEXT) | instid1(TRANS32_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v18, v9, v9
     ; CHECK-NEXT: v_add_nc_u32_e32 v17, v17, v16
     liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
-    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
     $vgpr16 = V_EXP_F32_e32 $vgpr16, implicit $exec, implicit $mode
     $vgpr18 = V_ADD_U32_e32 $vgpr9, $vgpr9, implicit $exec
     $vgpr17 = V_ADD_U32_e32 $vgpr17, $vgpr16, implicit $exec
@@ -26,14 +26,14 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr_valu:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp
     ; CHECK-NEXT: v_exp_f32_e32 v16, v16
     ; CHECK-NEXT: s_delay_alu instid0(TRANS32_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v18, v16, v16
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1) | instid1(VALU_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v17, v18, v4
     liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
-    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
     $vgpr16 = V_EXP_F32_e32 $vgpr16, implicit $exec, implicit $mode
     $vgpr18 = V_ADD_U32_e32 $vgpr16, $vgpr16, implicit $exec
     $vgpr17 = V_ADD_U32_e32 $vgpr18, $vgpr4, implicit $exec
@@ -46,11 +46,11 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}wmma_xdl_twoaddr:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] clamp
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16 clamp
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v18, v9, v9
     liveins: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr9, $vgpr16, $vgpr17, $vgpr18
-    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, -1, 0, 0, implicit $exec
+    $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr killed renamable $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, -1, 0, 0, implicit $exec
     $vgpr18 = V_ADD_U32_e32 $vgpr9, $vgpr9, implicit $exec
 ...
 
@@ -61,11 +61,11 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}swmma_xdl_twoaddr:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_swmma_f16_16x16_f16 v[12:15], v[0:3], v[4:11], v[12:15], v16 sparse_index_odd clamp
+    ; CHECK-NEXT: v_swmma_f16_16x16_f16 v[12:15], v[0:3], v[4:11], v[12:15], v16 k:32 index_set:MATRIX_SPARSE_INDEX_ODD clamp
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v18, v12, v12
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, $vgpr18
-    $vgpr12_vgpr13_vgpr14_vgpr15 = V_SWMMA_F16_16X16X32_F16_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, -1, -1, 0, 0, implicit $exec
+    $vgpr12_vgpr13_vgpr14_vgpr15 = V_SWMMA_F16_16X16X32_F16_twoaddr $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16, 262144, -1, 0, 0, implicit $exec
     $vgpr18 = V_ADD_U32_e32 $vgpr12, $vgpr12, implicit $exec
 ...
 
@@ -113,7 +113,7 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}convolve:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_convolve_f32_iu4 g1[0:3], v[0:3], v[4:5], g1[4] aux_data:3 clamp idxs:0x1001
+    ; CHECK-NEXT: 	v_convolve_f32_iu4 g1[0:3], v[4:5], g1[4], v[0:3] shape:SHAPE_4X2X16 filter:FILTER_1X1 iter:1 clamp idxs:0x1001
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
     ; CHECK-NEXT: v_add_nc_u32_e32 v5, v0, v0
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5
@@ -128,9 +128,9 @@ body: |
   bb.0:
     ; CHECK-LABEL: {{^}}convolve_non_accum:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_convolve_f32_iu4 v[0:3], v[0:3], v[4:5], v4
+    ; CHECK-NEXT: v_convolve_f32_iu4 v[0:3], v[4:5], v4, v[0:3] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
-    ; CHECK-NEXT: v_convolve_f32_iu4 v[4:7], v[4:7], v[4:5], v0
+    ; CHECK-NEXT: v_convolve_f32_iu4 v[4:7], v[4:5], v0, v[4:7] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_CONVOLVE_F32_IU4_1x1_4x2_ITER_1 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr4, $vgpr0, $vgpr0, $vgpr0, 0, 0, 0, 0, implicit $exec
     $vgpr4_vgpr5_vgpr6_vgpr7 = V_CONVOLVE_F32_IU4_1x1_4x2_ITER_1 $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr4_vgpr5, $vgpr0, $vgpr4, $vgpr4, $vgpr4, 0, 0, 0, 0, implicit $exec
@@ -144,8 +144,8 @@ body: |
     bb.0:
     ; CHECK-LABEL: {{^}}convolve_accum:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[8:11], 0, v[0:1], v4, v5
-    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[0:3], v[8:11], v[2:3], v6, v7
+    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[8:11], v[0:1], [v4, v5], 0 shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
+    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[0:3], v[2:3], [v6, v7], v[8:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     $vgpr8_vgpr9_vgpr10_vgpr11 = contract V_CONVOLVE_F16_BF8_BF8_1x1_4x4_ITER_2 0, $vgpr0_vgpr1, $vgpr4, $vgpr5, undef $vgpr0, undef $vgpr0, 0, 0, 0, 0, implicit $exec
     $vgpr0_vgpr1_vgpr2_vgpr3 = contract V_CONVOLVE_F16_BF8_BF8_1x1_4x4_ITER_2 $vgpr8_vgpr9_vgpr10_vgpr11, $vgpr2_vgpr3, $vgpr6, $vgpr7, undef $vgpr0, undef $vgpr0, 0, 0, 0, 0, implicit $exec
@@ -162,8 +162,8 @@ body: |
     ; CHECK: %bb.0:
     ; CHECK-NEXT: v_add_nc_u32_e32 v1, v0, v0
     ; CHECK-NEXT: s_delay_alu instid0(VALU_DEP_1)
-    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[8:11], v[0:3], v[0:1], v4, v5
-    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[0:3], v[8:11], v[2:3], v6, v7
+    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[8:11], v[0:1], [v4, v5], v[0:3] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
+    ; CHECK-NEXT: v_convolve_f16_bf8_bf8 v[0:3], v[2:3], [v6, v7], v[8:11] shape:SHAPE_8X4X8 filter:FILTER_1X1 iter:1
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7
     $vgpr1 = V_ADD_U32_e32 $vgpr0, $vgpr0, implicit $exec
     $vgpr8_vgpr9_vgpr10_vgpr11 = contract V_CONVOLVE_F16_BF8_BF8_1x1_4x4_ITER_2 $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr0_vgpr1, $vgpr4, $vgpr5, undef $vgpr0, undef $vgpr0, 0, 0, 0, 0, implicit $exec
@@ -179,11 +179,11 @@ body: |
     bb.0:
     ; CHECK-LABEL: {{^}}wmma_accum:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11]
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[12:13], v[14:15], v[4:11]
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[12:13], v[14:15], v[4:11] k:16
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19
-    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $exec
-    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr12_vgpr13, $vgpr14_vgpr15, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr12_vgpr13, $vgpr14_vgpr15, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...
@@ -195,12 +195,12 @@ body: |
     bb.0:
     ; CHECK-LABEL: {{^}}wmma_non_accum:
     ; CHECK: %bb.0:
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11]
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[4:11], v[0:1], v[2:3], v[4:11] k:16
     ; CHECK-NEXT: s_delay_alu instid0(XDL_DEP_1)
-    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[12:19], v[4:5], v[14:15], v[12:19]
+    ; CHECK-NEXT: v_wmma_f32_16x16_fp8_fp8 v[12:19], v[4:5], v[14:15], v[12:19] k:16
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19
-    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, implicit $exec
-    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr4_vgpr5, $vgpr14_vgpr15, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, implicit $exec
+    early-clobber $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11, 0, 0, 0, 0, implicit $exec
+    early-clobber $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19 = V_WMMA_F32_16X16X16_FP8_FP8_twoaddr $vgpr4_vgpr5, $vgpr14_vgpr15, $vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 
 ...

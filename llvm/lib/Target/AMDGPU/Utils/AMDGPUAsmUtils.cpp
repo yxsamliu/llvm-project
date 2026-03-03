@@ -234,15 +234,19 @@ static constexpr CustomOperand Operands[] = {
   {{"HW_REG_DVGPR_ALLOC_HI"},         ID_DVGPR_ALLOC_HI,              isGFX12Plus},
   {{"HW_REG_XNACK_STATE_PRIV"},       ID_XNACK_STATE_PRIV,            isGFX1250Only},
   {{"HW_REG_XNACK_MASK"},             ID_XNACK_MASK_gfx1250,          isGFX1250Only},
-  {{"HW_REG_WAVE_SEMA1_STATE"},       ID_WAVE_SEMA1_STATE,            isGFX13Plus},
-  {{"HW_REG_WAVE_SEMA2_STATE"},       ID_WAVE_SEMA2_STATE,            isGFX13Plus},
-  {{"HW_REG_WAVE_SEMA3_STATE"},       ID_WAVE_SEMA3_STATE,            isGFX13Plus},
-  {{"HW_REG_WAVE_SEMA4_STATE"},       ID_WAVE_SEMA4_STATE,            isGFX13Plus},
-  {{"HW_REG_WAVE_SEMA5_STATE"},       ID_WAVE_SEMA5_STATE,            isGFX13Plus},
+  {{"HW_REG_WAVE_SEMA1_STATE"},       ID_WAVE_SEMA1_STATE,            hasSemaphores},
+  {{"HW_REG_WAVE_SEMA2_STATE"},       ID_WAVE_SEMA2_STATE,            hasSemaphores},
+  {{"HW_REG_WAVE_SEMA3_STATE"},       ID_WAVE_SEMA3_STATE,            hasSemaphores},
+  {{"HW_REG_WAVE_SEMA4_STATE"},       ID_WAVE_SEMA4_STATE,            hasSemaphores},
+  {{"HW_REG_WAVE_SEMA5_STATE"},       ID_WAVE_SEMA5_STATE,            hasSemaphores},
+  // *_SEMA6_STATE and *_SEMA7_STATE are unsupported and dont do anything yet.
+  {{"HW_REG_WAVE_SEMA6_STATE"},       ID_WAVE_SEMA6_STATE,            hasSemaphores},
+  {{"HW_REG_WAVE_SEMA7_STATE"},       ID_WAVE_SEMA7_STATE,            hasSemaphores},
 
-  {{"HW_REG_WAVE_GPR_MSB_IDX0"},      ID_WAVE_GPR_MSB_IDX0,           isGFX13Plus},
-  {{"HW_REG_WAVE_GPR_IDX123"},        ID_WAVE_GPR_IDX123,             isGFX13Plus},
+  {{"HW_REG_WAVE_GPR_MSB_IDX0"},      ID_WAVE_GPR_MSB_IDX0,           hasVGPRIndexingRegisters},
+  {{"HW_REG_WAVE_GPR_IDX123"},        ID_WAVE_GPR_IDX123,             hasVGPRIndexingRegisters},
 
+  {{"HW_REG_WAVE_SEMA_MODE"},         ID_WAVE_SEMA_MODE,              hasSemaphores},
 };
 // clang-format on
 // NOLINTEND

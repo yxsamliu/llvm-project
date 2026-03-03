@@ -125,7 +125,7 @@ static bool lowerExecSyncGlobalVariables(
     if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
       unsigned BarrierScope = ExtTy->getIntParameter(0);
       unsigned BarId = NumBarAbsolutes[BarrierScope] + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
       NumBarAbsolutes[BarrierScope] += BarCnt;
 
       // 4 bits for alignment, 5 bits for the barrier num,
@@ -189,7 +189,7 @@ static bool lowerExecSyncGlobalVariables(
         unsigned BarrierScope = ExtTy->getIntParameter(0);
         unsigned BarId = Kernel2BarId[BarrierScope][F];
         BarId += NumBarAbsolutes[BarrierScope] + 1;
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        unsigned BarCnt = GV->getGlobalSize(DL) / 16;
         Kernel2BarId[BarrierScope][F] += BarCnt;
         Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
 
