@@ -52,6 +52,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-lower-vgpr-encoding"
 
+static constexpr unsigned SetregModeToVGPRMSBHazardNOPs = 2;
+
 namespace {
 
 class AMDGPULowerVGPREncoding {
@@ -182,6 +184,11 @@ private:
   /// new one was inserted.
   bool handleSetregMode(MachineInstr &MI);
 
+  /// On GFX1250, S_SET_VGPR_MSB immediately after S_SETREG_IMM32_B32
+  /// targeting MODE is silently dropped due to a hardware hazard. Insert a
+  /// V_NOP between them if needed.
+  void insertSetregModeHazardNop(MachineBasicBlock::instr_iterator InsertPt);
+
   /// Update bits[12:19] of the imm operand in S_SETREG_IMM32_B32 to contain
   /// the VGPR MSB mode value. \returns true if the immediate was changed.
   bool updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
@@ -215,6 +222,7 @@ bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
 
   I = handleClause(I);
   I = handleCoissue(I);
+  insertSetregModeHazardNop(I);
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(NewMode.encode() | OldModeBits);
 
@@ -438,11 +446,37 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
 
   // imm32[12:19] doesn't match VGPR MSBs - insert s_set_vgpr_msb after
   // the original instruction to restore the correct value.
-  MachineBasicBlock::iterator InsertPt = std::next(MI.getIterator());
+  MachineBasicBlock::instr_iterator InsertPt = std::next(MI.getIterator());
+  insertSetregModeHazardNop(InsertPt);
   MostRecentModeSet = BuildMI(*MBB, InsertPt, MI.getDebugLoc(),
                               TII->get(AMDGPU::S_SET_VGPR_MSB))
                           .addImm(ModeValue);
   return true;
+}
+
+void AMDGPULowerVGPREncoding::insertSetregModeHazardNop(
+    MachineBasicBlock::instr_iterator InsertPt) {
+  if (InsertPt == MBB->instr_begin())
+    return;
+
+  auto Prev = std::prev(InsertPt);
+  while (Prev != MBB->instr_begin() && Prev->isMetaInstruction())
+    --Prev;
+
+  if (Prev->getOpcode() != AMDGPU::S_SETREG_IMM32_B32)
+    return;
+
+  using namespace AMDGPU::Hwreg;
+  const MachineOperand *SIMM16Op =
+      TII->getNamedOperand(*Prev, AMDGPU::OpName::simm16);
+  auto [HwRegId, Offset, Size] = HwregEncoding::decode(SIMM16Op->getImm());
+  (void)Offset;
+  (void)Size;
+  if (HwRegId != ID_MODE)
+    return;
+
+  for (unsigned I = 0; I < SetregModeToVGPRMSBHazardNOPs; ++I)
+    BuildMI(*MBB, InsertPt, {}, TII->get(AMDGPU::V_NOP_e32));
 }
 
 bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {

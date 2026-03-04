@@ -94,6 +94,8 @@ body:             |
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 146108, 30721, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: V_NOP_e32
+    ; CHECK-NEXT: V_NOP_e32
     ; CHECK-NEXT: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: S_ENDPGM 0
     $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
@@ -206,6 +208,8 @@ body:             |
     ; CHECK-NEXT: S_SET_VGPR_MSB 64, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr0, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 4101, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: V_NOP_e32
+    ; CHECK-NEXT: V_NOP_e32
     ; CHECK-NEXT: S_SET_VGPR_MSB 16449, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr256, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
@@ -232,6 +236,8 @@ body:             |
     ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
     ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
     ; CHECK-NEXT: S_SETREG_IMM32_B32 23228, 30721, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: V_NOP_e32
+    ; CHECK-NEXT: V_NOP_e32
     ; CHECK-NEXT: S_SET_VGPR_MSB 16770, implicit-def $mode
     ; CHECK-NEXT: $vgpr512 = V_MOV_B32_e32 $vgpr513, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0
