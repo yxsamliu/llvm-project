@@ -5,6 +5,8 @@
 // This file is embedded in comgr and used when compiling HIPRTC programs
 // with the embedded libc++ headers.
 //
+// Defines mirror libcxx/include/__config_site.in — update if upstream changes.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef _LIBCPP___CONFIG_SITE
@@ -39,8 +41,9 @@
 #define _LIBCPP_LIBC_LLVM_LIBC 0
 
 // Hardening - disabled for GPU (minimal overhead)
-// Values: _LIBCPP_HARDENING_MODE_NONE = (1 << 1) = 2
-//         _LIBCPP_ASSERTION_SEMANTIC_IGNORE = (1 << 2) = 4
+// Values from libcxx/include/__configuration/hardening.h:
+//   _LIBCPP_HARDENING_MODE_NONE      = (1 << 1)
+//   _LIBCPP_ASSERTION_SEMANTIC_IGNORE = (1 << 2)
 #define _LIBCPP_HARDENING_MODE_DEFAULT (1 << 1)
 #define _LIBCPP_ASSERTION_SEMANTIC_DEFAULT (1 << 2)
 

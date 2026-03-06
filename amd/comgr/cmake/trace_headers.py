@@ -8,6 +8,7 @@ EmbedLibcxxHeaders.cmake to embed.
 import argparse
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -21,8 +22,8 @@ def trace_headers(clang, libcxx_dir, config_site, target, headers):
         test_file = f.name
 
     config_dir = tempfile.mkdtemp()
-    os.symlink(os.path.abspath(config_site),
-               os.path.join(config_dir, '__config_site'))
+    shutil.copy2(os.path.abspath(config_site),
+                 os.path.join(config_dir, '__config_site'))
 
     cmd = [
         clang, '-E', '-H',
