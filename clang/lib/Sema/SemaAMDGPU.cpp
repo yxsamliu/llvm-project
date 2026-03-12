@@ -746,6 +746,13 @@ Expr *SemaAMDGPU::ExpandAMDGPUPredicateBI(CallExpr *CE) {
   ASTContext &Ctx = getASTContext();
   QualType BoolTy = Ctx.getLogicalOperationType();
   llvm::APInt False = llvm::APInt::getZero(Ctx.getIntWidth(BoolTy));
+
+  if (!CE)
+    return *ExpandedPredicates
+                .insert(IntegerLiteral::Create(Ctx, False, BoolTy,
+                                               SourceLocation()))
+                .first;
+
   llvm::APInt True = llvm::APInt::getAllOnes(Ctx.getIntWidth(BoolTy));
   SourceLocation Loc = CE->getExprLoc();
 
