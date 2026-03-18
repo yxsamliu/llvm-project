@@ -63,6 +63,7 @@ set(PROFILE_SOURCES
   InstrProfiling.c
   InstrProfilingInternal.c
   InstrProfilingBuffer.c
+  InstrProfilingGPU.c
   InstrProfilingMerge.c
   InstrProfilingMergeFile.c
   InstrProfilingNameVar.c
@@ -73,6 +74,7 @@ set(PROFILE_SOURCES
   InstrProfilingPlatformFuchsia.c
   InstrProfilingPlatformLinux.c
   InstrProfilingPlatformOther.c
+  InstrProfilingPlatformROCm.c
   InstrProfilingPlatformWindows.c
   )
 
@@ -200,4 +202,33 @@ else()
     SOURCES ${PROFILE_SOURCES}
     ADDITIONAL_HEADERS ${PROFILE_HEADERS}
     PARENT_TARGET profile)
+endif()
+
+# Build GPU profile bitcode when AMDGPU is an enabled target.
+# This compiles InstrProfilingGPU.c to bitcode using the just-built clang
+# and installs it alongside device-libs for the driver to link.
+if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx")
+  set(_GPU_PROFILE_SRC "${CMAKE_CURRENT_SOURCE_DIR}/InstrProfilingGPU.c")
+  if(TARGET clang AND EXISTS "${_GPU_PROFILE_SRC}")
+    set(_GPU_PROFILE_BC "${CMAKE_CURRENT_BINARY_DIR}/InstrProfilingGPU.bc")
+    set(_GPU_PROFILE_INSTALL_DIR "lib/clang/${LLVM_VERSION_MAJOR}/amdgcn/bitcode")
+    add_custom_command(
+      OUTPUT "${_GPU_PROFILE_BC}"
+      COMMAND $<TARGET_FILE:clang>
+        --target=amdgcn-amd-amdhsa
+        -nogpulib -ffreestanding -flto
+        -Xclang -mcode-object-version=none
+        -O2 -emit-llvm -c
+        "${_GPU_PROFILE_SRC}"
+        -o "${_GPU_PROFILE_BC}"
+      DEPENDS clang "${_GPU_PROFILE_SRC}"
+      COMMENT "Building GPU profile bitcode"
+    )
+    add_custom_target(gpu-profile-bc DEPENDS "${_GPU_PROFILE_BC}")
+    add_dependencies(profile gpu-profile-bc)
+    install(FILES "${_GPU_PROFILE_BC}"
+      DESTINATION "${_GPU_PROFILE_INSTALL_DIR}"
+      RENAME "profile.bc"
+      COMPONENT gpu-profile-bc)
+  endif()
 endif()

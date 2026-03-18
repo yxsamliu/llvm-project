@@ -150,6 +150,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                              /*IsBitCodeSDL=*/true,
                              /*PostClangLink=*/false);
 
+  if (Args.getLastArg(options::OPT_fprofile_generate,
+                      options::OPT_fprofile_generate_EQ)) {
+    SmallString<128> ProfileBCPath(TC.getDriver().ResourceDir);
+    llvm::sys::path::append(ProfileBCPath, "amdgcn", "bitcode", "profile.bc");
+    if (llvm::sys::fs::exists(ProfileBCPath))
+      LldArgs.push_back(Args.MakeArgString(ProfileBCPath));
+  }
+
   LldArgs.push_back("--no-whole-archive");
 
   const char *Lld = Args.MakeArgString(getToolChain().GetProgramPath("lld"));

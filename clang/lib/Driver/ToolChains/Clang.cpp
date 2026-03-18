@@ -9627,6 +9627,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back(Args.MakeArgString(
             "--device-linker=" + TC->getTripleString() + "=" + Arg));
 
+      if (TC->getTriple().isAMDGPU() &&
+          Args.getLastArg(options::OPT_fprofile_generate,
+                          options::OPT_fprofile_generate_EQ)) {
+        SmallString<128> ProfileBCPath(C.getDriver().ResourceDir);
+        llvm::sys::path::append(ProfileBCPath, "amdgcn", "bitcode",
+                                "profile.bc");
+        if (C.getDriver().getVFS().exists(ProfileBCPath))
+          CmdArgs.push_back(Args.MakeArgString(
+              "--device-linker=" + TC->getTripleString() + "=" +
+              ProfileBCPath));
+      }
+
       // Forward the LTO mode relying on the Driver's parsing.
       if (C.getDriver().getOffloadLTOMode() == LTOK_Full)
         CmdArgs.push_back(Args.MakeArgString(
