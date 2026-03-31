@@ -5253,9 +5253,27 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       return {LargestIntTy, true, nullptr};
 
     // Try homogeneous struct to vector canonicalization.
+    // Skip if any non-splittable slice loads a sub-element of the partition
+    // (e.g., individual field load). Such element-wise read patterns would
+    // require extractelement operations after vectorization, which often
+    // causes regressions in later optimization passes. Sub-element stores
+    // (initialization) are fine since they become insertelement which is
+    // typically well-optimized. Only block on sub-element loads that indicate
+    // field-level read-modify-write patterns.
     if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
-      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
-        return {VTy, false, nullptr};
+      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL)) {
+        bool HasSubElementLoad = llvm::any_of(P, [&](const Slice &S) {
+          if (S.isSplittable() || S.isDead())
+            return false;
+          if (S.endOffset() - S.beginOffset() >= P.size())
+            return false;
+          // Check if this sub-element access is a load.
+          auto *U = S.getUse();
+          return U && isa<LoadInst>(U->getUser());
+        });
+        if (!HasSubElementLoad)
+          return {VTy, false, nullptr};
+      }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
