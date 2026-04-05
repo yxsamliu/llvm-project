@@ -5253,26 +5253,46 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       return {LargestIntTy, true, nullptr};
 
     // Try homogeneous struct to vector canonicalization.
-    // Skip if any non-splittable slice loads a sub-element of the partition
-    // (e.g., individual field load). Such element-wise read patterns would
-    // require extractelement operations after vectorization, which often
-    // causes regressions in later optimization passes. Sub-element stores
-    // (initialization) are fine since they become insertelement which is
-    // typically well-optimized. Only block on sub-element loads that indicate
-    // field-level read-modify-write patterns.
+    //
+    // For integer-element structs, only vectorize when there is at least
+    // one non-splittable whole-partition use and no sub-element loads.
+    // Without a whole-partition use, the struct is only accessed via
+    // memcpy (splittable) and sub-element stores, and the fallback
+    // integer promotion path (struct → i64) is more efficient because
+    // it keeps values in GPR. Vectorizing would force data through
+    // XMM registers and require extractelement to recover fields.
+    //
+    // For floating-point-element structs, vectorization is always
+    // beneficial since float values naturally live in XMM/vector
+    // registers.
+    //
+    // In all cases, skip if any sub-element load exists, as that
+    // requires extractelement after vectorization.
     if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
       if (auto *VTy = tryCanonicalizeStructToVector(STy, DL)) {
-        bool HasSubElementLoad = llvm::any_of(P, [&](const Slice &S) {
+        bool IsIntegerElement = VTy->getElementType()->isIntegerTy();
+        bool HasWholePartitionUse = false;
+        bool HasSubElementLoad = false;
+        for (const Slice &S : P) {
           if (S.isSplittable() || S.isDead())
-            return false;
-          if (S.endOffset() - S.beginOffset() >= P.size())
-            return false;
-          // Check if this sub-element access is a load.
+            continue;
           auto *U = S.getUse();
-          return U && isa<LoadInst>(U->getUser());
-        });
-        if (!HasSubElementLoad)
-          return {VTy, false, nullptr};
+          if (!U)
+            continue;
+          uint64_t SliceSize = S.endOffset() - S.beginOffset();
+          if (SliceSize < P.size()) {
+            if (isa<LoadInst>(U->getUser()))
+              HasSubElementLoad = true;
+          } else {
+            HasWholePartitionUse = true;
+          }
+        }
+        if (HasSubElementLoad)
+          ; // Skip — extractelement overhead.
+        else if (!IsIntegerElement)
+          return {VTy, false, nullptr}; // FP structs always benefit.
+        else if (HasWholePartitionUse)
+          return {VTy, false, nullptr}; // Integer with whole use.
       }
 
     // Fallback to TypePartitionTy and we probably won't promote.
