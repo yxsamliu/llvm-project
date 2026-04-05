@@ -109,6 +109,14 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
+static cl::opt<std::string> DebugLocIndexDatabase(
+    "debug-loc-index-database",
+    cl::desc("SQLite database path: after each pass, record instructions that "
+             "have debug locations (IR-unit filtering matches "
+             "-print-before/-print-after: -filter-print-funcs, "
+             "-print-module-scope, etc.)"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -163,6 +171,8 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
 }
+
+StringRef llvm::getDebugLocIndexDatabasePath() { return DebugLocIndexDatabase; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

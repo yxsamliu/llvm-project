@@ -12,6 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "DebugLocIndex.h"
 #include "NewPMDriver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -437,6 +438,7 @@ bool llvm::runPassPipeline(
   StandardInstrumentations SI(M.getContext(), DebugPM != DebugLogging::None,
                               VK == VerifierKind::EachPass, PrintPassOpts);
   SI.registerCallbacks(PIC, &MAM);
+  registerDebugLocIndexCallbacks(PIC);
   DebugifyEachInstrumentation Debugify;
   DebugifyStatsMap DIStatsMap;
   DebugInfoPerPass DebugInfoBeforePass;

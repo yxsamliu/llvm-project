@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLSourceDebugLoc.h"
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -147,6 +148,22 @@ static cl::opt<bool>
 static cl::opt<bool>
     StripDebug("strip-debug",
                cl::desc("Strip debugger symbol info from translation unit"));
+
+static cl::opt<bool>
+    AddLLDebugLoc(
+        "add-ll-debugloc",
+        cl::desc("Synthesize !dbg locations from input .ll file line numbers: "
+                 "each instruction gets the line in the input LLVM assembly "
+                 "text where it appears. No-op if the module already has debug "
+                 "info (use --add-ll-debugloc-force to overwrite)."),
+        cl::init(false));
+
+static cl::opt<bool>
+    AddLLDebugLocForce(
+        "add-ll-debugloc-force",
+        cl::desc("Like --add-ll-debugloc but also overwrites existing "
+                 "!dbg locations and strips any pre-existing DICompileUnit."),
+        cl::init(false));
 
 static cl::opt<bool>
     StripNamedMetadata("strip-named-metadata",
@@ -586,6 +603,13 @@ optMain(int argc, char **argv,
   // Strip debug info before running the verifier.
   if (StripDebug)
     StripDebugInfo(*M);
+
+  // Synthesize !dbg locations from the input .ll source file.
+  if (AddLLDebugLoc || AddLLDebugLocForce) {
+    if (AddLLDebugLocForce)
+      StripDebugInfo(*M);
+    applyLLSourceDebugLoc(*M, InputFilename, /*ForceOverwrite=*/AddLLDebugLocForce);
+  }
 
   // Erase module-level named metadata, if requested.
   if (StripNamedMetadata) {
