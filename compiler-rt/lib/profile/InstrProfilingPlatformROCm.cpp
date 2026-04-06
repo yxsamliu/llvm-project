@@ -561,29 +561,35 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   const void *DevCntsBegin = HostSections.CountersStart;
   const void *DevDataBegin = HostSections.DataStart;
   const void *DevNamesBegin = HostSections.NamesStart;
+  const void *DevUniformCntsBegin = HostSections.UniformCountersStart;
   const void *DevCntsEnd = HostSections.CountersStop;
   const void *DevDataEnd = HostSections.DataStop;
   const void *DevNamesEnd = HostSections.NamesStop;
+  const void *DevUniformCntsEnd = HostSections.UniformCountersStop;
 
   size_t CountersSize = (const char *)DevCntsEnd - (const char *)DevCntsBegin;
   size_t DataSize = (const char *)DevDataEnd - (const char *)DevDataBegin;
   size_t NamesSize = (const char *)DevNamesEnd - (const char *)DevNamesBegin;
+  size_t UniformCountersSize =
+      (const char *)DevUniformCntsEnd - (const char *)DevUniformCntsBegin;
 
   if (isVerboseMode())
     PROF_NOTE("Section pointers: Cnts=[%p,%p]=%zu Data=[%p,%p]=%zu "
-              "Names=[%p,%p]=%zu\n",
+              "Names=[%p,%p]=%zu UCnts=[%p,%p]=%zu\n",
               DevCntsBegin, DevCntsEnd, CountersSize, DevDataBegin, DevDataEnd,
-              DataSize, DevNamesBegin, DevNamesEnd, NamesSize);
+              DataSize, DevNamesBegin, DevNamesEnd, NamesSize,
+              DevUniformCntsBegin, DevUniformCntsEnd, UniformCountersSize);
 
   if (CountersSize == 0 || DataSize == 0)
     return 0;
 
   int ret = -1;
-  int NamesReused = 0, CntsReused = 0, DataReused = 0;
+  int NamesReused = 0, CntsReused = 0, UCntsReused = 0, DataReused = 0;
 
   char *HostDataBegin = nullptr;
   char *HostCountersBegin = nullptr;
   char *HostNamesBegin = nullptr;
+  char *HostUniformCountersBegin = nullptr;
 
   /* Sections using linker-defined __start_/__stop_ bounds are shared across
      TU structs in RDC mode. Deduplicate by caching the last copied range. */
@@ -599,8 +605,12 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   static char *CachedHostData = nullptr;
   static size_t CachedDataSize = 0;
 
+  static const void *CachedDevUCntsBegin = nullptr;
+  static char *CachedHostUCnts = nullptr;
+  static size_t CachedUCntsSize = 0;
+
   // Owns freshly malloc'd buffers; release() transfers ownership to the cache.
-  UniqueFree CntsOwner, DataOwner, NamesOwner;
+  UniqueFree CntsOwner, DataOwner, NamesOwner, UCntsOwner;
 
   if (CountersSize > 0 && DevCntsBegin == CachedDevCntsBegin &&
       CountersSize == CachedCntsSize) {
@@ -635,9 +645,22 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     NamesOwner.reset(HostNamesBegin);
   }
 
+  if (UniformCountersSize > 0 && DevUniformCntsBegin == CachedDevUCntsBegin &&
+      UniformCountersSize == CachedUCntsSize) {
+    HostUniformCountersBegin = CachedHostUCnts;
+    UCntsReused = 1;
+    if (isVerboseMode())
+      PROF_NOTE("Reusing cached ucnts section (%zu bytes)\n",
+                UniformCountersSize);
+  } else if (UniformCountersSize > 0) {
+    HostUniformCountersBegin = (char *)malloc(UniformCountersSize);
+    UCntsOwner.reset(HostUniformCountersBegin);
+  }
+
   if ((DataSize > 0 && !HostDataBegin) ||
       (CountersSize > 0 && !HostCountersBegin) ||
-      (NamesSize > 0 && !HostNamesBegin)) {
+      (NamesSize > 0 && !HostNamesBegin) ||
+      (UniformCountersSize > 0 && !HostUniformCountersBegin)) {
     PROF_ERR("%s\n", "failed to allocate host memory for device sections");
     return -1;
   }
@@ -648,7 +671,10 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
        memcpyDeviceToHost(HostCountersBegin, DevCntsBegin, CountersSize) !=
            0) ||
       (NamesSize > 0 && !NamesReused &&
-       memcpyDeviceToHost(HostNamesBegin, DevNamesBegin, NamesSize) != 0)) {
+       memcpyDeviceToHost(HostNamesBegin, DevNamesBegin, NamesSize) != 0) ||
+      (UniformCountersSize > 0 && !UCntsReused &&
+       memcpyDeviceToHost(HostUniformCountersBegin, DevUniformCntsBegin,
+                          UniformCountersSize) != 0)) {
     PROF_ERR("%s\n", "failed to copy profile sections from device");
     return -1;
   }
@@ -673,25 +699,34 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
     CachedNamesSize = NamesSize;
     NamesOwner.release();
   }
+  if (!UCntsReused && UniformCountersSize > 0) {
+    CachedDevUCntsBegin = DevUniformCntsBegin;
+    CachedHostUCnts = HostUniformCountersBegin;
+    CachedUCntsSize = UniformCountersSize;
+    UCntsOwner.release();
+  }
 
   if (isVerboseMode())
-    PROF_NOTE("Copied device sections: Counters=%zu, Data=%zu, Names=%zu\n",
-              CountersSize, DataSize, NamesSize);
+    PROF_NOTE("Copied device sections: Counters=%zu, Data=%zu, Names=%zu, "
+              "UniformCounters=%zu\n",
+              CountersSize, DataSize, NamesSize, UniformCountersSize);
 
   // Arrange buffer as [Data][Padding][Counters][Names] to match the layout
   // expected by lprofWriteDataImpl (CountersDelta = CountersBegin - DataBegin).
   const uint64_t NumData = DataSize / sizeof(__llvm_profile_data);
   const uint64_t NumBitmapBytes = 0;
+  const uint64_t NumUniformCounters = UniformCountersSize / sizeof(uint64_t);
   const uint64_t VTableSectionSize = 0;
   const uint64_t VNamesSize = 0;
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterUniformCounters,
+      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
 
   if (__llvm_profile_get_padding_sizes_for_counters(
-          DataSize, CountersSize, NumBitmapBytes, NamesSize, VTableSectionSize,
-          VNamesSize, &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-          &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterNames,
+          DataSize, CountersSize, NumBitmapBytes, NumUniformCounters, NamesSize,
+          VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
+          &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+          &PaddingBytesAfterUniformCounters, &PaddingBytesAfterNames,
           &PaddingBytesAfterVTable, &PaddingBytesAfterVNames) != 0) {
     PROF_ERR("%s\n", "failed to get padding sizes");
     return -1;
@@ -716,25 +751,46 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   __builtin_memcpy(BufCountersBegin, HostCountersBegin, CountersSize);
   __builtin_memcpy(BufNamesBegin, HostNamesBegin, NamesSize);
 
-  // CounterPtr is a device-relative offset; relocate it for the file layout
-  // where the Data section precedes Counters.
+  // CounterPtr and UniformCounterPtr are device-relative offsets; relocate
+  // them for the file layout where the Data section precedes the Counters and
+  // UniformCounters sections. Uniform counters are copied in linker (section)
+  // order and located via their relative pointer, exactly like the regular
+  // counters: llvm-profdata reads them through UniformCounterPtr (decrementing
+  // UniformCountersDelta per record, just like CountersDelta) and does not
+  // assume data-record order, so no reordering is needed.
+  ptrdiff_t UCFileOffset =
+      DataSize + PaddingBytesBeforeCounters + CountersSize +
+      PaddingBytesAfterCounters + NumBitmapBytes + PaddingBytesAfterBitmapBytes;
   __llvm_profile_data *RelocatedData = (__llvm_profile_data *)BufDataBegin;
   for (uint64_t i = 0; i < NumData; ++i) {
+    const char *DeviceDataStructAddr =
+        (const char *)DevDataBegin + (i * sizeof(__llvm_profile_data));
     if (RelocatedData[i].CounterPtr) {
-      ptrdiff_t DeviceCounterPtrOffset = (ptrdiff_t)RelocatedData[i].CounterPtr;
-      const char *DeviceDataStructAddr =
-          (const char *)DevDataBegin + (i * sizeof(__llvm_profile_data));
       const char *DeviceCountersAddr =
-          DeviceDataStructAddr + DeviceCounterPtrOffset;
+          DeviceDataStructAddr + (ptrdiff_t)RelocatedData[i].CounterPtr;
       ptrdiff_t OffsetIntoCountersSection =
           DeviceCountersAddr - (const char *)DevCntsBegin;
-
       ptrdiff_t NewRelativeOffset = DataSize + PaddingBytesBeforeCounters +
                                     OffsetIntoCountersSection -
                                     (i * sizeof(__llvm_profile_data));
       __builtin_memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
                            offsetof(__llvm_profile_data, CounterPtr),
                        &NewRelativeOffset, sizeof(NewRelativeOffset));
+    }
+    if (HostUniformCountersBegin && RelocatedData[i].UniformCounterPtr) {
+      const char *DeviceUCAddr =
+          DeviceDataStructAddr + (ptrdiff_t)RelocatedData[i].UniformCounterPtr;
+      ptrdiff_t OffsetIntoUCSection =
+          DeviceUCAddr - (const char *)DevUniformCntsBegin;
+      ptrdiff_t NewUCRelativeOffset = UCFileOffset + OffsetIntoUCSection -
+                                      (i * sizeof(__llvm_profile_data));
+      __builtin_memcpy((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                           offsetof(__llvm_profile_data, UniformCounterPtr),
+                       &NewUCRelativeOffset, sizeof(NewUCRelativeOffset));
+    } else {
+      __builtin_memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
+                           offsetof(__llvm_profile_data, UniformCounterPtr),
+                       0, sizeof(RelocatedData[i].UniformCounterPtr));
     }
     __builtin_memset((char *)RelocatedData + i * sizeof(__llvm_profile_data) +
                          offsetof(__llvm_profile_data, BitmapPtr),
@@ -750,8 +806,10 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, int TUIndex,
   ret = __llvm_write_custom_profile(
       Target, (__llvm_profile_data *)BufDataBegin,
       (__llvm_profile_data *)(BufDataBegin + DataSize), BufCountersBegin,
-      BufCountersBegin + CountersSize, BufNamesBegin, BufNamesBegin + NamesSize,
-      nullptr);
+      BufCountersBegin + CountersSize, HostUniformCountersBegin,
+      HostUniformCountersBegin ? HostUniformCountersBegin + UniformCountersSize
+                               : nullptr,
+      BufNamesBegin, BufNamesBegin + NamesSize, nullptr);
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");

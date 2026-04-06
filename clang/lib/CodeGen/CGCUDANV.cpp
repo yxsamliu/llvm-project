@@ -1328,12 +1328,14 @@ void CGNVCUDARuntime::createOffloadingEntries() {
 }
 
 // For HIP host+device compiles with PGO enabled, emit the per-TU global
-// __llvm_profile_sections_<CUID>. Device side: a 7-pointer struct holding
-// section start/stop bounds for the names/counters/data sections plus the
-// raw-version variable. Host side: an opaque void* shadow whose only
-// purpose is to give the host-runtime a registered symbol name to look up
-// via hipGetSymbolAddress; the actual device-side data lives in the
-// matching device-side global.
+// __llvm_profile_sections_<CUID>. Device side: a 9-pointer struct holding
+// section start/stop bounds for the names/counters/data/uniform-counters
+// sections plus the raw-version variable; the field order must match
+// INSTR_PROF_GPU_SECT in InstrProfData.inc, which the host runtime's
+// __llvm_profile_gpu_sections struct is generated from. Host side: an opaque
+// void* shadow whose only purpose is to give the host-runtime a registered
+// symbol name to look up via hipGetSymbolAddress; the actual device-side data
+// lives in the matching device-side global.
 void CGNVCUDARuntime::emitOffloadProfilingSections() {
   if (!CGM.getLangOpts().HIP)
     return;
@@ -1381,7 +1383,7 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
     }
 
     auto *StructTy = llvm::StructType::get(
-        Ctx, {PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy});
+        Ctx, {PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy, PtrTy});
     llvm::Constant *Fields[] = {
         getOrDeclare("__start___llvm_prf_names"),
         getOrDeclare("__stop___llvm_prf_names"),
@@ -1389,6 +1391,8 @@ void CGNVCUDARuntime::emitOffloadProfilingSections() {
         getOrDeclare("__stop___llvm_prf_cnts"),
         getOrDeclare("__start___llvm_prf_data"),
         getOrDeclare("__stop___llvm_prf_data"),
+        getOrDeclare("__start___llvm_prf_ucnts"),
+        getOrDeclare("__stop___llvm_prf_ucnts"),
         VersionGV,
     };
     auto *Init = llvm::ConstantStruct::get(StructTy, Fields);
