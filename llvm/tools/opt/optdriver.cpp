@@ -152,10 +152,10 @@ static cl::opt<bool>
 static cl::opt<bool>
     AddLLDebugLoc(
         "add-ll-debugloc",
-        cl::desc("Synthesize !dbg locations from input .ll file line numbers: "
-                 "each instruction gets the line in the input LLVM assembly "
-                 "text where it appears. No-op if the module already has debug "
-                 "info (use --add-ll-debugloc-force to overwrite)."),
+        cl::desc("Synthesize !dbg locations for inputs without debug info: "
+                 "use .ll source line numbers for textual IR, or synthetic "
+                 "ordinal IDs for bitcode. No-op if the module already has "
+                 "debug info (use --add-ll-debugloc-force to overwrite)."),
         cl::init(false));
 
 static cl::opt<bool>

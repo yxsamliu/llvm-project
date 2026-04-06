@@ -24,6 +24,10 @@ using namespace llvm;
 
 namespace {
 
+static bool isBitcodeBuffer(StringRef Buffer) {
+  return Buffer.starts_with("BC\xc0\xde");
+}
+
 /// Return true if a trimmed line looks like the start of a function definition
 /// or declaration (starts with "define " or "declare ").
 static bool isFunctionDefOrDecl(StringRef S) {
@@ -149,6 +153,50 @@ static LineMap buildLineMap(StringRef Text) {
   return LM;
 }
 
+static void addDebugInfoVersionIfMissing(Module &M) {
+  if (!M.getModuleFlag("Debug Info Version"))
+    M.addModuleFlag(Module::Warning, "Debug Info Version",
+                    DEBUG_METADATA_VERSION);
+}
+
+static DISubprogram *createSyntheticSubprogram(DIBuilder &DIB, DICompileUnit *CU,
+                                               DIFile *File, Function &F,
+                                               unsigned FuncLine,
+                                               DISubroutineType *SPType) {
+  DISubprogram::DISPFlags SPFlags =
+      DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
+  if (F.hasPrivateLinkage() || F.hasInternalLinkage())
+    SPFlags |= DISubprogram::SPFlagLocalToUnit;
+  return DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine,
+                            SPType, FuncLine, DINode::FlagZero, SPFlags);
+}
+
+static void applyOrdinalLocations(Module &M, LLVMContext &Ctx, DIBuilder &DIB,
+                                  DICompileUnit *CU, DIFile *File,
+                                  bool ForceOverwrite) {
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  unsigned NextOrdinal = 1;
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    unsigned FuncLine = NextOrdinal;
+    DISubprogram *SP =
+        createSyntheticSubprogram(DIB, CU, File, F, FuncLine, SPType);
+    F.setSubprogram(SP);
+
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (!ForceOverwrite && I.getDebugLoc())
+          continue;
+        I.setDebugLoc(DILocation::get(Ctx, NextOrdinal, 0, SP));
+        ++NextOrdinal;
+      }
+    }
+  }
+}
+
 } // namespace
 
 void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
@@ -166,24 +214,23 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
     return;
   }
 
-  // Read the .ll source.
+  // Read the original input. For textual LLVM assembly we use the actual
+  // source line numbers. For bitcode (or unreadable input), we fall back to
+  // synthetic ordinal IDs derived from the parsed IR traversal order.
   auto BufOrErr = MemoryBuffer::getFile(LLFilePath);
-  if (!BufOrErr) {
+  bool UseTextualLineMap = false;
+  LineMap LM;
+  if (BufOrErr) {
+    StringRef Text = (*BufOrErr)->getBuffer();
+    if (!isBitcodeBuffer(Text)) {
+      LM = buildLineMap(Text);
+      UseTextualLineMap = true;
+    }
+  } else {
     errs() << "warning: --add-ll-debugloc: cannot read '" << LLFilePath
-           << "': " << BufOrErr.getError().message() << "\n";
-    return;
+           << "': " << BufOrErr.getError().message()
+           << "; falling back to synthetic ordinal locations\n";
   }
-  StringRef Text = (*BufOrErr)->getBuffer();
-
-  // Bitcode files start with 'BC'. We can't get line info from them.
-  if (Text.starts_with("BC\xc0\xde")) {
-    errs() << "warning: --add-ll-debugloc: input is bitcode, not LLVM "
-              "assembly; cannot infer line numbers.\n";
-    return;
-  }
-
-  // Build positional line map from the assembly text.
-  LineMap LM = buildLineMap(Text);
 
   // Build debug info hierarchy.
   DIBuilder DIB(M);
@@ -199,9 +246,13 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
       dwarf::DW_LANG_C, File, "llvm-opt-add-ll-debugloc",
       /*isOptimized=*/true, "", /*RV=*/0, /*SplitName=*/"",
       DICompileUnit::FullDebug);
-  if (!M.getModuleFlag("Debug Info Version"))
-    M.addModuleFlag(Module::Warning, "Debug Info Version",
-                    DEBUG_METADATA_VERSION);
+  addDebugInfoVersionIfMissing(M);
+
+  if (!UseTextualLineMap) {
+    applyOrdinalLocations(M, Ctx, DIB, CU, File, ForceOverwrite);
+    DIB.finalize();
+    return;
+  }
 
   auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
 
@@ -216,13 +267,8 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
     if (FuncIdx < LM.size())
       FuncLine = LM[FuncIdx].DefineLine;
 
-    DISubprogram::DISPFlags SPFlags =
-        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
-    if (F.hasPrivateLinkage() || F.hasInternalLinkage())
-      SPFlags |= DISubprogram::SPFlagLocalToUnit;
     DISubprogram *SP =
-        DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine,
-                           SPType, FuncLine, DINode::FlagZero, SPFlags);
+        createSyntheticSubprogram(DIB, CU, File, F, FuncLine, SPType);
     F.setSubprogram(SP);
 
     unsigned BBIdx = 0;

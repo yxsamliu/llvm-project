@@ -15,19 +15,19 @@ namespace llvm {
 class Module;
 
 /// For each instruction in \p M that does not already have a debug location,
-/// assign a synthetic \c DILocation whose file is \p LLFilePath and whose
-/// line number is the line in the LLVM assembly text at which the instruction
-/// appeared.
+/// assign a synthetic \c DILocation whose file is derived from \p LLFilePath.
 ///
-/// The line numbers are inferred by scanning \p LLFilePath positionally:
-/// instructions are matched in declaration order (function, basic block,
-/// instruction within basic block) to lines detected in the text.
+/// For textual LLVM assembly input (\c .ll), line numbers are inferred by
+/// scanning \p LLFilePath positionally: instructions are matched in
+/// declaration order (function, basic block, instruction within basic block)
+/// to lines detected in the text.
+///
+/// For bitcode input (\c .bc) without existing debug info, line numbers fall
+/// back to synthetic ordinal IDs derived from the parsed IR traversal order.
 ///
 /// If the module already has a \c !llvm.dbg.cu metadata node (i.e. real debug
 /// info is present), the function is a no-op unless \p ForceOverwrite is true.
 ///
-/// Only works when the input is textual LLVM assembly (\c .ll). Bitcode input
-/// has no line information; in that case emit a warning and return.
 void applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
                            bool ForceOverwrite = false);
 
