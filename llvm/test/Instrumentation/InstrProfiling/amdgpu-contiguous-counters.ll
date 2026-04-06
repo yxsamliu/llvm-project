@@ -12,6 +12,7 @@
 
 ;; Per-kernel counter arrays: kernel1 has 2 slots, kernel2 has 1 (section "__llvm_prf_cnts")
 ; CHECK: @__profc_kernel1 = linkonce_odr protected addrspace(1) global [2 x i64] zeroinitializer, section "__llvm_prf_cnts"
+; CHECK: @__llvm_prf_unifcnt_kernel1 = linkonce_odr protected addrspace(1) global [2 x i64] zeroinitializer, section "__llvm_prf_ucnts"
 ; CHECK: @__profc_kernel2 = linkonce_odr protected addrspace(1) global [1 x i64] zeroinitializer, section "__llvm_prf_cnts"
 
 define amdgpu_kernel void @kernel1() {
@@ -31,4 +32,4 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 ; CHECK: @__llvm_offload_prf_abc123 = addrspace(1) constant ptr addrspace(1) @__llvm_profile_sections
 
 ;; Second counter slot uses GEP into the same [2 x i64] arrays
-; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel1, i32 0, i32 1) to ptr), ptr null, i64 1)
+; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel1, i32 0, i32 1) to ptr), ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__llvm_prf_unifcnt_kernel1, i32 0, i32 1) to ptr), i64 1)

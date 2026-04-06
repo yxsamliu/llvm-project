@@ -291,6 +291,7 @@ private:
   struct PerFunctionProfileData {
     uint32_t NumValueSites[IPVK_Last + 1] = {};
     GlobalVariable *RegionCounters = nullptr;
+    GlobalVariable *UniformCounters = nullptr; // For AMDGPU divergence tracking
     GlobalValue *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
@@ -320,6 +321,18 @@ private:
   std::vector<LoadStorePair> PromotionCandidates;
 
   int64_t TotalCountersPromoted = 0;
+
+  // Per-function cache of invariant values for AMDGPU PGO instrumentation.
+  // Computed once at the function entry and reused across all instrumentation
+  // points to avoid redundant IR and help the optimizer.
+  struct AMDGPUPGOInvariants {
+    Value *Matched = nullptr;
+    bool WaveSizeStored = false;
+  };
+  DenseMap<Function *, AMDGPUPGOInvariants> AMDGPUInvariantsCache;
+
+  /// Emit invariant PGO values at the function entry block and cache them.
+  AMDGPUPGOInvariants &getOrCreateAMDGPUInvariants(Function *F);
 
   /// Lower instrumentation intrinsics in the function. Returns true if there
   /// any lowering.
@@ -379,6 +392,10 @@ private:
   /// If the counter array doesn't yet exist, the profile data variables
   /// referring to them will also be created.
   GlobalVariable *getOrCreateRegionCounters(InstrProfCntrInstBase *Inc);
+
+  /// Get the uniform entry counters for AMDGPU divergence tracking.
+  /// These counters track how often blocks are entered with all lanes active.
+  GlobalVariable *getOrCreateUniformCounters(InstrProfCntrInstBase *Inc);
 
   /// Create the region counters.
   GlobalVariable *createRegionCounters(InstrProfCntrInstBase *Inc,
@@ -1287,22 +1304,87 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   Inc->eraseFromParent();
 }
 
+InstrLowerer::AMDGPUPGOInvariants &
+InstrLowerer::getOrCreateAMDGPUInvariants(Function *F) {
+  auto It = AMDGPUInvariantsCache.find(F);
+  if (It != AMDGPUInvariantsCache.end())
+    return It->second;
+
+  LLVMContext &Context = M.getContext();
+  auto *Int32Ty = Type::getInt32Ty(Context);
+
+  BasicBlock &EntryBB = F->getEntryBlock();
+  IRBuilder<> Builder(&*EntryBB.getFirstInsertionPt());
+
+  Value *Matched = ConstantInt::getTrue(Context);
+  if (OffloadPGOSampling > 0) {
+    FunctionCallee IsSampledFn =
+        M.getOrInsertFunction("__llvm_profile_sampling_gpu", Int32Ty, Int32Ty);
+    Value *SampledInt = Builder.CreateCall(
+        IsSampledFn, {ConstantInt::get(Int32Ty, OffloadPGOSampling)},
+        "pgo.sampled");
+    Matched = Builder.CreateICmpNE(SampledInt, ConstantInt::get(Int32Ty, 0),
+                                   "pgo.matched");
+  }
+
+  auto &Inv = AMDGPUInvariantsCache[F];
+  Inv.Matched = Matched;
+  return Inv;
+}
+
 void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
+  Function *F = Inc->getFunction();
+  auto &Inv = getOrCreateAMDGPUInvariants(F);
+
   IRBuilder<> Builder(Inc);
   LLVMContext &Context = M.getContext();
   auto *Int64Ty = Type::getInt64Ty(Context);
+
+  Value *Matched = Inv.Matched;
 
   auto *CounterIdx = Inc->getIndex();
 
   // --- Counter address ---
   GlobalVariable *Counters = getOrCreateRegionCounters(Inc);
+
+  // Store wavefront size into the profile data struct once per function.
+  // Uses the llvm.amdgcn.wavefrontsize intrinsic which the backend folds
+  // to a constant based on the actual subtarget.
+  if (!Inv.WaveSizeStored) {
+    Inv.WaveSizeStored = true;
+    GlobalVariable *NamePtr = Inc->getName();
+    auto &PD = ProfileDataMap[NamePtr];
+    if (PD.DataVar) {
+      IRBuilder<> EntryBuilder(&*F->getEntryBlock().getFirstInsertionPt());
+      Function *WaveSizeFn =
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::amdgcn_wavefrontsize);
+      Value *WaveSize = EntryBuilder.CreateCall(WaveSizeFn);
+      Value *WaveSize16 = EntryBuilder.CreateTrunc(
+          WaveSize, Type::getInt16Ty(Context), "wavesize.i16");
+      Value *WaveSizeAddr = EntryBuilder.CreateStructGEP(
+          PD.DataVar->getValueType(), PD.DataVar, 9, "profd.wavesize");
+      EntryBuilder.CreateStore(WaveSize16, WaveSizeAddr);
+    }
+  }
+
   Value *Indices[] = {Builder.getInt32(0), CounterIdx};
   Value *Addr = Builder.CreateInBoundsGEP(Counters->getValueType(), Counters,
                                           Indices, "ctr.addr");
 
+  GlobalVariable *UniformCounters = getOrCreateUniformCounters(Inc);
+  Value *UniformAddr = nullptr;
+  if (UniformCounters) {
+    Value *UniformIndices[] = {Builder.getInt32(0), CounterIdx};
+    UniformAddr = Builder.CreateInBoundsGEP(UniformCounters->getValueType(),
+                                            UniformCounters, UniformIndices,
+                                            "unifctr.addr");
+  }
+
   auto *PtrTy = PointerType::getUnqual(Context);
   Value *UniformAddrArg =
-      ConstantPointerNull::get(cast<PointerType>(PtrTy));
+      UniformAddr
+          ? Builder.CreatePointerBitCastOrAddrSpaceCast(UniformAddr, PtrTy)
+          : ConstantPointerNull::get(cast<PointerType>(PtrTy));
   Value *CastAddr = Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, PtrTy);
 
   Value *IncStep = Inc->getStep();
@@ -1312,7 +1394,25 @@ void InstrLowerer::lowerIncrementAMDGPU(InstrProfIncrementInst *Inc) {
                                      {PtrTy, PtrTy, Int64Ty}, false);
   FunctionCallee IncrFn =
       M.getOrInsertFunction("__llvm_profile_instrument_gpu", CalleeTy);
-  Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
+
+  if (OffloadPGOSampling > 0) {
+    BasicBlock *CurBB = Builder.GetInsertBlock();
+    BasicBlock *ContBB =
+        CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "po_cont");
+    BasicBlock *ThenBB = BasicBlock::Create(Context, "po_then", F);
+
+    CurBB->getTerminator()->eraseFromParent();
+    IRBuilder<> HeadBuilder(CurBB);
+    HeadBuilder.CreateCondBr(Matched, ThenBB, ContBB);
+
+    IRBuilder<> ThenBuilder(ThenBB);
+    ThenBuilder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
+    ThenBuilder.CreateBr(ContBB);
+
+    Builder.SetInsertPoint(ContBB, ContBB->begin());
+  } else {
+    Builder.CreateCall(IncrFn, {CastAddr, UniformAddrArg, StepI64});
+  }
 
   Inc->eraseFromParent();
 }
@@ -1840,10 +1940,52 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
     CompilerUsedVars.push_back(PD.RegionCounters);
   }
 
+  // Create uniform counters before the data variable so that
+  // UniformCounterPtr can reference them in createDataVariable().
+  getOrCreateUniformCounters(Inc);
+
   // Create the data variable (if it doesn't already exist).
   createDataVariable(Inc);
 
   return PD.RegionCounters;
+}
+
+GlobalVariable *
+InstrLowerer::getOrCreateUniformCounters(InstrProfCntrInstBase *Inc) {
+  // Only create uniform counters for AMDGPU targets
+  if (!TT.isAMDGPU())
+    return nullptr;
+
+  GlobalVariable *NamePtr = Inc->getName();
+  auto &PD = ProfileDataMap[NamePtr];
+  if (PD.UniformCounters)
+    return PD.UniformCounters;
+
+  // Ensure RegionCounters exists first (we need the same size)
+  getOrCreateRegionCounters(Inc);
+
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+
+  LLVMContext &Ctx = M.getContext();
+  ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
+
+  bool Renamed;
+  std::string VarName = getVarName(Inc, "__llvm_prf_unifcnt_", Renamed);
+
+  auto *GV = new GlobalVariable(M, CounterTy, false, NamePtr->getLinkage(),
+                                Constant::getNullValue(CounterTy), VarName);
+  GV->setAlignment(Align(8));
+
+  GV->setSection(getInstrProfSectionName(IPSK_ucnts, TT.getObjectFormat()));
+
+  GV->setComdat(M.getOrInsertComdat(VarName));
+  GV->setLinkage(GlobalValue::LinkOnceODRLinkage);
+  GV->setVisibility(GlobalValue::ProtectedVisibility);
+
+  PD.UniformCounters = GV;
+  CompilerUsedVars.push_back(GV);
+
+  return PD.UniformCounters;
 }
 
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
@@ -1910,6 +2052,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
 
   Constant *CounterPtr = PD.RegionCounters;
+  Constant *UniformCounterPtr = PD.UniformCounters;
 
   uint64_t NumBitmapBytes = PD.NumBitmapBytes;
 
@@ -1924,6 +2067,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
+
+  uint16_t OffloadDeviceWaveSizeVal = 0;
 
   if (isGPUProfTarget(M)) {
     // For GPU targets, weak functions need weak linkage for their profile data
@@ -1963,6 +2108,7 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   Constant *DataAddr = Data;
 
   Constant *RelativeCounterPtr;
+  Constant *RelativeUniformCounterPtr = ConstantInt::get(IntPtrTy, 0);
   GlobalVariable *BitmapPtr = PD.RegionBitmaps;
   Constant *RelativeBitmapPtr = ConstantInt::get(IntPtrTy, 0);
   InstrProfSectKind DataSectionKind;
@@ -1973,6 +2119,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
     if (BitmapPtr != nullptr)
       RelativeBitmapPtr = ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy);
+    if (UniformCounterPtr != nullptr)
+      RelativeUniformCounterPtr =
+          ConstantExpr::getPtrToInt(UniformCounterPtr, IntPtrTy);
   } else if (TT.isNVPTX()) {
     DataSectionKind = IPSK_data;
     RelativeCounterPtr = ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy);
@@ -1987,6 +2136,10 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
       RelativeBitmapPtr =
           ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
                                ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
+    if (UniformCounterPtr != nullptr)
+      RelativeUniformCounterPtr = ConstantExpr::getSub(
+          ConstantExpr::getPtrToInt(UniformCounterPtr, IntPtrTy),
+          ConstantExpr::getPtrToInt(DataAddr, IntPtrTy));
   }
 
   Constant *DataVals[] = {
@@ -2434,9 +2587,8 @@ void InstrLowerer::cacheGPUCUID() {
 }
 
 // Create CUID-suffixed pointer to __llvm_profile_sections for GPU targets.
-// The basic HIP/offload runtime exposes the original 7-entry section table:
-//   names_start, names_stop, cnts_start, cnts_stop, data_start, data_stop,
-//   raw_version.
+// The actual sections struct is defined in InstrProfilingPlatformGPU.c
+// (device-side runtime) using linker-defined __start_/__stop_ symbols.
 // We create a per-TU global that points to it, giving the host a unique
 // symbol for shadow variable registration.
 void InstrLowerer::createProfileSectionSymbols() {
@@ -2447,9 +2599,9 @@ void InstrLowerer::createProfileSectionSymbols() {
   unsigned AS = M.getDataLayout().getDefaultGlobalsAddressSpace();
   auto *Int8PtrTy = PointerType::get(Ctx, AS);
 
-  // __llvm_profile_sections is an array of 7 pointers defined in the GPU
+  // __llvm_profile_sections is an array of 9 pointers defined in the GPU
   // profile runtime (InstrProfilingPlatformGPU.c). Declare it as external.
-  auto *SectionsTy = ArrayType::get(Int8PtrTy, 7);
+  auto *SectionsTy = ArrayType::get(Int8PtrTy, 9);
   auto *SectionsGV = M.getGlobalVariable("__llvm_profile_sections");
   if (!SectionsGV) {
     SectionsGV = new GlobalVariable(M, SectionsTy, /*isConstant=*/true,
@@ -2479,7 +2631,7 @@ void InstrLowerer::createHIPDeviceVariableRegistration() {
   if (isGPUProfTarget(M))
     return;
 
-  std::string CUID = CachedCUID.empty() ? getCUIDFromModule(M) : CachedCUID;
+  std::string CUID = getCUIDFromModule(M);
   if (CUID.empty())
     return;
 
