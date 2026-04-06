@@ -14,7 +14,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -23,13 +23,6 @@
 using namespace llvm;
 
 namespace {
-
-/// Describes a single instruction's position in the assembly scan.
-struct InstPos {
-  unsigned FuncIdx;
-  unsigned BBIdx;
-  unsigned InstIdx;
-};
 
 /// Return true if a trimmed line looks like the start of a function definition
 /// or declaration (starts with "define " or "declare ").
@@ -71,7 +64,12 @@ static StringRef stripComment(StringRef Line) {
   return Line;
 }
 
-using LineMap = SmallVector<SmallVector<SmallVector<unsigned>>>;
+struct FunctionLineMap {
+  unsigned DefineLine = 1;
+  SmallVector<SmallVector<unsigned>> BBInstLines;
+};
+
+using LineMap = SmallVector<FunctionLineMap>;
 
 /// Scan \p Text (LLVM assembly) and build a 3-D positional map:
 ///   LineMap[func_idx][bb_idx][inst_idx] = 1-based line number in the file.
@@ -97,16 +95,19 @@ static LineMap buildLineMap(StringRef Text) {
       continue;
 
     if (isFunctionDefOrDecl(Trimmed)) {
-      // Start a new function (whether definition or declaration).
-      // Declarations have no body; they are followed immediately by the next
-      // define. Track them anyway so indices stay consistent with Module order.
-      InFunction = Trimmed.starts_with("define ");
-      if (InFunction) {
+      // Only definitions contribute instruction line information. Declarations
+      // have no body and must not consume a function slot, or the positional
+      // mapping will become misaligned.
+      if (Trimmed.starts_with("define ")) {
+        InFunction = true;
         LM.emplace_back(); // new function slot
+        LM.back().DefineLine = LineNo;
         FuncIdx = LM.size() - 1;
         BBIdx = 0;
         // If the opening brace is on the same line as "define", the first BB
         // label (or first instruction) will follow.
+      } else {
+        InFunction = false;
       }
       continue;
     }
@@ -127,8 +128,8 @@ static LineMap buildLineMap(StringRef Text) {
     if (isBBLabel(Trimmed)) {
       // New basic block.
       if (FuncIdx < LM.size()) {
-        LM[FuncIdx].emplace_back(); // new BB slot
-        BBIdx = LM[FuncIdx].size() - 1;
+        LM[FuncIdx].BBInstLines.emplace_back(); // new BB slot
+        BBIdx = LM[FuncIdx].BBInstLines.size() - 1;
       }
       continue;
     }
@@ -137,11 +138,11 @@ static LineMap buildLineMap(StringRef Text) {
     if (FuncIdx < LM.size()) {
       // If we see an instruction before any BB label (first BB may be unnamed),
       // create a slot for it implicitly.
-      if (LM[FuncIdx].empty())
-        LM[FuncIdx].emplace_back();
+      if (LM[FuncIdx].BBInstLines.empty())
+        LM[FuncIdx].BBInstLines.emplace_back();
 
-      BBIdx = LM[FuncIdx].size() - 1;
-      LM[FuncIdx][BBIdx].push_back(LineNo);
+      BBIdx = LM[FuncIdx].BBInstLines.size() - 1;
+      LM[FuncIdx].BBInstLines[BBIdx].push_back(LineNo);
     }
   }
 
@@ -198,22 +199,22 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
       dwarf::DW_LANG_C, File, "llvm-opt-add-ll-debugloc",
       /*isOptimized=*/true, "", /*RV=*/0, /*SplitName=*/"",
       DICompileUnit::FullDebug);
+  if (!M.getModuleFlag("Debug Info Version"))
+    M.addModuleFlag(Module::Warning, "Debug Info Version",
+                    DEBUG_METADATA_VERSION);
 
   auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
 
   unsigned FuncIdx = 0;
   for (Function &F : M) {
-    if (F.isDeclaration()) {
-      ++FuncIdx;
+    if (F.isDeclaration())
       continue;
-    }
 
     // Determine the line of this function's definition in the source. Use 1
     // if we don't have data (graceful fallback).
     unsigned FuncLine = 1;
-    if (FuncIdx < LM.size() && !LM[FuncIdx].empty() &&
-        !LM[FuncIdx][0].empty())
-      FuncLine = LM[FuncIdx][0][0];
+    if (FuncIdx < LM.size())
+      FuncLine = LM[FuncIdx].DefineLine;
 
     DISubprogram::DISPFlags SPFlags =
         DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
@@ -234,7 +235,7 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
 
         unsigned Line = FuncLine; // fallback
         if (FuncIdx < LM.size()) {
-          const auto &FuncData = LM[FuncIdx];
+          const auto &FuncData = LM[FuncIdx].BBInstLines;
           if (BBIdx < FuncData.size()) {
             const auto &BBData = FuncData[BBIdx];
             if (InstIdx < BBData.size())
@@ -246,6 +247,7 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
       }
       ++BBIdx;
     }
+
     ++FuncIdx;
   }
 
