@@ -2,6 +2,7 @@
 
 set(INTERCEPTION_SOURCES
   interception_aix.cpp
+  interception_dso.cpp
   interception_linux.cpp
   interception_mac.cpp
   interception_win.cpp
@@ -10,6 +11,11 @@ set(INTERCEPTION_SOURCES
 
 set(INTERCEPTION_HEADERS
   interception.h
+  interception_asm.h
+  interception_defs.h
+  interception_dso.h
+  interception_platform.h
+  interception_type_traits.h
   interception_aix.h
   interception_linux.h
   interception_mac.h
@@ -26,7 +32,20 @@ endif()
 
 include_directories(..)
 
-set(INTERCEPTION_CFLAGS ${SANITIZER_COMMON_CFLAGS})
+set(INTERCEPTION_CFLAGS
+  ${COMPILER_RT_COMMON_CFLAGS}
+  ${COMPILER_RT_CXX_CFLAGS})
+
+append_list_if(COMPILER_RT_HAS_NOSTDINCXX_FLAG -nostdinc++ INTERCEPTION_CFLAGS)
+append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions INTERCEPTION_CFLAGS)
+append_list_if(MSVC /Zl INTERCEPTION_CFLAGS)
+if(HAIKU)
+  list(APPEND INTERCEPTION_CFLAGS
+    -I/system/develop/headers/private
+    -I/system/develop/headers/private/system/arch/x86_64
+    -I/system/develop/headers/private/system)
+endif()
+
 append_rtti_flag(OFF INTERCEPTION_CFLAGS)
 
 # Silence warnings in system headers with MSVC.
@@ -35,8 +54,8 @@ if(NOT CLANG_CL)
 endif()
 
 add_compiler_rt_object_libraries(RTInterception
-    OS ${SANITIZER_COMMON_SUPPORTED_OS}
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
+    OS ${INTERCEPTION_SUPPORTED_OS}
+    ARCHS ${INTERCEPTION_SUPPORTED_ARCH}
     SOURCES ${INTERCEPTION_SOURCES}
     ADDITIONAL_HEADERS ${INTERCEPTION_HEADERS}
     CFLAGS ${INTERCEPTION_CFLAGS})

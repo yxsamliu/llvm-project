@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception.h"
-#include "sanitizer_common/sanitizer_type_traits.h"
+#include "interception_type_traits.h"
 
 #if __has_include(<sys/types.h>)
 #  include <sys/types.h>

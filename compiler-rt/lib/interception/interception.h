@@ -14,8 +14,8 @@
 #ifndef INTERCEPTION_H
 #define INTERCEPTION_H
 
-#include "sanitizer_common/sanitizer_asm.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
+#include "interception_asm.h"
+#include "interception_defs.h"
 
 #if !SANITIZER_LINUX && !SANITIZER_FREEBSD && !SANITIZER_APPLE &&    \
     !SANITIZER_NETBSD && !SANITIZER_WINDOWS && !SANITIZER_FUCHSIA && \

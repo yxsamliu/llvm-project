@@ -465,6 +465,7 @@ if(APPLE)
   endif()
 
   set(SANITIZER_COMMON_SUPPORTED_OS osx)
+  set(INTERCEPTION_SUPPORTED_OS osx)
   set(PROFILE_SUPPORTED_OS osx)
   set(TSAN_SUPPORTED_OS osx)
   set(TYSAN_SUPPORTED_OS osx)
@@ -564,6 +565,7 @@ if(APPLE)
         message(STATUS "${platform} Simulator supported arches: ${DARWIN_${platform}sim_ARCHS}")
         if(DARWIN_${platform}sim_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform}sim)
+          list(APPEND INTERCEPTION_SUPPORTED_OS ${platform}sim)
           list(APPEND PROFILE_SUPPORTED_OS ${platform}sim)
           list(APPEND TSAN_SUPPORTED_OS ${platform}sim)
           list(APPEND FUZZER_SUPPORTED_OS ${platform}sim)
@@ -594,6 +596,7 @@ if(APPLE)
         message(STATUS "${platform} supported arches: ${DARWIN_${platform}_ARCHS}")
         if(DARWIN_${platform}_ARCHS)
           list(APPEND SANITIZER_COMMON_SUPPORTED_OS ${platform})
+          list(APPEND INTERCEPTION_SUPPORTED_OS ${platform})
           list(APPEND PROFILE_SUPPORTED_OS ${platform})
 
           list_intersect(DARWIN_${platform}_TSAN_ARCHS DARWIN_${platform}_ARCHS ALL_TSAN_SUPPORTED_ARCH)
@@ -624,6 +627,10 @@ if(APPLE)
 
   list_intersect(SANITIZER_COMMON_SUPPORTED_ARCH
     ALL_SANITIZER_COMMON_SUPPORTED_ARCH
+    COMPILER_RT_SUPPORTED_ARCH
+    )
+  list_intersect(INTERCEPTION_SUPPORTED_ARCH
+    ALL_INTERCEPTION_SUPPORTED_ARCH
     COMPILER_RT_SUPPORTED_ARCH
     )
   set(LSAN_COMMON_SUPPORTED_ARCH ${SANITIZER_COMMON_SUPPORTED_ARCH})
@@ -700,6 +707,8 @@ else()
   # Architectures supported by compiler-rt libraries.
   filter_available_targets(SANITIZER_COMMON_SUPPORTED_ARCH
     ${ALL_SANITIZER_COMMON_SUPPORTED_ARCH})
+  filter_available_targets(INTERCEPTION_SUPPORTED_ARCH
+    ${ALL_INTERCEPTION_SUPPORTED_ARCH})
   # LSan and UBSan common files should be available on all architectures
   # supported by other sanitizers (even if they build into dummy object files).
   filter_available_targets(LSAN_COMMON_SUPPORTED_ARCH
@@ -777,7 +786,10 @@ else()
   set(COMPILER_RT_HAS_SANITIZER_COMMON FALSE)
 endif()
 
-if (COMPILER_RT_HAS_SANITIZER_COMMON)
+if (INTERCEPTION_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
+    (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD|NetBSD|Fuchsia|SunOS|Haiku" OR
+    (OS_NAME MATCHES "Windows" AND NOT CYGWIN AND
+        (NOT MINGW OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"))))
   set(COMPILER_RT_HAS_INTERCEPTION TRUE)
 else()
   set(COMPILER_RT_HAS_INTERCEPTION FALSE)

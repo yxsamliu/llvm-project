@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "interception.h"
-#include "sanitizer_common/sanitizer_common.h"
 
 #if SANITIZER_AIX
 
@@ -30,6 +29,44 @@
 #  endif
 
 namespace __interception {
+
+static int internal_strcmp(const char *s1, const char *s2) {
+  while (*s1 == *s2) {
+    if (*s1 == '\0')
+      return 0;
+    ++s1;
+    ++s2;
+  }
+  return static_cast<unsigned char>(*s1) - static_cast<unsigned char>(*s2);
+}
+
+static char *internal_strncpy(char *dst, const char *src, size_t n) {
+  char *ret = dst;
+  for (; n && *src; --n)
+    *dst++ = *src++;
+  for (; n; --n)
+    *dst++ = '\0';
+  return ret;
+}
+
+static char *internal_strcat(char *dst, const char *src) {
+  char *ret = dst;
+  while (*dst)
+    ++dst;
+  while ((*dst++ = *src++))
+    ;
+  return ret;
+}
+
+static char *internal_strncat(char *dst, const char *src, size_t n) {
+  char *ret = dst;
+  while (*dst)
+    ++dst;
+  while (n-- && *src)
+    *dst++ = *src++;
+  *dst = '\0';
+  return ret;
+}
 
 // These symbols cannot be used for indirect calls.
 char* ___strcpy(char*, const char*) __asm__(STRCPY_STR);

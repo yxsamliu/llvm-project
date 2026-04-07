@@ -15,6 +15,7 @@
 #define __NO_CTYPE
 
 #include "interception/interception.h"
+#include "interception/interception_dso.h"
 
 #include <stdlib.h>
 
@@ -91,6 +92,16 @@ TEST(Interception, Basic) {
   EXPECT_NE(0, REAL(isdigit)('1'));
   EXPECT_EQ(0, REAL(isdigit)('a'));
   EXPECT_EQ(0, isdigit_called);
+}
+
+TEST(Interception, DsoHelpers) {
+  EXPECT_TRUE(__interception_is_dynamic_loader_available());
+
+  void *self = __interception_open_library(nullptr);
+  EXPECT_NE(nullptr, self);
+  EXPECT_NE(nullptr, __interception_lookup_symbol(self, "malloc"));
+  EXPECT_EQ(nullptr,
+            __interception_lookup_symbol(self, "symbol_that_does_not_exist__"));
 }
 
 TEST(Interception, ForeignOverrideDirect) {
