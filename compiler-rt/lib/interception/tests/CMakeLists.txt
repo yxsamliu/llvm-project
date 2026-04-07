@@ -116,11 +116,13 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT APPLE)
   # be sure that produced binaries would work.
   if(APPLE)
     add_interceptor_lib("RTInterception.test.osx"
-                        $<TARGET_OBJECTS:RTInterception.osx>)
+                        $<TARGET_OBJECTS:RTInterception.osx>
+                        $<TARGET_OBJECTS:RTInterceptionDSO.osx>)
   else()
     foreach(arch ${INTERCEPTION_UNITTEST_SUPPORTED_ARCH})
       add_interceptor_lib("RTInterception.test.${arch}"
-                          $<TARGET_OBJECTS:RTInterception.${arch}>)
+                          $<TARGET_OBJECTS:RTInterception.${arch}>
+                          $<TARGET_OBJECTS:RTInterceptionDSO.${arch}>)
     endforeach()
   endif()
   foreach(arch ${INTERCEPTION_UNITTEST_SUPPORTED_ARCH})

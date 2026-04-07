@@ -15,9 +15,9 @@
 // Do not declare functions in ctype.h.
 #define __NO_CTYPE
 
+#include "interception_asm.h"
+#include "interception_defs.h"
 #include "gtest/gtest.h"
-#include "sanitizer_common/sanitizer_asm.h"
-#include "sanitizer_common/sanitizer_internal_defs.h"
 
 #if SANITIZER_LINUX
 

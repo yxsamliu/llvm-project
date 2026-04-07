@@ -31,7 +31,8 @@ function(compiler_rt_build_runtime runtime)
   endif()
 endfunction()
 
-if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF)
+if(COMPILER_RT_BUILD_SANITIZERS OR COMPILER_RT_BUILD_MEMPROF OR
+   COMPILER_RT_BUILD_PROFILE)
   compiler_rt_build_runtime(interception)
 endif()
 

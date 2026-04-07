@@ -127,7 +127,6 @@
 #include "interception.h"
 
 #if SANITIZER_WINDOWS
-#include "sanitizer_common/sanitizer_platform.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <psapi.h>
