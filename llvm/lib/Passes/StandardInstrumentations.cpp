@@ -2670,9 +2670,9 @@ void DotCfgChangeReporter::registerCallbacks(
 
 StandardInstrumentations::StandardInstrumentations(
     LLVMContext &Context, bool DebugLogging, bool VerifyEach,
-    PrintPassOptions PrintPassOpts)
-    : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
-      OptPassGate(Context),
+    PrintPassOptions PrintPassOpts, bool DisableIRTracker)
+    : PrintPass(DebugLogging, PrintPassOpts), IRTracker(DisableIRTracker),
+      OptNone(DebugLogging), OptPassGate(Context),
       PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
@@ -2742,6 +2742,8 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
 void IRTrackerInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
+  if (Disabled)
+    return;
 #ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
   StringRef Path = getDebugLocIndexDatabasePath();
   if (Path.empty())

@@ -149,7 +149,10 @@ private:
 /// after each pass into a SQLite database when \c -debug-loc-index-database is
 /// specified.
 class IRTrackerInstrumentation {
+  bool Disabled = false;
+
 public:
+  explicit IRTrackerInstrumentation(bool Disabled = false) : Disabled(Disabled) {}
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
@@ -628,7 +631,8 @@ public:
   LLVM_ABI
   StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
-                           PrintPassOptions PrintPassOpts = PrintPassOptions());
+                           PrintPassOptions PrintPassOpts = PrintPassOptions(),
+                           bool DisableIRTracker = false);
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.

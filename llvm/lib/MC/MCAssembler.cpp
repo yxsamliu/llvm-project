@@ -88,12 +88,23 @@ MCAssembler::MCAssembler(MCContext &Context,
     this->Writer->setAssembler(this);
 }
 
+void MCAssembler::discardEmissionForReuse() {
+  for (const MCSymbol *Sym : Symbols) {
+    const_cast<MCSymbol *>(Sym)->setIsRegistered(false);
+    if (!Sym->isVariable())
+      const_cast<MCSymbol *>(Sym)->setFragment(nullptr);
+  }
+  Symbols.clear();
+  for (MCSection *Sec : Sections)
+    Sec->resetInstructionEmissionState();
+  Sections.clear();
+}
+
 void MCAssembler::reset() {
+  discardEmissionForReuse();
   HasLayout = false;
   HasFinalLayout = false;
   RelaxAll = false;
-  Sections.clear();
-  Symbols.clear();
   ThumbFuncs.clear();
 
   // reset objects owned by us
