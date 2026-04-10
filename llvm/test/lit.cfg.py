@@ -276,6 +276,7 @@ tools.extend(
         "llvm-exegesis",
         "llvm-extract",
         "llvm-ir2vec",
+        "llvm-ir-tracker",
         "llvm-isel-fuzzer",
         "llvm-ifs",
         "llvm-install-name-tool",

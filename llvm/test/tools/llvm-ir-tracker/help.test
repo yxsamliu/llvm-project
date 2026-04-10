@@ -1,0 +1,4 @@
+; RUN: llvm-ir-tracker --help | FileCheck %s
+; CHECK-DAG: llvm-ir-tracker
+; CHECK-DAG: build
+; CHECK-DAG: passes
