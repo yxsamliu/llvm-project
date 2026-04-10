@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineVerifier.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -373,6 +374,24 @@ bool isInterestingFunction(const Function &F) {
 }
 
 #ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
+namespace {
+
+/// Prefer directory + filename when DI provides both (stronger file identity).
+static std::string getIRTrackerFilePath(const DILocation *Loc) {
+  if (!Loc)
+    return {};
+  StringRef Dir = Loc->getDirectory();
+  StringRef File = Loc->getFilename();
+  if (File.empty())
+    return {};
+  if (Dir.empty())
+    return File.str();
+  SmallString<256> Path;
+  Path = Dir;
+  sys::path::append(Path, File);
+  return std::string(Path);
+}
+
 class IRTrackerState {
   sqlite3 *DB = nullptr;
   sqlite3_stmt *StmtInsertPass = nullptr;
@@ -430,7 +449,7 @@ class IRTrackerState {
         if (Line == 0)
           continue;
         unsigned Col = Loc->getColumn();
-        std::string FilePath = Loc->getFilename().str();
+        std::string FilePath = getIRTrackerFilePath(Loc);
         if (FilePath.empty())
           continue;
         int FileId = getOrCreateFileId(FilePath);
@@ -493,34 +512,37 @@ public:
     const char *Schema = R"SQL(
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
-CREATE TABLE IF NOT EXISTS meta (
+CREATE TABLE IF NOT EXISTS ir_tracker_meta (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS files (
+CREATE TABLE IF NOT EXISTS ir_tracker_files (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   path TEXT NOT NULL UNIQUE
 );
-CREATE TABLE IF NOT EXISTS passes (
+CREATE TABLE IF NOT EXISTS ir_tracker_passes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   seq INTEGER NOT NULL,
   pass_class TEXT NOT NULL,
   ir_unit TEXT NOT NULL
 );
-CREATE UNIQUE INDEX IF NOT EXISTS idx_passes_seq ON passes(seq);
-CREATE TABLE IF NOT EXISTS instructions (
+CREATE UNIQUE INDEX IF NOT EXISTS ir_tracker_idx_passes_seq
+  ON ir_tracker_passes(seq);
+CREATE TABLE IF NOT EXISTS ir_tracker_instructions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pass_id INTEGER NOT NULL REFERENCES passes(id),
+  pass_id INTEGER NOT NULL REFERENCES ir_tracker_passes(id),
   function TEXT NOT NULL,
   basicblock TEXT NOT NULL,
   inst_seq INTEGER NOT NULL,
   opcode TEXT NOT NULL,
-  file_id INTEGER NOT NULL REFERENCES files(id),
+  file_id INTEGER NOT NULL REFERENCES ir_tracker_files(id),
   line INTEGER NOT NULL,
   col INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_instr_file_loc ON instructions(file_id, line, col);
-CREATE INDEX IF NOT EXISTS idx_instr_pass ON instructions(pass_id);
+CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_file_loc
+  ON ir_tracker_instructions(file_id, line, col);
+CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
+  ON ir_tracker_instructions(pass_id);
 )SQL";
     char *Err = nullptr;
     if (sqlite3_exec(DB, Schema, nullptr, nullptr, &Err) != SQLITE_OK) {
@@ -529,28 +551,31 @@ CREATE INDEX IF NOT EXISTS idx_instr_pass ON instructions(pass_id);
       report_fatal_error(Twine("ir-tracker schema: ") + Msg);
     }
 
-    sqlite3_exec(DB, "DELETE FROM instructions", nullptr, nullptr, nullptr);
-    sqlite3_exec(DB, "DELETE FROM passes", nullptr, nullptr, nullptr);
-    sqlite3_exec(DB, "DELETE FROM files", nullptr, nullptr, nullptr);
-    sqlite3_exec(DB, "DELETE FROM meta", nullptr, nullptr, nullptr);
+    sqlite3_exec(DB, "DELETE FROM ir_tracker_instructions", nullptr, nullptr,
+                 nullptr);
+    sqlite3_exec(DB, "DELETE FROM ir_tracker_passes", nullptr, nullptr, nullptr);
+    sqlite3_exec(DB, "DELETE FROM ir_tracker_files", nullptr, nullptr, nullptr);
+    sqlite3_exec(DB, "DELETE FROM ir_tracker_meta", nullptr, nullptr, nullptr);
     sqlite3_exec(DB,
-                 "INSERT INTO meta(key,value) VALUES('schema_version','1')",
+                 "INSERT INTO ir_tracker_meta(key,value) "
+                 "VALUES('schema_version','2')",
                  nullptr, nullptr, nullptr);
 
     const char *InsPass =
-        "INSERT INTO passes(seq, pass_class, ir_unit) VALUES(?,?,?)";
+        "INSERT INTO ir_tracker_passes(seq, pass_class, ir_unit) VALUES(?,?,?)";
     check(sqlite3_prepare_v2(DB, InsPass, -1, &StmtInsertPass, nullptr),
           "sqlite3_prepare(insert pass)");
-    const char *InsFile = "INSERT OR IGNORE INTO files(path) VALUES(?)";
+    const char *InsFile =
+        "INSERT OR IGNORE INTO ir_tracker_files(path) VALUES(?)";
     check(sqlite3_prepare_v2(DB, InsFile, -1, &StmtInsertFileIgnore, nullptr),
           "sqlite3_prepare(insert file)");
-    const char *SelFile = "SELECT id FROM files WHERE path = ?";
+    const char *SelFile = "SELECT id FROM ir_tracker_files WHERE path = ?";
     check(sqlite3_prepare_v2(DB, SelFile, -1, &StmtSelectFileId, nullptr),
           "sqlite3_prepare(select file)");
     const char *InsInst =
         "INSERT INTO "
-        "instructions(pass_id,function,basicblock,inst_seq,opcode,file_id,line,"
-        "col) VALUES(?,?,?,?,?,?,?,?)";
+        "ir_tracker_instructions(pass_id,function,basicblock,inst_seq,opcode,"
+        "file_id,line,col) VALUES(?,?,?,?,?,?,?,?)";
     check(sqlite3_prepare_v2(DB, InsInst, -1, &StmtInsertInst, nullptr),
           "sqlite3_prepare(insert inst)");
   }
@@ -600,6 +625,9 @@ CREATE INDEX IF NOT EXISTS idx_instr_pass ON instructions(pass_id);
           "sqlite3 COMMIT");
   }
 };
+
+} // namespace
+
 #endif
 
 // Return true when this is a pass on IR for which printing
