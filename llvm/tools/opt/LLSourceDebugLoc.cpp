@@ -202,15 +202,15 @@ static void applyOrdinalLocations(Module &M, LLVMContext &Ctx, DIBuilder &DIB,
 void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
                                  bool ForceOverwrite) {
   if (LLFilePath.empty()) {
-    errs() << "warning: --add-ll-debugloc: no input file path known, "
+    errs() << "warning: --add-ir-tracker-locs: no input file path known, "
               "skipping.\n";
     return;
   }
 
   // If the module has real debug info, skip unless forced.
   if (!ForceOverwrite && M.getNamedMetadata("llvm.dbg.cu")) {
-    errs() << "note: --add-ll-debugloc: module already has debug info; "
-              "use --add-ll-debugloc-force to overwrite.\n";
+    errs() << "note: --add-ir-tracker-locs: module already has debug info; "
+              "use --add-ir-tracker-locs-force to overwrite.\n";
     return;
   }
 
@@ -227,7 +227,7 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
       UseTextualLineMap = true;
     }
   } else {
-    errs() << "warning: --add-ll-debugloc: cannot read '" << LLFilePath
+    errs() << "warning: --add-ir-tracker-locs: cannot read '" << LLFilePath
            << "': " << BufOrErr.getError().message()
            << "; falling back to synthetic ordinal locations\n";
   }
@@ -243,7 +243,7 @@ void llvm::applyLLSourceDebugLoc(Module &M, StringRef LLFilePath,
 
   DIFile *File = DIB.createFile(Filename, Dir);
   DICompileUnit *CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, File, "llvm-opt-add-ll-debugloc",
+      dwarf::DW_LANG_C, File, "llvm-opt-add-ir-tracker-locs",
       /*isOptimized=*/true, "", /*RV=*/0, /*SplitName=*/"",
       DICompileUnit::FullDebug);
   addDebugInfoVersionIfMissing(M);

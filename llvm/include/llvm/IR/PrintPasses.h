@@ -81,9 +81,9 @@ std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
 
-/// Non-empty when \c -debug-loc-index-database is set (opt records debug
-/// locations after each pass into a SQLite database).
-StringRef getDebugLocIndexDatabasePath();
+/// Non-empty when \c -ir-tracker-database is set (tools record instructions
+/// with debug locations after each pass into a SQLite database).
+StringRef getIRTrackerDatabasePath();
 
 } // namespace llvm
 

@@ -2745,7 +2745,7 @@ void IRTrackerInstrumentation::registerCallbacks(
   if (Disabled)
     return;
 #ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
-  StringRef Path = getDebugLocIndexDatabasePath();
+  StringRef Path = getIRTrackerDatabasePath();
   if (Path.empty())
     return;
 
@@ -2755,8 +2755,8 @@ void IRTrackerInstrumentation::registerCallbacks(
         State->afterPass(PassID, IR, PIC);
       });
 #else
-  if (!getDebugLocIndexDatabasePath().empty()) {
-    errs() << "tool: -debug-loc-index-database requires an LLVM build linked "
+  if (!getIRTrackerDatabasePath().empty()) {
+    errs() << "tool: -ir-tracker-database requires an LLVM build linked "
               "against SQLite3 (e.g. install libsqlite3-dev and reconfigure).\n";
     exit(1);
   }

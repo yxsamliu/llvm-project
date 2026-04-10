@@ -126,9 +126,9 @@ int llvm::compileModuleWithNewPM(
                               VK == VerifierKind::EachPass, PrintPassOptions(),
                               DisableIRTrackerForObjectOutput);
   if (DisableIRTrackerForObjectOutput &&
-      !getDebugLocIndexDatabasePath().empty()) {
+      !getIRTrackerDatabasePath().empty()) {
     WithColor::note(errs(), Arg0)
-        << "ignoring -debug-loc-index-database for object emission; use "
+        << "ignoring -ir-tracker-database for object emission; use "
            "-filetype=asm to record the codegen pipeline, or record IR with "
            "opt.\n";
   }

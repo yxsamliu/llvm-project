@@ -109,10 +109,10 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<std::string> DebugLocIndexDatabase(
-    "debug-loc-index-database",
-    cl::desc("SQLite database path: after each pass, record instructions that "
-             "have debug locations (IR-unit filtering matches "
+static cl::opt<std::string> IRTrackerDatabase(
+    "ir-tracker-database",
+    cl::desc("IR tracker: SQLite database path; after each pass, record "
+             "instructions that have debug locations (IR-unit filtering matches "
              "-print-before/-print-after: -filter-print-funcs, "
              "-print-module-scope, etc.)"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
@@ -172,7 +172,7 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
          PrintFuncNames.count(std::string(FunctionName));
 }
 
-StringRef llvm::getDebugLocIndexDatabasePath() { return DebugLocIndexDatabase; }
+StringRef llvm::getIRTrackerDatabasePath() { return IRTrackerDatabase; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

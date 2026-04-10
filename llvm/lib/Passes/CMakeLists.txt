@@ -34,7 +34,7 @@ add_llvm_component_library(LLVMPasses
   Instrumentation
   )
 
-# Optional: index tracked IR locations to SQLite (-debug-loc-index-database).
+# Optional: IR tracker SQLite backend (-ir-tracker-database).
 find_package(SQLite3 QUIET)
 if(SQLite3_FOUND)
   set(IR_TRACKER_SQLITE_LIB SQLite::SQLite3)

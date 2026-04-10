@@ -757,9 +757,9 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
                                   PassPipeline, codegen::getFileType());
   }
 
-  if (!getDebugLocIndexDatabasePath().empty()) {
+  if (!getIRTrackerDatabasePath().empty()) {
     WithColor::error(errs(), argv[0])
-        << "-debug-loc-index-database requires -enable-new-pm: the legacy "
+        << "-ir-tracker-database requires -enable-new-pm: the legacy "
            "codegen pass manager does not register IR tracker instrumentation. "
            "For a reliable object file without codegen recording, omit this "
            "flag and use default llc; for recording during codegen use "

@@ -146,7 +146,7 @@ private:
 };
 
 /// IR tracker instrumentation that records instructions with debug locations
-/// after each pass into a SQLite database when \c -debug-loc-index-database is
+/// after each pass into a SQLite database when \c -ir-tracker-database is
 /// specified.
 class IRTrackerInstrumentation {
   bool Disabled = false;

@@ -17,7 +17,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -filetype=obj -o %t.npm.o %s
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -filetype=asm -o - %s | FileCheck %s
 ; RUN: rm -f %t.npm.db
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -debug-loc-index-database=%t.npm.db -filetype=obj -o %t.dbobj.o %s 2>&1 | FileCheck %s --check-prefix=DBOBJ
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -enable-new-pm -ir-tracker-database=%t.npm.db -filetype=obj -o %t.dbobj.o %s 2>&1 | FileCheck %s --check-prefix=DBOBJ
 ; RUN: test ! -f %t.npm.db
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -40,7 +40,7 @@ m:
 
 ; NM: {{.*}} T f
 
-; DBOBJ: note: ignoring -debug-loc-index-database for object emission
+; DBOBJ: note: ignoring -ir-tracker-database for object emission
 
 ; CHECK-LABEL: f:
 ; CHECK: retq

@@ -1,9 +1,9 @@
-; RUN: opt %s --add-ll-debugloc-force -passes=no-op-module -S -o - | FileCheck %s
-; RUN: opt %s --add-ll-debugloc-force -passes=no-op-module -S -o %t.ll
+; RUN: opt %s --add-ir-tracker-locs-force -passes=no-op-module -S -o - | FileCheck %s
+; RUN: opt %s --add-ir-tracker-locs-force -passes=no-op-module -S -o %t.ll
 ; RUN: opt -disable-output -passes=no-op-module %t.ll 2>&1 | FileCheck %s --check-prefix=NOWARN --allow-empty
 ; RUN: llvm-as %s -o %t.bc
-; RUN: opt %t.bc --add-ll-debugloc-force -passes=no-op-module -S -o - | FileCheck %s --check-prefix=BC
-; RUN: opt %t.bc --add-ll-debugloc-force -passes=no-op-module -S -o %t-bc.ll
+; RUN: opt %t.bc --add-ir-tracker-locs-force -passes=no-op-module -S -o - | FileCheck %s --check-prefix=BC
+; RUN: opt %t.bc --add-ir-tracker-locs-force -passes=no-op-module -S -o %t-bc.ll
 ; RUN: opt -disable-output -passes=no-op-module %t-bc.ll 2>&1 | FileCheck %s --check-prefix=BCNOWARN --allow-empty
 ; NOWARN-NOT: invalid version
 ; BCNOWARN-NOT: invalid version

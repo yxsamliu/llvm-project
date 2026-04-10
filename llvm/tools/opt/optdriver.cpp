@@ -150,18 +150,19 @@ static cl::opt<bool>
                cl::desc("Strip debugger symbol info from translation unit"));
 
 static cl::opt<bool>
-    AddLLDebugLoc(
-        "add-ll-debugloc",
-        cl::desc("Synthesize !dbg locations for inputs without debug info: "
-                 "use .ll source line numbers for textual IR, or synthetic "
-                 "ordinal IDs for bitcode. No-op if the module already has "
-                 "debug info (use --add-ll-debugloc-force to overwrite)."),
+    AddIRTrackerLocs(
+        "add-ir-tracker-locs",
+        cl::desc("IR tracker: synthesize !dbg locations for inputs without "
+                 "debug info: use .ll source line numbers for textual IR, or "
+                 "synthetic ordinal IDs for bitcode. No-op if the module "
+                 "already has debug info (use --add-ir-tracker-locs-force to "
+                 "overwrite)."),
         cl::init(false));
 
 static cl::opt<bool>
-    AddLLDebugLocForce(
-        "add-ll-debugloc-force",
-        cl::desc("Like --add-ll-debugloc but also overwrites existing "
+    AddIRTrackerLocsForce(
+        "add-ir-tracker-locs-force",
+        cl::desc("Like --add-ir-tracker-locs but also overwrites existing "
                  "!dbg locations and strips any pre-existing DICompileUnit."),
         cl::init(false));
 
@@ -604,11 +605,12 @@ optMain(int argc, char **argv,
   if (StripDebug)
     StripDebugInfo(*M);
 
-  // Synthesize !dbg locations from the input .ll source file.
-  if (AddLLDebugLoc || AddLLDebugLocForce) {
-    if (AddLLDebugLocForce)
+  // Synthesize !dbg locations from the input .ll source file (IR tracker).
+  if (AddIRTrackerLocs || AddIRTrackerLocsForce) {
+    if (AddIRTrackerLocsForce)
       StripDebugInfo(*M);
-    applyLLSourceDebugLoc(*M, InputFilename, /*ForceOverwrite=*/AddLLDebugLocForce);
+    applyLLSourceDebugLoc(*M, InputFilename,
+                          /*ForceOverwrite=*/AddIRTrackerLocsForce);
   }
 
   // Erase module-level named metadata, if requested.
