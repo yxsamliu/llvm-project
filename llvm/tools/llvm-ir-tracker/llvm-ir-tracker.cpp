@@ -240,7 +240,7 @@ int runTrace() {
   }
 
   int Line = 0;
-  if (TraceLine.getAsInteger(0, Line) || Line <= 0) {
+  if (StringRef(TraceLine).getAsInteger(0, Line) || Line <= 0) {
     errs() << "llvm-ir-tracker: invalid --line\n";
     sqlite3_close(DB);
     return 1;

@@ -623,10 +623,6 @@ CREATE TABLE IF NOT EXISTS ir_tracker_instructions (
   line INTEGER NOT NULL,
   col INTEGER NOT NULL
 );
-CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_file_loc
-  ON ir_tracker_instructions(file_id, line, col);
-CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
-  ON ir_tracker_instructions(pass_id);
 )SQL";
     char *Err = nullptr;
     if (sqlite3_exec(DB, Schema, nullptr, nullptr, &Err) != SQLITE_OK) {
@@ -640,6 +636,13 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
     sqlite3_exec(DB, "DELETE FROM ir_tracker_passes", nullptr, nullptr, nullptr);
     sqlite3_exec(DB, "DELETE FROM ir_tracker_files", nullptr, nullptr, nullptr);
     sqlite3_exec(DB, "DELETE FROM ir_tracker_meta", nullptr, nullptr, nullptr);
+    // Drop secondary indexes on instructions if present (fresh run or upgrade
+    // from builds that created them in the initial schema). Indexes are built
+    // once after all rows are inserted to speed bulk load.
+    sqlite3_exec(DB, "DROP INDEX IF EXISTS ir_tracker_idx_instr_file_loc",
+                 nullptr, nullptr, nullptr);
+    sqlite3_exec(DB, "DROP INDEX IF EXISTS ir_tracker_idx_instr_pass", nullptr,
+                 nullptr, nullptr);
     sqlite3_exec(DB,
                  "INSERT INTO ir_tracker_meta(key,value) "
                  "VALUES('schema_version','2')",
@@ -666,6 +669,12 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
     InsertBatch = getIRTrackerInsertBatch();
     int MaxVar = sqlite3_limit(DB, SQLITE_LIMIT_VARIABLE_NUMBER, -1);
     MaxInsertChunk = std::max(1u, (unsigned)std::max(1, MaxVar / 8));
+
+    // One transaction for the whole recording session avoids per-pass commit
+    // overhead (WAL/fsync churn). Indexes on ir_tracker_instructions are
+    // created in the destructor after COMMIT.
+    check(sqlite3_exec(DB, "BEGIN", nullptr, nullptr, nullptr),
+          "sqlite3 BEGIN (ir-tracker session)");
   }
 
   ~IRTrackerState() {
@@ -679,8 +688,25 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
       sqlite3_finalize(StmtInsertFileIgnore);
     if (StmtInsertPass)
       sqlite3_finalize(StmtInsertPass);
-    if (DB)
+    if (DB) {
+      if (sqlite3_get_autocommit(DB) == 0)
+        check(sqlite3_exec(DB, "COMMIT", nullptr, nullptr, nullptr),
+              "sqlite3 COMMIT (ir-tracker session)");
+      const char *BuildIdx = R"SQL(
+CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_file_loc
+  ON ir_tracker_instructions(file_id, line, col);
+CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
+  ON ir_tracker_instructions(pass_id);
+)SQL";
+      char *Err = nullptr;
+      if (sqlite3_exec(DB, BuildIdx, nullptr, nullptr, &Err) != SQLITE_OK) {
+        std::string Msg = Err ? Err : "unknown error";
+        sqlite3_free(Err);
+        report_fatal_error(Twine("ir-tracker indexes: ") + Msg);
+      }
       sqlite3_close(DB);
+      DB = nullptr;
+    }
   }
 
   void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
@@ -695,9 +721,6 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
     if (PassName.empty())
       PassName = PassID.str();
 
-    check(sqlite3_exec(DB, "BEGIN IMMEDIATE", nullptr, nullptr, nullptr),
-          "sqlite3 BEGIN");
-
     check(sqlite3_bind_int(StmtInsertPass, 1, (int)NextSeq), "bind seq");
     check(sqlite3_bind_text(StmtInsertPass, 2, PassName.data(),
                             (int)PassName.size(), SQLITE_TRANSIENT),
@@ -711,9 +734,6 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
     LastPassRowId = sqlite3_last_insert_rowid(DB);
     indexIR(IR);
     flushAllPendingInstructionRows();
-
-    check(sqlite3_exec(DB, "COMMIT", nullptr, nullptr, nullptr),
-          "sqlite3 COMMIT");
   }
 };
 
