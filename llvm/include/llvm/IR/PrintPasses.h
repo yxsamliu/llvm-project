@@ -85,6 +85,10 @@ std::string doSystemDiff(StringRef Before, StringRef After,
 /// with debug locations after each pass into a SQLite database).
 StringRef getIRTrackerDatabasePath();
 
+/// When \c -ir-tracker-database is enabled, maximum instruction rows per
+/// multi-row \c INSERT (minimum 1). Capped by SQLite host-parameter limits.
+unsigned getIRTrackerInsertBatch();
+
 } // namespace llvm
 
 #endif // LLVM_IR_PRINTPASSES_H
