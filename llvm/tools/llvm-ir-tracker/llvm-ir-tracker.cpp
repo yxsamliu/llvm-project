@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Wraps opt -ir-tracker-database= and queries ir_tracker_* tables (schema v2).
+// Wraps opt -ir-tracker-database= and queries ir_tracker_* tables.
 // Query subcommands require LLVM to be built with SQLite (same as LLVMPasses).
 //
 //===----------------------------------------------------------------------===//
@@ -27,12 +27,14 @@
 #endif
 
 #include <cctype>
+#include <limits>
 #include <string>
 #include <vector>
 
 using namespace llvm;
 
 static constexpr StringRef T_FILES = "ir_tracker_files";
+static constexpr StringRef T_META = "ir_tracker_meta";
 static constexpr StringRef T_PASSES = "ir_tracker_passes";
 static constexpr StringRef T_INSTR = "ir_tracker_instructions";
 
@@ -41,12 +43,14 @@ cl::SubCommand BuildCmd("build",
 cl::SubCommand PassesCmd("passes", "List recorded passes");
 cl::SubCommand TraceCmd(
     "trace", "Find first pass with instructions matching a source line");
+cl::SubCommand ShowCmd(
+    "show", "Show LLVM IR instructions matching a source line");
 cl::SubCommand SqlCmd("sql", "Run a read-only SQL query");
 
 static cl::opt<std::string>
     DbPath("db", cl::desc("SQLite database path"), cl::value_desc("path"),
            cl::Required, cl::sub(BuildCmd), cl::sub(PassesCmd),
-           cl::sub(TraceCmd), cl::sub(SqlCmd));
+           cl::sub(TraceCmd), cl::sub(ShowCmd), cl::sub(SqlCmd));
 
 static cl::opt<std::string>
     BuildOptPath("opt",
@@ -60,13 +64,22 @@ static cl::list<std::string>
 
 static cl::opt<std::string>
     TraceFile("file", cl::desc("Substring or basename to match file path"),
-              cl::Required, cl::sub(TraceCmd));
+              cl::Required, cl::sub(TraceCmd), cl::sub(ShowCmd));
 static cl::opt<std::string> TraceLine("line", cl::desc("1-based source line"),
-                                      cl::Required, cl::sub(TraceCmd));
+                                      cl::Required, cl::sub(TraceCmd),
+                                      cl::sub(ShowCmd));
 static cl::opt<int> TraceCol("col", cl::desc("Optional column"), cl::init(-1),
-                             cl::sub(TraceCmd));
+                             cl::sub(TraceCmd), cl::sub(ShowCmd));
 static cl::opt<std::string> TraceOpcode("opcode", cl::desc("Optional opcode"),
-                                        cl::init(""), cl::sub(TraceCmd));
+                                        cl::init(""), cl::sub(TraceCmd),
+                                        cl::sub(ShowCmd));
+static cl::opt<int> ShowSeq(
+    "seq",
+    cl::desc("Pass sequence to show (0=initial, default: final pass)"),
+    cl::init(-1), cl::sub(ShowCmd));
+static cl::opt<bool> ShowAllPasses(
+    "all-passes", cl::desc("Show matches from every recorded pass"),
+    cl::init(false), cl::sub(ShowCmd));
 
 static cl::opt<std::string> SqlStatement(cl::Positional, cl::Required,
                                          cl::desc("<sql>"), cl::sub(SqlCmd));
@@ -198,6 +211,41 @@ static std::vector<int> resolveFileIds(sqlite3 *DB, StringRef FilePat) {
   return Ids;
 }
 
+static int getSchemaVersion(sqlite3 *DB) {
+  sqlite3_stmt *Stmt = nullptr;
+  std::string Q = "SELECT value FROM " + std::string(T_META) +
+                  " WHERE key = 'schema_version'";
+  if (sqlite3_prepare_v2(DB, Q.c_str(), -1, &Stmt, nullptr) != SQLITE_OK) {
+    printSqliteError(DB, "prepare(schema_version)");
+    return -1;
+  }
+  int Version = -1;
+  if (sqlite3_step(Stmt) == SQLITE_ROW &&
+      sqlite3_column_type(Stmt, 0) != SQLITE_NULL) {
+    const char *Value =
+        reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 0));
+    if (!Value || StringRef(Value).getAsInteger(10, Version))
+      Version = -1;
+  }
+  sqlite3_finalize(Stmt);
+  return Version;
+}
+
+static int getMaxSeq(sqlite3 *DB) {
+  sqlite3_stmt *Stmt = nullptr;
+  std::string Q = "SELECT MAX(seq) AS m FROM " + std::string(T_PASSES);
+  if (sqlite3_prepare_v2(DB, Q.c_str(), -1, &Stmt, nullptr) != SQLITE_OK) {
+    printSqliteError(DB, "prepare(max seq)");
+    return -1;
+  }
+  int MaxSeq = -1;
+  if (sqlite3_step(Stmt) == SQLITE_ROW &&
+      sqlite3_column_type(Stmt, 0) != SQLITE_NULL)
+    MaxSeq = sqlite3_column_int(Stmt, 0);
+  sqlite3_finalize(Stmt);
+  return MaxSeq;
+}
+
 int runPasses() {
   sqlite3 *DB = openDbReadOnly(DbPath);
   if (!DB)
@@ -253,19 +301,7 @@ int runTrace() {
   if (!TraceOpcode.empty())
     OpcSql = " AND i.opcode = ?";
 
-  sqlite3_stmt *MaxStmt = nullptr;
-  std::string QMax = "SELECT MAX(seq) AS m FROM " + std::string(T_PASSES);
-  if (sqlite3_prepare_v2(DB, QMax.c_str(), -1, &MaxStmt, nullptr) !=
-      SQLITE_OK) {
-    printSqliteError(DB, "prepare(max seq)");
-    sqlite3_close(DB);
-    return 1;
-  }
-  int MaxSeq = -1;
-  if (sqlite3_step(MaxStmt) == SQLITE_ROW &&
-      sqlite3_column_type(MaxStmt, 0) != SQLITE_NULL)
-    MaxSeq = sqlite3_column_int(MaxStmt, 0);
-  sqlite3_finalize(MaxStmt);
+  int MaxSeq = getMaxSeq(DB);
   if (MaxSeq < 0) {
     errs() << "llvm-ir-tracker: empty " << T_PASSES << " table\n";
     sqlite3_close(DB);
@@ -359,6 +395,146 @@ int runTrace() {
   return 0;
 }
 
+int runShow() {
+  sqlite3 *DB = openDbReadOnly(DbPath);
+  if (!DB)
+    return 1;
+
+  int SchemaVersion = getSchemaVersion(DB);
+  if (SchemaVersion < 3) {
+    errs() << "llvm-ir-tracker: 'show' requires ir-tracker schema_version >= 3 "
+              "(database stores metadata only)\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+  if (ShowAllPasses && ShowSeq >= 0) {
+    errs() << "llvm-ir-tracker: --all-passes and --seq are mutually exclusive\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+
+  std::vector<int> FileIds = resolveFileIds(DB, TraceFile);
+  if (FileIds.empty()) {
+    errs() << "llvm-ir-tracker: no " << T_FILES
+           << " rows match --file (try a basename or substring)\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+
+  int Line = 0;
+  if (StringRef(TraceLine).getAsInteger(0, Line) || Line <= 0) {
+    errs() << "llvm-ir-tracker: invalid --line\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+
+  int TargetSeq = ShowSeq;
+  if (!ShowAllPasses && TargetSeq < 0) {
+    TargetSeq = getMaxSeq(DB);
+    if (TargetSeq < 0) {
+      errs() << "llvm-ir-tracker: empty " << T_PASSES << " table\n";
+      sqlite3_close(DB);
+      return 1;
+    }
+  }
+  if (TargetSeq < -1) {
+    errs() << "llvm-ir-tracker: invalid --seq\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+
+  std::string InClause;
+  for (size_t I = 0; I < FileIds.size(); ++I) {
+    if (I)
+      InClause += ',';
+    InClause += '?';
+  }
+
+  std::string SeqSql;
+  std::string ColSql;
+  std::string OpcSql;
+  if (!ShowAllPasses)
+    SeqSql = " AND p.seq = ?";
+  if (TraceCol >= 0)
+    ColSql = " AND i.col = ?";
+  if (!TraceOpcode.empty())
+    OpcSql = " AND i.opcode = ?";
+
+  std::string Q =
+      "SELECT p.seq, p.pass_class, p.ir_unit, i.function, i.basicblock, "
+      "i.inst_seq, i.opcode, i.inst_text FROM " +
+      std::string(T_INSTR) + " i JOIN " + std::string(T_PASSES) +
+      " p ON i.pass_id = p.id WHERE i.file_id IN (" + InClause +
+      ") AND i.line = ?" + SeqSql + ColSql + OpcSql +
+      " ORDER BY p.seq ASC, i.function ASC, i.basicblock ASC, i.inst_seq ASC";
+
+  sqlite3_stmt *Stmt = nullptr;
+  if (sqlite3_prepare_v2(DB, Q.c_str(), -1, &Stmt, nullptr) != SQLITE_OK) {
+    printSqliteError(DB, "prepare(show)");
+    sqlite3_close(DB);
+    return 1;
+  }
+
+  int B = 1;
+  for (int Fid : FileIds)
+    sqlite3_bind_int(Stmt, B++, Fid);
+  sqlite3_bind_int(Stmt, B++, Line);
+  if (!ShowAllPasses)
+    sqlite3_bind_int(Stmt, B++, TargetSeq);
+  if (TraceCol >= 0)
+    sqlite3_bind_int(Stmt, B++, TraceCol);
+  if (!TraceOpcode.empty())
+    sqlite3_bind_text(Stmt, B++, TraceOpcode.c_str(), -1, SQLITE_TRANSIENT);
+
+  int PrevSeq = std::numeric_limits<int>::min();
+  std::string PrevFunc;
+  std::string PrevBB;
+  bool AnyRows = false;
+  while (sqlite3_step(Stmt) == SQLITE_ROW) {
+    AnyRows = true;
+    int Seq = sqlite3_column_int(Stmt, 0);
+    const char *PassClass =
+        reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 1));
+    const char *IRUnit =
+        reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 2));
+    const char *Func =
+        reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 3));
+    const char *BB = reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 4));
+    const char *InstText =
+        reinterpret_cast<const char *>(sqlite3_column_text(Stmt, 7));
+    std::string FuncStr = Func ? Func : "";
+    std::string BBStr = BB ? BB : "";
+
+    if (Seq != PrevSeq) {
+      outs() << "seq=" << Seq << " '" << (PassClass ? PassClass : "") << "' on '"
+             << (IRUnit ? IRUnit : "") << "'\n";
+      PrevSeq = Seq;
+      PrevFunc.clear();
+      PrevBB.clear();
+    }
+    if (FuncStr != PrevFunc || BBStr != PrevBB) {
+      outs() << "  function " << FuncStr << ", block " << BBStr << ":\n";
+      PrevFunc = std::move(FuncStr);
+      PrevBB = std::move(BBStr);
+    }
+    outs() << "    " << (InstText ? InstText : "") << "\n";
+  }
+
+  sqlite3_finalize(Stmt);
+  sqlite3_close(DB);
+
+  if (!AnyRows) {
+    if (ShowAllPasses)
+      errs() << "llvm-ir-tracker: no matching instructions found\n";
+    else
+      errs() << "llvm-ir-tracker: no matching instructions found at seq="
+             << TargetSeq << '\n';
+    return 1;
+  }
+
+  return 0;
+}
+
 int runSql() {
   sqlite3 *DB = openDbReadOnly(DbPath);
   if (!DB)
@@ -428,6 +604,8 @@ int main(int argc, char **argv) {
     return runPasses();
   if (TraceCmd)
     return runTrace();
+  if (ShowCmd)
+    return runShow();
   if (SqlCmd)
     return runSql();
 #endif

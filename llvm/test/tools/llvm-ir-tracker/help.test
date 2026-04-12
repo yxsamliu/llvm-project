@@ -2,3 +2,6 @@
 ; CHECK-DAG: llvm-ir-tracker
 ; CHECK-DAG: build
 ; CHECK-DAG: passes
+; CHECK-DAG: trace
+; CHECK-DAG: show
+; CHECK-DAG: sql
