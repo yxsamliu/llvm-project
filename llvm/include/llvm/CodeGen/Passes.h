@@ -114,6 +114,15 @@ LLVM_ABI MachineFunctionPass *createStackFrameLayoutAnalysisPass();
 /// using the MIR serialization format.
 LLVM_ABI MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 
+/// IR tracker final-MIR pass - records final MachineInstr text into the same
+/// SQLite database selected by -ir-tracker-database when enabled.
+LLVM_ABI MachineFunctionPass *createIRTrackerFinalMIRPass();
+
+/// Append final textual ISA rows into the same SQLite database selected by
+/// -ir-tracker-database. The input should be the emitted assembly text.
+LLVM_ABI void appendIRTrackerISAFromAssembly(StringRef DatabasePath,
+                                             StringRef AssemblyText);
+
 /// This pass resets a MachineFunction when it has the FailedISel property
 /// as if it was just created.
 /// If EmitFallbackDiag is true, the pass will emit a

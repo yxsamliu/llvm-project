@@ -43,8 +43,8 @@ cl::SubCommand BuildCmd("build",
 cl::SubCommand PassesCmd("passes", "List recorded passes");
 cl::SubCommand TraceCmd(
     "trace", "Find first pass with instructions matching a source line");
-cl::SubCommand ShowCmd(
-    "show", "Show LLVM IR instructions matching a source line");
+cl::SubCommand ShowCmd("show",
+                       "Show tracked instructions matching a source line");
 cl::SubCommand SqlCmd("sql", "Run a read-only SQL query");
 
 static cl::opt<std::string>
@@ -73,6 +73,9 @@ static cl::opt<int> TraceCol("col", cl::desc("Optional column"), cl::init(-1),
 static cl::opt<std::string> TraceOpcode("opcode", cl::desc("Optional opcode"),
                                         cl::init(""), cl::sub(TraceCmd),
                                         cl::sub(ShowCmd));
+static cl::opt<std::string> TraceKind(
+    "kind", cl::desc("Representation kind: ir, mir, isa"), cl::init("ir"),
+    cl::sub(TraceCmd), cl::sub(ShowCmd));
 static cl::opt<int> ShowSeq(
     "seq",
     cl::desc("Pass sequence to show (0=initial, default: final pass)"),
@@ -211,6 +214,10 @@ static std::vector<int> resolveFileIds(sqlite3 *DB, StringRef FilePat) {
   return Ids;
 }
 
+static bool isValidTrackedKind(StringRef Kind) {
+  return Kind == "ir" || Kind == "mir" || Kind == "isa";
+}
+
 static int getSchemaVersion(sqlite3 *DB) {
   sqlite3_stmt *Stmt = nullptr;
   std::string Q = "SELECT value FROM " + std::string(T_META) +
@@ -231,13 +238,16 @@ static int getSchemaVersion(sqlite3 *DB) {
   return Version;
 }
 
-static int getMaxSeq(sqlite3 *DB) {
+static int getMaxSeqForKind(sqlite3 *DB, StringRef Kind) {
   sqlite3_stmt *Stmt = nullptr;
-  std::string Q = "SELECT MAX(seq) AS m FROM " + std::string(T_PASSES);
+  std::string Q = "SELECT MAX(p.seq) AS m FROM " + std::string(T_INSTR) +
+                  " i JOIN " + std::string(T_PASSES) +
+                  " p ON i.pass_id = p.id WHERE i.kind = ?";
   if (sqlite3_prepare_v2(DB, Q.c_str(), -1, &Stmt, nullptr) != SQLITE_OK) {
     printSqliteError(DB, "prepare(max seq)");
     return -1;
   }
+  sqlite3_bind_text(Stmt, 1, Kind.data(), (int)Kind.size(), SQLITE_TRANSIENT);
   int MaxSeq = -1;
   if (sqlite3_step(Stmt) == SQLITE_ROW &&
       sqlite3_column_type(Stmt, 0) != SQLITE_NULL)
@@ -278,6 +288,13 @@ int runTrace() {
   sqlite3 *DB = openDbReadOnly(DbPath);
   if (!DB)
     return 1;
+  int SchemaVersion = getSchemaVersion(DB);
+  if (SchemaVersion < 4) {
+    errs() << "llvm-ir-tracker: 'trace' with representation kinds requires "
+              "ir-tracker schema_version >= 4\n";
+    sqlite3_close(DB);
+    return 1;
+  }
 
   std::vector<int> FileIds = resolveFileIds(DB, TraceFile);
   if (FileIds.empty()) {
@@ -293,7 +310,13 @@ int runTrace() {
     sqlite3_close(DB);
     return 1;
   }
+  if (!isValidTrackedKind(TraceKind)) {
+    errs() << "llvm-ir-tracker: invalid --kind (expected ir, mir, or isa)\n";
+    sqlite3_close(DB);
+    return 1;
+  }
 
+  std::string KindSql = " AND i.kind = ?";
   std::string ColSql;
   std::string OpcSql;
   if (TraceCol >= 0)
@@ -301,9 +324,10 @@ int runTrace() {
   if (!TraceOpcode.empty())
     OpcSql = " AND i.opcode = ?";
 
-  int MaxSeq = getMaxSeq(DB);
+  int MaxSeq = getMaxSeqForKind(DB, TraceKind);
   if (MaxSeq < 0) {
-    errs() << "llvm-ir-tracker: empty " << T_PASSES << " table\n";
+    errs() << "llvm-ir-tracker: no rows recorded for kind '" << TraceKind
+           << "'\n";
     sqlite3_close(DB);
     return 1;
   }
@@ -320,6 +344,7 @@ int runTrace() {
     for (int Fid : FileIds)
       sqlite3_bind_int(S, Idx++, Fid);
     sqlite3_bind_int(S, Idx++, Line);
+    sqlite3_bind_text(S, Idx++, TraceKind.c_str(), -1, SQLITE_TRANSIENT);
     if (TraceCol >= 0)
       sqlite3_bind_int(S, Idx++, TraceCol);
     if (!TraceOpcode.empty()) {
@@ -332,7 +357,8 @@ int runTrace() {
     std::string QCnt = "SELECT COUNT(*) AS c FROM " + std::string(T_INSTR) +
                        " i JOIN " + std::string(T_PASSES) +
                        " p ON i.pass_id = p.id WHERE p.seq = ? AND i.file_id IN (" +
-                       InClause + ") AND i.line = ?" + ColSql + OpcSql;
+                       InClause + ") AND i.line = ?" + KindSql + ColSql +
+                       OpcSql;
     sqlite3_stmt *Stmt = nullptr;
     if (sqlite3_prepare_v2(DB, QCnt.c_str(), -1, &Stmt, nullptr) != SQLITE_OK) {
       printSqliteError(DB, "prepare(count)");
@@ -365,7 +391,7 @@ int runTrace() {
         "SELECT p.seq, p.pass_class, p.ir_unit, COUNT(*) AS n FROM " +
         std::string(T_INSTR) + " i JOIN " + std::string(T_PASSES) +
         " p ON i.pass_id = p.id WHERE i.file_id IN (" + InClause +
-        ") AND i.line = ?" + ColSql + OpcSql +
+        ") AND i.line = ?" + KindSql + ColSql + OpcSql +
         " GROUP BY p.id ORDER BY p.seq ASC LIMIT 1";
     sqlite3_stmt *Stmt = nullptr;
     if (sqlite3_prepare_v2(DB, QFirst.c_str(), -1, &Stmt, nullptr) !=
@@ -401,14 +427,19 @@ int runShow() {
     return 1;
 
   int SchemaVersion = getSchemaVersion(DB);
-  if (SchemaVersion < 3) {
-    errs() << "llvm-ir-tracker: 'show' requires ir-tracker schema_version >= 3 "
+  if (SchemaVersion < 4) {
+    errs() << "llvm-ir-tracker: 'show' requires ir-tracker schema_version >= 4 "
               "(database stores metadata only)\n";
     sqlite3_close(DB);
     return 1;
   }
   if (ShowAllPasses && ShowSeq >= 0) {
     errs() << "llvm-ir-tracker: --all-passes and --seq are mutually exclusive\n";
+    sqlite3_close(DB);
+    return 1;
+  }
+  if (!isValidTrackedKind(TraceKind)) {
+    errs() << "llvm-ir-tracker: invalid --kind (expected ir, mir, or isa)\n";
     sqlite3_close(DB);
     return 1;
   }
@@ -430,9 +461,10 @@ int runShow() {
 
   int TargetSeq = ShowSeq;
   if (!ShowAllPasses && TargetSeq < 0) {
-    TargetSeq = getMaxSeq(DB);
+    TargetSeq = getMaxSeqForKind(DB, TraceKind);
     if (TargetSeq < 0) {
-      errs() << "llvm-ir-tracker: empty " << T_PASSES << " table\n";
+      errs() << "llvm-ir-tracker: no rows recorded for kind '" << TraceKind
+             << "'\n";
       sqlite3_close(DB);
       return 1;
     }
@@ -451,6 +483,7 @@ int runShow() {
   }
 
   std::string SeqSql;
+  std::string KindSql = " AND i.kind = ?";
   std::string ColSql;
   std::string OpcSql;
   if (!ShowAllPasses)
@@ -465,7 +498,7 @@ int runShow() {
       "i.inst_seq, i.opcode, i.inst_text FROM " +
       std::string(T_INSTR) + " i JOIN " + std::string(T_PASSES) +
       " p ON i.pass_id = p.id WHERE i.file_id IN (" + InClause +
-      ") AND i.line = ?" + SeqSql + ColSql + OpcSql +
+      ") AND i.line = ?" + KindSql + SeqSql + ColSql + OpcSql +
       " ORDER BY p.seq ASC, i.function ASC, i.basicblock ASC, i.inst_seq ASC";
 
   sqlite3_stmt *Stmt = nullptr;
@@ -479,6 +512,7 @@ int runShow() {
   for (int Fid : FileIds)
     sqlite3_bind_int(Stmt, B++, Fid);
   sqlite3_bind_int(Stmt, B++, Line);
+  sqlite3_bind_text(Stmt, B++, TraceKind.c_str(), -1, SQLITE_TRANSIENT);
   if (!ShowAllPasses)
     sqlite3_bind_int(Stmt, B++, TargetSeq);
   if (TraceCol >= 0)

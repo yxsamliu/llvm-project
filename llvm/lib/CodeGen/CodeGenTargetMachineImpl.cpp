@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -244,6 +245,9 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     return true;
 
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
+    if (!getIRTrackerDatabasePath().empty())
+      if (MachineFunctionPass *IRTrackerMIR = createIRTrackerFinalMIRPass())
+        PM.add(IRTrackerMIR);
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {

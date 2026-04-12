@@ -80,6 +80,7 @@ add_llvm_component_library(LLVMCodeGen
   InlineSpiller.cpp
   InsertCodePrefetch.cpp
   InterferenceCache.cpp
+  IRTrackerCodeGen.cpp
   InterleavedAccessPass.cpp
   InterleavedLoadCombinePass.cpp
   IntrinsicLowering.cpp
@@ -293,6 +294,27 @@ add_llvm_component_library(LLVMCodeGen
   TargetParser
   TransformUtils
   )
+
+# Optional: IR tracker SQLite backend (-ir-tracker-database) for final MIR/ISA.
+find_package(SQLite3 QUIET)
+if(SQLite3_FOUND)
+  set(IR_TRACKER_SQLITE_LIB SQLite::SQLite3)
+  set(IR_TRACKER_HAVE_SQLITE 1)
+else()
+  find_path(LLVM_SQLITE3_INCLUDE_DIR sqlite3.h)
+  find_library(LLVM_SQLITE3_LIBRARY sqlite3)
+  if(LLVM_SQLITE3_INCLUDE_DIR AND LLVM_SQLITE3_LIBRARY)
+    set(IR_TRACKER_SQLITE_LIB "${LLVM_SQLITE3_LIBRARY}")
+    set(IR_TRACKER_HAVE_SQLITE 1)
+  endif()
+endif()
+if(IR_TRACKER_HAVE_SQLITE)
+  target_compile_definitions(LLVMCodeGen PRIVATE LLVM_ENABLE_IR_TRACKER_SQLITE=1)
+  if(LLVM_SQLITE3_INCLUDE_DIR)
+    target_include_directories(LLVMCodeGen PRIVATE "${LLVM_SQLITE3_INCLUDE_DIR}")
+  endif()
+  target_link_libraries(LLVMCodeGen PRIVATE ${IR_TRACKER_SQLITE_LIB})
+endif()
 
 add_subdirectory(SelectionDAG)
 add_subdirectory(AsmPrinter)

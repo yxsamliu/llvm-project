@@ -1,8 +1,8 @@
 ; RUN: opt -disable-output -passes=no-op-module -ir-tracker-database=%t.db --add-ir-tracker-locs-force %s
-; RUN: llvm-ir-tracker trace --db %t.db --file %s --line 9 | FileCheck %s --check-prefix=TRACE
-; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 --seq 0 | FileCheck %s --check-prefix=SEQ0
-; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 | FileCheck %s --check-prefix=FINAL
-; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 --all-passes | FileCheck %s --check-prefix=ALL
+; RUN: llvm-ir-tracker trace --db %t.db --file %s --line 9 --kind ir | FileCheck %s --check-prefix=TRACE
+; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 --kind ir --seq 0 | FileCheck %s --check-prefix=SEQ0
+; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 --kind ir | FileCheck %s --check-prefix=FINAL
+; RUN: llvm-ir-tracker show --db %t.db --file %s --line 9 --kind ir --all-passes | FileCheck %s --check-prefix=ALL
 
 define i32 @f(i32 %x) {
 entry:
