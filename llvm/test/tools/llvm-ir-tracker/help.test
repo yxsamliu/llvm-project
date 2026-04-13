@@ -1,0 +1,13 @@
+RUN: %ir-tracker --help | FileCheck %s --check-prefix=MAIN
+RUN: %ir-tracker passes --help | FileCheck %s --check-prefix=PASSES
+RUN: %ir-tracker trace --help | FileCheck %s --check-prefix=TRACE
+RUN: %ir-tracker show --help | FileCheck %s --check-prefix=SHOW
+RUN: %ir-tracker sql --help | FileCheck %s --check-prefix=SQL
+
+MAIN: Query IR-tracker SQLite databases
+MAIN: {passes,trace,show,sql}
+
+PASSES: usage: ir-tracker passes
+TRACE: usage: ir-tracker trace
+SHOW: usage: ir-tracker show
+SQL: usage: ir-tracker sql
