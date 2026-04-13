@@ -156,23 +156,6 @@ using RewriteableMemOp =
     std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
 using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 
-/// Provenance bits for allocas rewritten by SROA.
-///
-/// These flags describe how the current alloca relates to the original
-/// aggregate so the struct-to-vector fallback can distinguish original
-/// full-record allocas from smaller pieces created by earlier SROA rewrites.
-/// They are tracked only inside this pass; they are not IR metadata.
-enum AllocaProvenanceFlag : unsigned {
-  APF_None = 0,
-  /// The alloca is only a subaggregate of the original aggregate.
-  APF_Subaggregate = 1u << 0,
-  /// The subaggregate starts at a non-zero offset within the original.
-  APF_NonPrefix = 1u << 1,
-  /// The subaggregate is strictly interior: it starts after offset 0 and ends
-  /// before the end of the original aggregate.
-  APF_Interior = 1u << 2,
-};
-
 /// An optimization pass providing Scalar Replacement of Aggregates.
 ///
 /// This pass takes allocations which can be completely analyzed (that is, they
@@ -196,14 +179,6 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
-
-  /// Side table for the provenance bits above.
-  ///
-  /// New allocas created by rewritePartition() inherit and refine the
-  /// provenance of the source alloca. Keeping this as pass-local state lets the
-  /// heuristic reason about original-vs-derived allocas without changing the
-  /// emitted IR.
-  DenseMap<const AllocaInst *, unsigned> AllocaProvenance;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -285,18 +260,6 @@ private:
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas();
-
-  unsigned getAllocaProvenance(const AllocaInst &AI) const {
-    auto It = AllocaProvenance.find(&AI);
-    return It == AllocaProvenance.end() ? APF_None : It->second;
-  }
-
-  void setAllocaProvenance(const AllocaInst &AI, unsigned Flags) {
-    if (Flags == APF_None)
-      AllocaProvenance.erase(&AI);
-    else
-      AllocaProvenance[&AI] = Flags;
-  }
 };
 
 } // end anonymous namespace
@@ -5231,7 +5194,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///
 /// We also recover a narrow class of memcpy-only integer cases, even though
 /// they are classified as splittable rather than whole-partition uses:
-/// - interior i64 subaggregates produced by earlier SROA rewrites
+/// - interior i64 partitions within a larger fixed-size allocation
 /// - original full-record integer aggregates of size >= 32 bytes
 ///
 /// Rationale:
@@ -5241,8 +5204,9 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///   benchmark cases like arrow/interfaces, an original full-record 16-byte
 ///   {i64, i64} helper can look locally profitable while still making the
 ///   enclosing caller worse after inlining and backend lowering.
-/// - So the fallback stays narrow and uses provenance to distinguish the safer
-///   recovered cases from the broader risky bucket.
+/// - So the fallback stays narrow and uses the current partition's offsets plus
+///   allocation size to distinguish the safer recovered cases from the broader
+///   risky bucket.
 ///
 /// Intuition:
 /// - Good: whole-value traffic can benefit from a vector type.
@@ -5266,16 +5230,17 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 static bool
 shouldCanonicalizeHomogeneousStructToVector(Partition &P, const DataLayout &DL,
                                             AllocaInst &AI,
-                                            bool IsI64Candidate,
-                                            unsigned ProvenanceFlags) {
+                                            bool IsI64Candidate) {
   bool HasWholePartitionUse = false;
   bool HasSubElementLoad = false;
   bool HasRecoverableSplittableTransfer = false;
-  bool IsInteriorSubaggregate = (ProvenanceFlags & APF_Interior) != 0;
   std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
+  bool IsInteriorSubaggregate =
+      AllocSize && AllocSize->isFixed() && P.beginOffset() != 0 &&
+      P.endOffset() < AllocSize->getFixedValue();
   bool IsOriginalFullRecord =
-      (ProvenanceFlags & APF_Subaggregate) == 0 && P.beginOffset() == 0 &&
-      AllocSize && AllocSize->isFixed() && AllocSize->getFixedValue() == P.size();
+      P.beginOffset() == 0 && AllocSize && AllocSize->isFixed() &&
+      AllocSize->getFixedValue() == P.size();
 
   for (const Slice &S : P) {
     if (S.isDead())
@@ -5324,7 +5289,7 @@ shouldCanonicalizeHomogeneousStructToVector(Partition &P, const DataLayout &DL,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C, unsigned ProvenanceFlags) {
+                    LLVMContext &C) {
   auto LogChoice = [&](StringRef Path, Type *ChosenTy, VectorType *ChosenVecTy,
                        bool ChosenIntWidening) {
     LLVM_DEBUG({
@@ -5431,10 +5396,9 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         //   codegen
         //
         // So this path is restricted to 64-bit integer lanes, and only for
-        // interior subaggregates or original full records of size >= 32 bytes.
+        // interior partitions or original full records of size >= 32 bytes.
         bool AllowStructFallback = shouldCanonicalizeHomogeneousStructToVector(
-            P, DL, AI, VTy->getElementType()->isIntegerTy(64),
-            ProvenanceFlags);
+            P, DL, AI, VTy->getElementType()->isIntegerTy(64));
         LLVM_DEBUG({
           dbgs() << "selectPartitionType struct-fallback-candidate"
                  << " func=" << AI.getFunction()->getName() << " alloca=";
@@ -5492,9 +5456,8 @@ std::pair<AllocaInst *, uint64_t>
 SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
-  unsigned ProvenanceFlags = getAllocaProvenance(AI);
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C, ProvenanceFlags);
+      selectPartitionType(P, DL, AI, *C);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5521,27 +5484,6 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
         AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
-    // Propagate and refine provenance for the rewritten alloca.
-    //
-    // New allocas inherit the source alloca's provenance and then add flags
-    // describing which slice of the original aggregate this partition covers.
-    // This lets later struct-to-vector fallback decisions distinguish:
-    // - original full-record allocas
-    // - prefix subaggregates
-    // - strictly interior subaggregates
-    unsigned NewProvenanceFlags = ProvenanceFlags;
-    std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
-    assert(AllocSize && AllocSize->isFixed() &&
-           "rewritePartition should only see fixed-size allocas");
-    uint64_t OriginalAllocSize = AllocSize->getFixedValue();
-    if (P.beginOffset() != 0 ||
-        P.size() != OriginalAllocSize)
-      NewProvenanceFlags |= APF_Subaggregate;
-    if (P.beginOffset() != 0)
-      NewProvenanceFlags |= APF_NonPrefix;
-    if (P.beginOffset() != 0 && P.endOffset() < OriginalAllocSize)
-      NewProvenanceFlags |= APF_Interior;
-    setAllocaProvenance(*NewAI, NewProvenanceFlags);
     ++NumNewAllocas;
   }
 
