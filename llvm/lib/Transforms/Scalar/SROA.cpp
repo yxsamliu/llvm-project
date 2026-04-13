@@ -156,6 +156,23 @@ using RewriteableMemOp =
     std::variant<PossiblySpeculatableLoad, UnspeculatableStore>;
 using RewriteableMemOps = SmallVector<RewriteableMemOp, 2>;
 
+/// Provenance bits for allocas rewritten by SROA.
+///
+/// These flags describe how the current alloca relates to the original
+/// aggregate so the struct-to-vector fallback can distinguish original
+/// full-record allocas from smaller pieces created by earlier SROA rewrites.
+/// They are tracked only inside this pass; they are not IR metadata.
+enum AllocaProvenanceFlag : unsigned {
+  APF_None = 0,
+  /// The alloca is only a subaggregate of the original aggregate.
+  APF_Subaggregate = 1u << 0,
+  /// The subaggregate starts at a non-zero offset within the original.
+  APF_NonPrefix = 1u << 1,
+  /// The subaggregate is strictly interior: it starts after offset 0 and ends
+  /// before the end of the original aggregate.
+  APF_Interior = 1u << 2,
+};
+
 /// An optimization pass providing Scalar Replacement of Aggregates.
 ///
 /// This pass takes allocations which can be completely analyzed (that is, they
@@ -179,6 +196,14 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+
+  /// Side table for the provenance bits above.
+  ///
+  /// New allocas created by rewritePartition() inherit and refine the
+  /// provenance of the source alloca. Keeping this as pass-local state lets the
+  /// heuristic reason about original-vs-derived allocas without changing the
+  /// emitted IR.
+  DenseMap<const AllocaInst *, unsigned> AllocaProvenance;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -260,6 +285,18 @@ private:
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
   bool promoteAllocas();
+
+  unsigned getAllocaProvenance(const AllocaInst &AI) const {
+    auto It = AllocaProvenance.find(&AI);
+    return It == AllocaProvenance.end() ? APF_None : It->second;
+  }
+
+  void setAllocaProvenance(const AllocaInst &AI, unsigned Flags) {
+    if (Flags == APF_None)
+      AllocaProvenance.erase(&AI);
+    else
+      AllocaProvenance[&AI] = Flags;
+  }
 };
 
 } // end anonymous namespace
@@ -5179,6 +5216,101 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   return FixedVectorType::get(EltTy, NumElts);
 }
 
+/// Decide whether it is profitable to canonicalize a homogeneous struct
+/// partition to a vector after the usual promotion choices have already failed.
+///
+/// This helper consolidates the local heuristics from the follow-up tuning work:
+/// we only canonicalize when the partition has a non-splittable whole-partition
+/// use and does not have any non-splittable sub-element loads.
+///
+/// The current heuristic is intentionally conservative:
+/// - Default allow case: a real whole-partition use, because that is the
+///   clearest signal that a vector type can carry a whole value profitably.
+/// - Default reject case: sub-element loads, because they usually turn the
+///   vector back into lane extraction traffic.
+///
+/// We also recover a narrow class of memcpy-only integer cases, even though
+/// they are classified as splittable rather than whole-partition uses:
+/// - interior i64 subaggregates produced by earlier SROA rewrites
+/// - original full-record integer aggregates of size >= 32 bytes
+///
+/// Rationale:
+/// - Some memcpy-only integer cases are real wins and stay in whole-value form
+///   after canonicalization.
+/// - But recovering all full-record memcpy-only cases is too broad: in
+///   benchmark cases like arrow/interfaces, an original full-record 16-byte
+///   {i64, i64} helper can look locally profitable while still making the
+///   enclosing caller worse after inlining and backend lowering.
+/// - So the fallback stays narrow and uses provenance to distinguish the safer
+///   recovered cases from the broader risky bucket.
+///
+/// Intuition:
+/// - Good: whole-value traffic can benefit from a vector type.
+///     %tmp = load { i64, i64 }, ptr %src
+///     store { i64, i64 } %tmp, ptr %dst
+///   Canonicalizing to <2 x i64> exposes a single whole-value load/store.
+///
+/// - Bad: field-by-field reads become extractelement traffic.
+///     %x = load i32, ptr %p
+///     %y = load i32, ptr (gep %p, 4)
+///   Canonicalizing { i32, i32 } to <2 x i32> only adds lane extraction.
+///
+/// - Bad: a store-only FP tail can seed later SLP divergence without a clear
+///   SROA win.
+///     store float %a, ptr %p0
+///     store float %b, ptr %p1
+///     store float %c, ptr %p2
+///     store float %d, ptr %p3
+///   Canonicalizing this to a temporary <4 x float> store was enough to change
+///   later vectorization in benchmark cases like glTFImporter.
+static bool
+shouldCanonicalizeHomogeneousStructToVector(Partition &P, const DataLayout &DL,
+                                            AllocaInst &AI,
+                                            bool IsI64Candidate,
+                                            unsigned ProvenanceFlags) {
+  bool HasWholePartitionUse = false;
+  bool HasSubElementLoad = false;
+  bool HasRecoverableSplittableTransfer = false;
+  bool IsInteriorSubaggregate = (ProvenanceFlags & APF_Interior) != 0;
+  bool IsOriginalFullRecord =
+      (ProvenanceFlags & APF_Subaggregate) == 0 && P.beginOffset() == 0 &&
+      DL.getTypeAllocSize(AI.getAllocatedType()).isFixed() &&
+      DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue() == P.size();
+
+  for (const Slice &S : P) {
+    if (S.isDead())
+      continue;
+
+    auto *U = S.getUse();
+    if (!U)
+      continue;
+
+    if (S.isSplittable()) {
+      if (IsI64Candidate && IsInteriorSubaggregate &&
+          S.beginOffset() == P.beginOffset() &&
+          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
+        HasRecoverableSplittableTransfer = true;
+      if (IsI64Candidate && IsOriginalFullRecord && P.size() >= 32 &&
+          S.beginOffset() == P.beginOffset() &&
+          S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
+        HasRecoverableSplittableTransfer = true;
+      continue;
+    }
+
+    uint64_t SliceSize = S.endOffset() - S.beginOffset();
+    if (SliceSize < P.size()) {
+      if (isa<LoadInst>(U->getUser()))
+        HasSubElementLoad = true;
+      continue;
+    }
+
+    HasWholePartitionUse = true;
+  }
+
+  return (HasWholePartitionUse || HasRecoverableSplittableTransfer) &&
+         !HasSubElementLoad;
+}
+
 /// Select a partition type for an alloca partition.
 ///
 /// Try to compute a friendly type for this partition of the alloca. This
@@ -5192,7 +5324,25 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     nullptr.
 static std::tuple<Type *, bool, VectorType *>
 selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
-                    LLVMContext &C) {
+                    LLVMContext &C, unsigned ProvenanceFlags) {
+  auto LogChoice = [&](StringRef Path, Type *ChosenTy, VectorType *ChosenVecTy,
+                       bool ChosenIntWidening) {
+    LLVM_DEBUG({
+      dbgs() << "selectPartitionType path=" << Path
+             << " func=" << AI.getFunction()->getName() << " alloca=";
+      if (AI.hasName())
+        dbgs() << AI.getName();
+      else
+        dbgs() << "<unnamed>";
+      dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+             << ") size=" << P.size() << " allocated=" << *AI.getAllocatedType();
+      if (ChosenTy)
+        dbgs() << " chosen=" << *ChosenTy;
+      if (ChosenVecTy)
+        dbgs() << " vec=" << *ChosenVecTy;
+      dbgs() << " intwiden=" << ChosenIntWidening << "\n";
+    });
+  };
   // First check if the partition is viable for vector promotion.
   //
   // We prefer vector promotion over integer widening promotion when:
@@ -5209,8 +5359,10 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
   // promotion. If the vector has one element, let the below code select
   // whether we promote with the vector or scalar.
   if (VecTy && VecTy->getElementType()->isFloatingPointTy() &&
-      VecTy->getElementCount().getFixedValue() > 1)
+      VecTy->getElementCount().getFixedValue() > 1) {
+    LogChoice("direct-fp-vecty", VecTy, VecTy, false);
     return {VecTy, false, VecTy};
+  }
 
   // Check if there is a common type that all slices of the partition use that
   // spans the partition.
@@ -5222,10 +5374,13 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       // We prefer vector promotion here because if vector promotion is viable
       // and there is a common type used, then it implies the second listed
       // condition for preferring vector promotion is true.
-      if (VecTy)
+      if (VecTy) {
+        LogChoice("common-type-vecty", VecTy, VecTy, false);
         return {VecTy, false, VecTy};
-      return {CommonUseTy, isIntegerWideningViable(P, CommonUseTy, DL),
-              nullptr};
+      }
+      bool IntWiden = isIntegerWideningViable(P, CommonUseTy, DL);
+      LogChoice("common-type", CommonUseTy, nullptr, IntWiden);
+      return {CommonUseTy, IntWiden, nullptr};
     }
   }
 
@@ -5241,37 +5396,84 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         DL.isLegalInteger(P.size() * 8))
       TypePartitionTy = Type::getIntNTy(C, P.size() * 8);
     // There was no common type used, so we prefer integer widening promotion.
-    if (isIntegerWideningViable(P, TypePartitionTy, DL))
+    if (isIntegerWideningViable(P, TypePartitionTy, DL)) {
+      LogChoice("type-partition-intwiden", TypePartitionTy, nullptr, true);
       return {TypePartitionTy, true, nullptr};
-    if (VecTy)
+    }
+    if (VecTy) {
+      LogChoice("type-partition-vecty", VecTy, VecTy, false);
       return {VecTy, false, VecTy};
+    }
     // If we couldn't promote with TypePartitionTy, try with the largest
     // integer type used.
     if (LargestIntTy &&
         DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size() &&
-        isIntegerWideningViable(P, LargestIntTy, DL))
+        isIntegerWideningViable(P, LargestIntTy, DL)) {
+      LogChoice("largest-int-intwiden", LargestIntTy, nullptr, true);
       return {LargestIntTy, true, nullptr};
+    }
 
     // Try homogeneous struct to vector canonicalization.
+    //
+    // This is intentionally more conservative than tryCanonicalize...
+    // alone: after the normal promotion paths above fail, we only want the
+    // struct-to-vector fallback when it can expose a real whole-value use,
+    // not when it would merely create vector lanes that later passes have to
+    // unpack again.
     if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
-      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
-        return {VTy, false, nullptr};
+      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL)) {
+        // Recover only the narrow integer memcpy-only cases that looked safe in
+        // follow-up tuning. Broader fallback recovery was too aggressive:
+        // - full-record 16-byte { i64, i64 } cases reopened regressions
+        // - FP and lane-oriented cases were more likely to trigger bad later
+        //   codegen
+        //
+        // So this path is restricted to 64-bit integer lanes, and only for
+        // interior subaggregates or original full records of size >= 32 bytes.
+        bool AllowStructFallback = shouldCanonicalizeHomogeneousStructToVector(
+            P, DL, AI, VTy->getElementType()->isIntegerTy(64),
+            ProvenanceFlags);
+        LLVM_DEBUG({
+          dbgs() << "selectPartitionType struct-fallback-candidate"
+                 << " func=" << AI.getFunction()->getName() << " alloca=";
+          if (AI.hasName())
+            dbgs() << AI.getName();
+          else
+            dbgs() << "<unnamed>";
+          dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
+                 << ") size=" << P.size() << " type-partition=" << *STy
+                 << " candidate-vec=" << *VTy << " allow=" << AllowStructFallback
+                 << "\n";
+        });
+        if (AllowStructFallback) {
+          LogChoice("struct-fallback-vecty", VTy, nullptr, false);
+          return {VTy, false, nullptr};
+        }
+      }
 
     // Fallback to TypePartitionTy and we probably won't promote.
+    LogChoice("type-partition-fallback", TypePartitionTy, nullptr, false);
     return {TypePartitionTy, false, nullptr};
   }
 
   // Select the largest integer type used if it spans the partition.
   if (LargestIntTy &&
-      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size())
+      DL.getTypeAllocSize(LargestIntTy).getFixedValue() >= P.size()) {
+    LogChoice("largest-int-fallback", LargestIntTy, nullptr, false);
     return {LargestIntTy, false, nullptr};
+  }
 
   // Select a legal integer type if it spans the partition.
-  if (DL.isLegalInteger(P.size() * 8))
-    return {Type::getIntNTy(C, P.size() * 8), false, nullptr};
+  if (DL.isLegalInteger(P.size() * 8)) {
+    Type *IntTy = Type::getIntNTy(C, P.size() * 8);
+    LogChoice("legal-int-fallback", IntTy, nullptr, false);
+    return {IntTy, false, nullptr};
+  }
 
   // Fallback to an i8 array.
-  return {ArrayType::get(Type::getInt8Ty(C), P.size()), false, nullptr};
+  Type *ArrayTy = ArrayType::get(Type::getInt8Ty(C), P.size());
+  LogChoice("byte-array-fallback", ArrayTy, nullptr, false);
+  return {ArrayTy, false, nullptr};
 }
 
 /// Rewrite an alloca partition's users.
@@ -5288,8 +5490,9 @@ std::pair<AllocaInst *, uint64_t>
 SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   const DataLayout &DL = AI.getDataLayout();
   // Select the type for the new alloca that spans the partition.
+  unsigned ProvenanceFlags = getAllocaProvenance(AI);
   auto [PartitionTy, IsIntegerWideningViable, VecTy] =
-      selectPartitionType(P, DL, AI, *C);
+      selectPartitionType(P, DL, AI, *C, ProvenanceFlags);
 
   // Check for the case where we're going to rewrite to a new alloca of the
   // exact same type as the original, and with the same access offsets. In that
@@ -5316,6 +5519,25 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
         AI.getIterator());
     // Copy the old AI debug location over to the new one.
     NewAI->setDebugLoc(AI.getDebugLoc());
+    // Propagate and refine provenance for the rewritten alloca.
+    //
+    // New allocas inherit the source alloca's provenance and then add flags
+    // describing which slice of the original aggregate this partition covers.
+    // This lets later struct-to-vector fallback decisions distinguish:
+    // - original full-record allocas
+    // - prefix subaggregates
+    // - strictly interior subaggregates
+    unsigned NewProvenanceFlags = ProvenanceFlags;
+    if (P.beginOffset() != 0 ||
+        P.size() != DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue())
+      NewProvenanceFlags |= APF_Subaggregate;
+    if (P.beginOffset() != 0)
+      NewProvenanceFlags |= APF_NonPrefix;
+    if (P.beginOffset() != 0 &&
+        P.endOffset() <
+            DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue())
+      NewProvenanceFlags |= APF_Interior;
+    setAllocaProvenance(*NewAI, NewProvenanceFlags);
     ++NumNewAllocas;
   }
 

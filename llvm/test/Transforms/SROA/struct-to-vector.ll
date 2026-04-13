@@ -7,11 +7,11 @@ define dso_local void @foo_flat(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1, 
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[Y_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> poison, i64 [[Y_COERCE0]], i64 0
-; CHECK-NEXT:    [[Y_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[Y_SROA_0_0_VEC_INSERT]], i64 [[Y_COERCE1]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[Y_SROA_0_8_VEC_INSERT]] to <4 x i32>
-; CHECK-NEXT:    [[COND1_SROA_SPECULATED:%.*]] = select i1 [[TOBOOL_NOT]], <4 x i32> zeroinitializer, <4 x i32> [[TMP0]]
-; CHECK-NEXT:    store <4 x i32> [[COND1_SROA_SPECULATED]], ptr [[X]], align 16
+; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
+; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
+; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
+; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
+; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -44,9 +44,11 @@ cond.false:
 
 cond.end:
   %cond1 = phi ptr [ %temp, %cond.true ], [ %zero, %cond.false ]
-  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %data, ptr align 16 %cond1, i64 16, i1 false)
+  %whole = load { i64, i64 }, ptr %cond1, align 16
+  store { i64, i64 } %whole, ptr %data, align 16
   %3 = load ptr, ptr %x.addr, align 8
-  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %3, ptr align 16 %data, i64 16, i1 false)
+  %whole2 = load { i64, i64 }, ptr %data, align 16
+  store { i64, i64 } %whole2, ptr %3, align 16
   call void @llvm.lifetime.end.p0(ptr %data)
   call void @llvm.lifetime.end.p0(ptr %zero)
   call void @llvm.lifetime.end.p0(ptr %temp)
@@ -60,11 +62,11 @@ define dso_local void @foo_nested(ptr noundef %x, i64 %y.coerce0, i64 %y.coerce1
 ; CHECK-SAME: ptr noundef [[X:%.*]], i64 [[Y_COERCE0:%.*]], i64 [[Y_COERCE1:%.*]], i32 noundef [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[COND]], 0
-; CHECK-NEXT:    [[Y_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x i64> poison, i64 [[Y_COERCE0]], i64 0
-; CHECK-NEXT:    [[Y_SROA_0_8_VEC_INSERT:%.*]] = insertelement <2 x i64> [[Y_SROA_0_0_VEC_INSERT]], i64 [[Y_COERCE1]], i64 1
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <2 x i64> [[Y_SROA_0_8_VEC_INSERT]] to <4 x i32>
-; CHECK-NEXT:    [[COND1_SROA_SPECULATED:%.*]] = select i1 [[TOBOOL_NOT]], <4 x i32> zeroinitializer, <4 x i32> [[TMP0]]
-; CHECK-NEXT:    store <4 x i32> [[COND1_SROA_SPECULATED]], ptr [[X]], align 16
+; CHECK-NEXT:    [[DOTY_COERCE0:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE0]]
+; CHECK-NEXT:    [[DOTY_COERCE1:%.*]] = select i1 [[TOBOOL_NOT]], i64 0, i64 [[Y_COERCE1]]
+; CHECK-NEXT:    store i64 [[DOTY_COERCE0]], ptr [[X]], align 16
+; CHECK-NEXT:    [[X_REPACK7:%.*]] = getelementptr inbounds nuw i8, ptr [[X]], i64 8
+; CHECK-NEXT:    store i64 [[DOTY_COERCE1]], ptr [[X_REPACK7]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -97,9 +99,11 @@ cond.false:
 
 cond.end:
   %cond1 = phi ptr [ %temp, %cond.true ], [ %zero, %cond.false ]
-  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %data, ptr align 16 %cond1, i64 16, i1 false)
+  %whole = load { i64, i64 }, ptr %cond1, align 16
+  store { i64, i64 } %whole, ptr %data, align 16
   %3 = load ptr, ptr %x.addr, align 8
-  call void @llvm.memcpy.p0.p0.i64(ptr align 16 %3, ptr align 16 %data, i64 16, i1 false)
+  %whole2 = load { i64, i64 }, ptr %data, align 16
+  store { i64, i64 } %whole2, ptr %3, align 16
   call void @llvm.lifetime.end.p0(ptr %data)
   call void @llvm.lifetime.end.p0(ptr %zero)
   call void @llvm.lifetime.end.p0(ptr %temp)

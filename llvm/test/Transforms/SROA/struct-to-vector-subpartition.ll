@@ -7,13 +7,16 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; When SROA splits { ptr, i64, i64, i64 } into [0,8), [8,16), [16,32),
 ; the [16,32) partition type from getTypePartition is { i64, i64 }.
-; tryCanonicalizeStructToVector converts this to <2 x i64>, making the
-; sub-partition promotable and eliminating the alloca entirely.
+; The current whole-use heuristic intentionally does NOT canonicalize this
+; sub-partition to <2 x i64>, because the [16,32) slice is only touched by
+; splittable memcpy traffic and has no non-splittable whole-partition use.
+; Keeping it scalar avoids creating a vectorized temporary that later passes
+; may not be able to promote away.
 
 ; CHECK-LABEL: define void @test_subpartition_type(
-; CHECK-NOT: alloca
-; CHECK: load <2 x i64>
-; CHECK: store <2 x i64>
+; CHECK: %a.sroa.6 = alloca { i64, i64 }, align 8
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a.sroa.6, ptr align 8 %a.sroa.6.0.src.sroa_idx, i64 16, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a.sroa.6.0.dst.sroa_idx, ptr align 8 %a.sroa.6, i64 16, i1 false)
 define void @test_subpartition_type(ptr %src, ptr %dst) {
 entry:
   %a = alloca { ptr, i64, i64, i64 }, align 8
@@ -30,8 +33,8 @@ entry:
   %v1 = load i64, ptr %gep.a.8, align 8
 
   ; Only splittable memcpy uses touch [16,32), so SROA creates a single
-  ; [16,32) partition. getTypePartition returns { i64, i64 } for this,
-  ; which is canonicalized to <2 x i64>.
+  ; [16,32) partition. getTypePartition returns { i64, i64 } for this, but
+  ; the whole-use heuristic keeps it in scalar/memcpy form.
 
   ; Copy all 32 bytes from %a to dst (splittable)
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %a, i64 32, i1 false)
