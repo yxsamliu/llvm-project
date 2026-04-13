@@ -164,6 +164,12 @@ public:
   ///
   LLVM_ABI void reset();
 
+  /// Clear symbol/section emission bookkeeping so MCContext sections can be
+  /// reused by another MCAssembler. Safe to call while fragments are still
+  /// allocated; must run before fragment storage is freed if another assembler
+  /// will emit into the same MCContext.
+  LLVM_ABI void discardEmissionForReuse();
+
   MCContext &getContext() const { return Context; }
 
   MCAsmBackend *getBackendPtr() const { return Backend.get(); }

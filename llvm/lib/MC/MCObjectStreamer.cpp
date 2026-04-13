@@ -40,7 +40,15 @@ MCObjectStreamer::MCObjectStreamer(MCContext &Context,
     Assembler->setRelaxAll(true);
 }
 
-MCObjectStreamer::~MCObjectStreamer() = default;
+MCObjectStreamer::~MCObjectStreamer() {
+  // Fragment storage is destroyed after the assembler; clear MCSection and
+  // MCSymbol state first so a subsequent MCObjectStreamer (same MCContext) does
+  // not see stale Subsections/Tail from a dead assembler (e.g. llc NewPM
+  // creates separate streamers for AsmPrinter begin/function/end passes).
+  if (Assembler)
+    Assembler->discardEmissionForReuse();
+  MCStreamer::reset();
+}
 
 MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   if (getUseAssemblerInfoForParsing())

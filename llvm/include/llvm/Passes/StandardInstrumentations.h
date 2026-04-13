@@ -145,6 +145,17 @@ private:
   int Indent = 0;
 };
 
+/// IR tracker instrumentation that records instructions with debug locations
+/// after each pass into a SQLite database when \c -ir-tracker-database is
+/// specified.
+class IRTrackerInstrumentation {
+  bool Disabled = false;
+
+public:
+  explicit IRTrackerInstrumentation(bool Disabled = false) : Disabled(Disabled) {}
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 class PreservedCFGCheckerInstrumentation {
 public:
   // Keeps sticky poisoned flag for the given basic block once it has been
@@ -599,6 +610,7 @@ private:
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
+  IRTrackerInstrumentation IRTracker;
   TimePassesHandler TimePasses;
   TimeProfilingPassesHandler TimeProfilingPasses;
   OptNoneInstrumentation OptNone;
@@ -619,7 +631,8 @@ public:
   LLVM_ABI
   StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
                            bool VerifyEach = false,
-                           PrintPassOptions PrintPassOpts = PrintPassOptions());
+                           PrintPassOptions PrintPassOpts = PrintPassOptions(),
+                           bool DisableIRTracker = false);
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.

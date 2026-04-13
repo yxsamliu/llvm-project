@@ -1,0 +1,10 @@
+; RUN: %ir-tracker --help | FileCheck %s
+; RUN: %ir-tracker show --help | FileCheck %s --check-prefix=SHOW
+; CHECK-DAG: ir-tracker
+; CHECK-DAG: build
+; CHECK-DAG: passes
+; CHECK-DAG: trace
+; CHECK-DAG: show
+; CHECK-DAG: sql
+; SHOW: --kind
+; SHOW-DAG: all

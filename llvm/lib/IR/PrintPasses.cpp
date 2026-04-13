@@ -109,6 +109,22 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
+static cl::opt<std::string> IRTrackerDatabase(
+    "ir-tracker-database",
+    cl::desc("IR tracker: SQLite database path; after each pass, record "
+             "instructions that have debug locations (IR-unit filtering matches "
+             "-print-before/-print-after: -filter-print-funcs, "
+             "-print-module-scope, etc.)"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
+static cl::opt<unsigned> IRTrackerInsertBatch(
+    "ir-tracker-insert-batch",
+    cl::desc("IR tracker: accumulate up to this many instruction rows per "
+             "multi-row INSERT (default 1). Larger values reduce SQLite "
+             "round-trips; each INSERT is also capped by SQLite's host "
+             "parameter limit."),
+    cl::init(1), cl::Hidden);
+
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -162,6 +178,13 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
                                                         PrintFuncsList.end());
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
+}
+
+StringRef llvm::getIRTrackerDatabasePath() { return IRTrackerDatabase; }
+
+unsigned llvm::getIRTrackerInsertBatch() {
+  unsigned N = IRTrackerInsertBatch;
+  return N < 1 ? 1 : N;
 }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,

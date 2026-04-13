@@ -24,6 +24,15 @@ MCSection::MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin)
   DummyFragment.setParent(this);
 }
 
+void MCSection::resetInstructionEmissionState() {
+  Subsections.clear();
+  CurFragList = nullptr;
+  HasInstructions = false;
+  FirstLinkerRelaxable = -1u;
+  Ordinal = 0;
+  setIsRegistered(false);
+}
+
 MCSymbol *MCSection::getEndSymbol(MCContext &Ctx) {
   if (!End)
     End = Ctx.createTempSymbol("sec_end");

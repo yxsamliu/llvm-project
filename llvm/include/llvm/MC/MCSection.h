@@ -634,6 +634,11 @@ public:
 
   MCFragment &getDummyFragment() { return DummyFragment; }
 
+  /// Drop subsection / fragment-list state when discarding an MCAssembler whose
+  /// fragment storage is about to be freed. This resets \p IsRegistered so a
+  /// later assembler in the same MCContext can call registerSection again.
+  void resetInstructionEmissionState();
+
   FragList *curFragList() const { return CurFragList; }
   iterator begin() const { return iterator(CurFragList->Head); }
   iterator end() const { return {}; }

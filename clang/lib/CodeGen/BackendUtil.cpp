@@ -25,11 +25,13 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
@@ -78,6 +80,8 @@
 #include "llvm/Transforms/Instrumentation/MemProfInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/MemProfUse.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
+#include <algorithm>
+#include <cstring>
 #include "llvm/Transforms/Instrumentation/NumericalStabilitySanitizer.h"
 #include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/RealtimeSanitizer.h"
@@ -226,6 +230,37 @@ public:
   // Emit output using the new pass manager for the optimization pipeline.
   void emitAssembly(BackendAction Action, std::unique_ptr<raw_pwrite_stream> OS,
                     BackendConsumer *BC);
+};
+
+class IRTrackerTeeAsmOutputStream final : public raw_pwrite_stream {
+  raw_pwrite_stream &Underlying;
+  std::string Capture;
+  uint64_t Pos = 0;
+
+public:
+  explicit IRTrackerTeeAsmOutputStream(raw_pwrite_stream &Underlying)
+      : Underlying(Underlying) {
+    SetUnbuffered();
+  }
+
+  StringRef getCapturedText() const { return Capture; }
+
+private:
+  void write_impl(const char *Ptr, size_t Size) override {
+    Underlying.write(Ptr, Size);
+    Capture.append(Ptr, Size);
+    Pos += Size;
+  }
+
+  uint64_t current_pos() const override { return Pos; }
+
+  void pwrite_impl(const char *Ptr, size_t Size, uint64_t Offset) override {
+    Underlying.pwrite(Ptr, Size, Offset);
+    if (Offset + Size > Capture.size())
+      Capture.resize(Offset + Size, '\0');
+    std::memcpy(Capture.data() + Offset, Ptr, Size);
+    Pos = std::max<uint64_t>(Pos, Offset + Size);
+  }
 };
 } // namespace
 
@@ -1252,7 +1287,15 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
+  std::unique_ptr<IRTrackerTeeAsmOutputStream> ISARecorder;
+  raw_pwrite_stream *CodeGenOS = OS.get();
+  if (CGFT == CodeGenFileType::AssemblyFile &&
+      !getIRTrackerDatabasePath().empty()) {
+    ISARecorder = std::make_unique<IRTrackerTeeAsmOutputStream>(*OS);
+    CodeGenOS = ISARecorder.get();
+  }
+
+  if (TM->addPassesToEmitFile(CodeGenPasses, *CodeGenOS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
@@ -1278,6 +1321,10 @@ void EmitAssemblyHelper::RunCodegenPipeline(
     if (CI.getCodeGenOpts().TimePasses)
       timer.yieldTo(CI.getFrontendTimer());
   }
+
+  if (ISARecorder)
+    appendIRTrackerISAFromAssembly(getIRTrackerDatabasePath(),
+                                   ISARecorder->getCapturedText());
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,

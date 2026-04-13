@@ -30,6 +30,7 @@
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
@@ -119,8 +120,18 @@ int llvm::compileModuleWithNewPM(
   MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
+  const bool DisableIRTrackerForObjectOutput =
+      (FileType == CodeGenFileType::ObjectFile);
   StandardInstrumentations SI(Context, Opt.DebugPM,
-                              VK == VerifierKind::EachPass);
+                              VK == VerifierKind::EachPass, PrintPassOptions(),
+                              DisableIRTrackerForObjectOutput);
+  if (DisableIRTrackerForObjectOutput &&
+      !getIRTrackerDatabasePath().empty()) {
+    WithColor::note(errs(), Arg0)
+        << "ignoring -ir-tracker-database for object emission; use "
+           "-filetype=asm to record the codegen pipeline, or record IR with "
+           "opt.\n";
+  }
   registerCodeGenCallback(PIC, *Target);
 
   MachineFunctionAnalysisManager MFAM;

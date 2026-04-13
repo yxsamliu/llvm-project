@@ -34,6 +34,7 @@
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
@@ -487,10 +488,11 @@ static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
         << "cannot create pass: " << PI->getPassName() << "\n";
     return true;
   }
-  std::string Banner = std::string("After ") + std::string(P->getPassName());
+  std::string AddedPassName = std::string(P->getPassName());
+  std::string Banner = std::string("After ") + AddedPassName;
   TPC.addMachinePrePasses();
   PM.add(P);
-  TPC.addMachinePostPasses(Banner);
+  TPC.addMachinePostPasses(AddedPassName, Banner);
 
   return false;
 }
@@ -754,6 +756,17 @@ static int compileModule(char **argv, SmallVectorImpl<PassPlugin> &PluginList,
                                   std::move(Target), std::move(Out),
                                   std::move(DwoOut), Context, TLII, VK,
                                   PassPipeline, codegen::getFileType());
+  }
+
+  if (!getIRTrackerDatabasePath().empty()) {
+    WithColor::error(errs(), argv[0])
+        << "-ir-tracker-database requires -enable-new-pm: the legacy "
+           "codegen pass manager does not register IR tracker instrumentation. "
+           "For a reliable object file without codegen recording, omit this "
+           "flag and use default llc; for recording during codegen use "
+           "-enable-new-pm (prefer -filetype=asm until NewPM object emission "
+           "matches legacy).\n";
+    return 1;
   }
 
   // Build up all of the passes that we want to do to the module.
