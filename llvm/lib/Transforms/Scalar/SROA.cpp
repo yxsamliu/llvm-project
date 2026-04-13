@@ -5272,10 +5272,10 @@ shouldCanonicalizeHomogeneousStructToVector(Partition &P, const DataLayout &DL,
   bool HasSubElementLoad = false;
   bool HasRecoverableSplittableTransfer = false;
   bool IsInteriorSubaggregate = (ProvenanceFlags & APF_Interior) != 0;
+  std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
   bool IsOriginalFullRecord =
       (ProvenanceFlags & APF_Subaggregate) == 0 && P.beginOffset() == 0 &&
-      DL.getTypeAllocSize(AI.getAllocatedType()).isFixed() &&
-      DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue() == P.size();
+      AllocSize && AllocSize->isFixed() && AllocSize->getFixedValue() == P.size();
 
   for (const Slice &S : P) {
     if (S.isDead())
@@ -5335,7 +5335,9 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
       else
         dbgs() << "<unnamed>";
       dbgs() << " partition=[" << P.beginOffset() << "," << P.endOffset()
-             << ") size=" << P.size() << " allocated=" << *AI.getAllocatedType();
+             << ") size=" << P.size();
+      if (std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL))
+        dbgs() << " alloc-size=" << AllocSize->getKnownMinValue();
       if (ChosenTy)
         dbgs() << " chosen=" << *ChosenTy;
       if (ChosenVecTy)
@@ -5528,14 +5530,16 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
     // - prefix subaggregates
     // - strictly interior subaggregates
     unsigned NewProvenanceFlags = ProvenanceFlags;
+    std::optional<TypeSize> AllocSize = AI.getAllocationSize(DL);
+    assert(AllocSize && AllocSize->isFixed() &&
+           "rewritePartition should only see fixed-size allocas");
+    uint64_t OriginalAllocSize = AllocSize->getFixedValue();
     if (P.beginOffset() != 0 ||
-        P.size() != DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue())
+        P.size() != OriginalAllocSize)
       NewProvenanceFlags |= APF_Subaggregate;
     if (P.beginOffset() != 0)
       NewProvenanceFlags |= APF_NonPrefix;
-    if (P.beginOffset() != 0 &&
-        P.endOffset() <
-            DL.getTypeAllocSize(AI.getAllocatedType()).getFixedValue())
+    if (P.beginOffset() != 0 && P.endOffset() < OriginalAllocSize)
       NewProvenanceFlags |= APF_Interior;
     setAllocaProvenance(*NewAI, NewProvenanceFlags);
     ++NumNewAllocas;
