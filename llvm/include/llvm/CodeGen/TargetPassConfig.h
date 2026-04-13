@@ -325,7 +325,8 @@ public:
 
   /// Add standard passes after a pass that has just been added. For example,
   /// the MachineVerifier if it is enabled.
-  void addMachinePostPasses(const std::string &Banner);
+  void addMachinePostPasses(const std::string &PassName,
+                            const std::string &Banner);
 
   /// Check whether or not GlobalISel should abort on error.
   /// When this is disabled, GlobalISel will fall back on SDISel instead of

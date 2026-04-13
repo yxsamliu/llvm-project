@@ -30,6 +30,7 @@
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -734,11 +735,11 @@ void TargetPassConfig::addPass(Pass *P) {
   if (Started && !Stopped) {
     if (AddingMachinePasses) {
       // Construct banner message before PM->add() as that may delete the pass.
-      std::string Banner =
-          std::string("After ") + std::string(P->getPassName());
+      std::string PassName = std::string(P->getPassName());
+      std::string Banner = std::string("After ") + PassName;
       addMachinePrePasses();
       PM->add(P);
-      addMachinePostPasses(Banner);
+      addMachinePostPasses(PassName, Banner);
     } else {
       PM->add(P);
     }
@@ -824,7 +825,8 @@ void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
     addDebugifyPass();
 }
 
-void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
+void TargetPassConfig::addMachinePostPasses(const std::string &PassName,
+                                            const std::string &Banner) {
   if (DebugifyIsSafe) {
     if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
       addCheckDebugPass();
@@ -832,6 +834,9 @@ void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
     } else if (DebugifyAndStripAll == cl::BOU_TRUE)
       addStripDebugPass();
   }
+  if (!getIRTrackerDatabasePath().empty())
+    if (MachineFunctionPass *IRTrackerMIR = createIRTrackerMIRPass(PassName))
+      PM->add(IRTrackerMIR);
   addVerifyPass(Banner);
 }
 

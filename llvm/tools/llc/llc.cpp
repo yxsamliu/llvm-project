@@ -488,10 +488,11 @@ static bool addPass(PassManagerBase &PM, const char *argv0, StringRef PassName,
         << "cannot create pass: " << PI->getPassName() << "\n";
     return true;
   }
-  std::string Banner = std::string("After ") + std::string(P->getPassName());
+  std::string AddedPassName = std::string(P->getPassName());
+  std::string Banner = std::string("After ") + AddedPassName;
   TPC.addMachinePrePasses();
   PM.add(P);
-  TPC.addMachinePostPasses(Banner);
+  TPC.addMachinePostPasses(AddedPassName, Banner);
 
   return false;
 }

@@ -41,6 +41,8 @@ using namespace llvm;
 #ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
 namespace {
 
+static constexpr StringRef IRTrackerNoSourceFile = "<no-source>";
+
 static std::string getIRTrackerFilePath(const DILocation *Loc) {
   if (!Loc)
     return {};
@@ -99,6 +101,7 @@ CREATE TABLE IF NOT EXISTS ir_tracker_instructions (
   function TEXT NOT NULL,
   basicblock TEXT NOT NULL,
   inst_seq INTEGER NOT NULL,
+  repr_line INTEGER NOT NULL,
   kind TEXT NOT NULL,
   opcode TEXT NOT NULL,
   inst_text TEXT NOT NULL,
@@ -110,6 +113,8 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_file_loc
   ON ir_tracker_instructions(kind, file_id, line, col);
 CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
   ON ir_tracker_instructions(pass_id);
+CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_repr
+  ON ir_tracker_instructions(kind, pass_id, function, repr_line);
 )SQL";
     char *Err = nullptr;
     if (sqlite3_exec(DB, Schema, nullptr, nullptr, &Err) != SQLITE_OK) {
@@ -119,7 +124,7 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
     }
     if (sqlite3_exec(DB,
                      "INSERT OR REPLACE INTO ir_tracker_meta(key, value) "
-                     "VALUES('schema_version','4')",
+                     "VALUES('schema_version','5')",
                      nullptr, nullptr, &Err) != SQLITE_OK) {
       std::string Msg = Err ? Err : "unknown error";
       sqlite3_free(Err);
@@ -145,8 +150,9 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
 
     const char *InsInst =
         "INSERT INTO "
-        "ir_tracker_instructions(pass_id,function,basicblock,inst_seq,kind,"
-        "opcode,inst_text,file_id,line,col) VALUES(?,?,?,?,?,?,?,?,?,?)";
+        "ir_tracker_instructions(pass_id,function,basicblock,inst_seq,"
+        "repr_line,kind,opcode,inst_text,file_id,line,col) "
+        "VALUES(?,?,?,?,?,?,?,?,?,?,?)";
     check(DB, sqlite3_prepare_v2(DB, InsInst, -1, &StmtInsertInst, nullptr),
           "sqlite3_prepare(codegen insert inst)");
   }
@@ -210,9 +216,9 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
   }
 
   void insertInstructionRow(sqlite3_int64 PassRowId, StringRef FunctionName,
-                            StringRef BBLabel, int InstSeq, StringRef Kind,
-                            StringRef Opcode, StringRef InstText, int FileId,
-                            int Line, int Col) {
+                            StringRef BBLabel, int InstSeq, int ReprLine,
+                            StringRef Kind, StringRef Opcode, StringRef InstText,
+                            int FileId, int Line, int Col) {
     check(DB, sqlite3_bind_int64(StmtInsertInst, 1, PassRowId),
           "bind codegen pass row");
     check(DB, sqlite3_bind_text(StmtInsertInst, 2, FunctionName.data(),
@@ -223,20 +229,22 @@ CREATE INDEX IF NOT EXISTS ir_tracker_idx_instr_pass
           "bind codegen bb");
     check(DB, sqlite3_bind_int(StmtInsertInst, 4, InstSeq),
           "bind codegen inst seq");
-    check(DB, sqlite3_bind_text(StmtInsertInst, 5, Kind.data(), (int)Kind.size(),
+    check(DB, sqlite3_bind_int(StmtInsertInst, 5, ReprLine),
+          "bind codegen repr line");
+    check(DB, sqlite3_bind_text(StmtInsertInst, 6, Kind.data(), (int)Kind.size(),
                                 SQLITE_TRANSIENT),
           "bind codegen kind");
-    check(DB, sqlite3_bind_text(StmtInsertInst, 6, Opcode.data(),
+    check(DB, sqlite3_bind_text(StmtInsertInst, 7, Opcode.data(),
                                 (int)Opcode.size(), SQLITE_TRANSIENT),
           "bind codegen opcode");
-    check(DB, sqlite3_bind_text(StmtInsertInst, 7, InstText.data(),
+    check(DB, sqlite3_bind_text(StmtInsertInst, 8, InstText.data(),
                                 (int)InstText.size(), SQLITE_TRANSIENT),
           "bind codegen inst text");
-    check(DB, sqlite3_bind_int(StmtInsertInst, 8, FileId),
+    check(DB, sqlite3_bind_int(StmtInsertInst, 9, FileId),
           "bind codegen file");
-    check(DB, sqlite3_bind_int(StmtInsertInst, 9, Line),
+    check(DB, sqlite3_bind_int(StmtInsertInst, 10, Line),
           "bind codegen line");
-    check(DB, sqlite3_bind_int(StmtInsertInst, 10, Col),
+    check(DB, sqlite3_bind_int(StmtInsertInst, 11, Col),
           "bind codegen col");
     check(DB, sqlite3_step(StmtInsertInst), "sqlite3_step(codegen insert inst)");
     check(DB, sqlite3_reset(StmtInsertInst),
@@ -284,36 +292,41 @@ public:
     sqlite3_close(DB);
   }
 
-  void appendFinalMIR(MachineFunction &MF) {
+  void appendMIR(MachineFunction &MF, StringRef PassName) {
     sqlite3_int64 PassRowId =
-        insertPassRow("final-mir", "<final-mir>", MF.getName());
+        insertPassRow("after-machine", PassName, MF.getName());
     ModuleSlotTracker MST(MF.getFunction().getParent());
     MST.incorporateFunction(MF.getFunction());
     const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
     std::string FuncName = MF.getName().str();
+    int NoSourceFileId = getOrCreateFileId(IRTrackerNoSourceFile);
+    int ReprLine = 1;
     for (const MachineBasicBlock &MBB : MF) {
       std::string BBLabel = getMachineBlockLabel(MBB);
       int InstSeq = 0;
       for (const MachineInstr &MI : MBB) {
         DebugLoc DL = MI.getDebugLoc();
-        if (!DL)
-          continue;
-        const DILocation *Loc = DL.get();
-        unsigned Line = Loc->getLine();
-        if (Line == 0)
-          continue;
-        std::string FilePath = getIRTrackerFilePath(Loc);
-        if (FilePath.empty())
-          continue;
+        int FileId = NoSourceFileId;
+        int Line = 0;
+        int Col = 0;
+        if (DL) {
+          const DILocation *Loc = DL.get();
+          unsigned SrcLine = Loc->getLine();
+          std::string FilePath = getIRTrackerFilePath(Loc);
+          if (SrcLine != 0 && !FilePath.empty()) {
+            FileId = getOrCreateFileId(FilePath);
+            Line = (int)SrcLine;
+            Col = (int)Loc->getColumn();
+          }
+        }
         std::string InstText;
         raw_string_ostream OS(InstText);
         MI.print(OS, MST, /*IsStandalone=*/true, /*SkipOpers=*/false,
                  /*SkipDebugLoc=*/true, /*AddNewLine=*/false, TII);
         OS.flush();
         StringRef Opcode = TII ? TII->getName(MI.getOpcode()) : "<unknown>";
-        insertInstructionRow(PassRowId, FuncName, BBLabel, InstSeq++, "mir",
-                             Opcode, InstText, getOrCreateFileId(FilePath),
-                             (int)Line, (int)Loc->getColumn());
+        insertInstructionRow(PassRowId, FuncName, BBLabel, InstSeq++, ReprLine++,
+                             "mir", Opcode, InstText, FileId, Line, Col);
       }
     }
   }
@@ -328,6 +341,8 @@ public:
     std::string CurrentFunction = "<unknown>";
     std::string CurrentBlock = "<asm>";
     int InstSeq = 0;
+    int ReprLine = 1;
+    int NoSourceFileId = getOrCreateFileId(IRTrackerNoSourceFile);
 
     auto parseQuotedStrings = [](StringRef Line) {
       SmallVector<std::string, 4> Strings;
@@ -368,6 +383,7 @@ public:
         if (!Line.starts_with(".")) {
           CurrentFunction = Label;
           CurrentBlock = "<asm>";
+          ReprLine = 1;
         } else {
           CurrentBlock = Label;
         }
@@ -421,8 +437,6 @@ public:
         continue;
       }
 
-      if (CurrentFileId == 0 || CurrentLine == 0)
-        continue;
       if (Line.starts_with(".") || Line.starts_with(";") ||
           Line.starts_with("#"))
         continue;
@@ -432,54 +446,48 @@ public:
       StringRef Opcode = parseToken(OpcodeLine);
       if (Opcode.empty())
         continue;
+      int FileId = CurrentFileId ? CurrentFileId : NoSourceFileId;
       insertInstructionRow(PassRowId, CurrentFunction, CurrentBlock, InstSeq++,
-                           "isa", Opcode, InstText, CurrentFileId, CurrentLine,
-                           CurrentCol);
+                           ReprLine++, "isa", Opcode, InstText, FileId,
+                           CurrentLine, CurrentCol);
     }
   }
 };
 
-class IRTrackerFinalMIRPass : public MachineFunctionPass {
-  std::unique_ptr<IRTrackerCodeGenDB> Appender;
+class IRTrackerMIRPass : public MachineFunctionPass {
+  std::string DatabasePath;
+  std::string PassName;
 
 public:
   static char ID;
-  IRTrackerFinalMIRPass() : MachineFunctionPass(ID) {}
+  explicit IRTrackerMIRPass(StringRef PassName, StringRef DatabasePath)
+      : MachineFunctionPass(ID), DatabasePath(DatabasePath), PassName(PassName) {}
 
-  StringRef getPassName() const override { return "IR tracker final MIR pass"; }
+  StringRef getPassName() const override { return "IR tracker MIR pass"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  bool doInitialization(Module &) override {
-    StringRef Path = getIRTrackerDatabasePath();
-    if (!Path.empty())
-      Appender = std::make_unique<IRTrackerCodeGenDB>(Path);
-    return false;
-  }
-
   bool runOnMachineFunction(MachineFunction &MF) override {
-    if (Appender)
-      Appender->appendFinalMIR(MF);
-    return false;
-  }
-
-  bool doFinalization(Module &) override {
-    Appender.reset();
+    if (!DatabasePath.empty()) {
+      IRTrackerCodeGenDB Appender(DatabasePath);
+      Appender.appendMIR(MF, PassName);
+    }
     return false;
   }
 };
 
-char IRTrackerFinalMIRPass::ID = 0;
+char IRTrackerMIRPass::ID = 0;
 
 } // namespace
 
-MachineFunctionPass *llvm::createIRTrackerFinalMIRPass() {
-  if (getIRTrackerDatabasePath().empty())
+MachineFunctionPass *llvm::createIRTrackerMIRPass(const std::string &PassName) {
+  StringRef Path = getIRTrackerDatabasePath();
+  if (Path.empty())
     return nullptr;
-  return new IRTrackerFinalMIRPass();
+  return new IRTrackerMIRPass(PassName, Path);
 }
 
 void llvm::appendIRTrackerISAFromAssembly(StringRef DatabasePath,
@@ -492,7 +500,9 @@ void llvm::appendIRTrackerISAFromAssembly(StringRef DatabasePath,
 
 #else
 
-MachineFunctionPass *llvm::createIRTrackerFinalMIRPass() { return nullptr; }
+MachineFunctionPass *llvm::createIRTrackerMIRPass(const std::string &) {
+  return nullptr;
+}
 
 void llvm::appendIRTrackerISAFromAssembly(StringRef, StringRef) {}
 

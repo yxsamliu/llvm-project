@@ -105,7 +105,6 @@ set(LLVM_TEST_DEPENDS
   llvm-extract
   llvm-gsymutil
   llvm-ir2vec
-  llvm-ir-tracker
   llvm-isel-fuzzer
   llvm-ifs
   llvm-install-name-tool

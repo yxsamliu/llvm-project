@@ -245,9 +245,6 @@ bool CodeGenTargetMachineImpl::addPassesToEmitFile(
     return true;
 
   if (TargetPassConfig::willCompleteCodeGenPipeline()) {
-    if (!getIRTrackerDatabasePath().empty())
-      if (MachineFunctionPass *IRTrackerMIR = createIRTrackerFinalMIRPass())
-        PM.add(IRTrackerMIR);
     if (addAsmPrinter(PM, Out, DwoOut, FileType, MMIWP->getMMI().getContext()))
       return true;
   } else {
