@@ -183,7 +183,9 @@ def run_show(
         print("ir-tracker: unsupported schema version", file=sys.stderr)
         return 1
     if show_all_passes and seq >= 0:
-        print("ir-tracker: --all-passes and --seq are mutually exclusive", file=sys.stderr)
+        print(
+            "ir-tracker: --all-passes and --seq are mutually exclusive", file=sys.stderr
+        )
         return 1
 
     file_ids = resolve_file_ids(con, file_pat)

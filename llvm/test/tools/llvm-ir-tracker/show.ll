@@ -1,3 +1,5 @@
+; REQUIRES: sqlite
+;
 ; RUN: opt -disable-output -passes=no-op-module -ir-tracker-database=%t.db %s
 ; RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
 ; RUN: %ir-tracker trace --db %t.db --file show.c --line 8 | FileCheck %s --check-prefix=TRACE
