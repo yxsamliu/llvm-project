@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import json
 import re
 import sqlite3
 import sys
@@ -107,93 +108,230 @@ def _get_or_create_file_id(
     return file_id
 
 
-def build_db(text_input: str, db_path: str) -> int:
-    if not text_input:
-        print("ir-tracker: empty text input path", file=sys.stderr)
+def _insert_pass(
+    con: sqlite3.Connection, seq: int, phase: str, pass_name: str, ir_unit: str
+) -> int:
+    return int(
+        con.execute(
+            f"INSERT INTO {T_PASSES}(seq, phase, pass_class, ir_unit) "
+            f"VALUES(?, ?, ?, ?)",
+            (seq, phase, pass_name, ir_unit),
+        ).lastrowid
+    )
+
+
+def _insert_inst(
+    con: sqlite3.Connection,
+    file_cache: Dict[str, int],
+    current_pass_id: int,
+    file_path: str,
+    line_s: int,
+    col_s: int,
+    func: str,
+    bb: str,
+    inst_seq_s: int,
+    opcode: str,
+    inst_text: str,
+) -> None:
+    file_id = _get_or_create_file_id(con, file_cache, file_path)
+    con.execute(
+        f"INSERT INTO {T_INSTR}("
+        "pass_id, function, basicblock, inst_seq, opcode, inst_text, "
+        "file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            current_pass_id,
+            func,
+            bb,
+            inst_seq_s,
+            opcode,
+            inst_text,
+            file_id,
+            line_s,
+            col_s,
+        ),
+    )
+
+
+def _detect_input_format(path: str) -> str:
+    with open(path, "r", encoding="utf-8") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line:
+                continue
+            return "jsonl" if line.startswith("{") else "text"
+    return "text"
+
+
+def _build_db_from_text(
+    con: sqlite3.Connection, input_path: str
+) -> tuple[int, int]:
+    file_cache: Dict[str, int] = {}
+    current_pass_id: Optional[int] = None
+    n_passes = 0
+    n_rows = 0
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        for line_no, raw in enumerate(f, 1):
+            line = raw.rstrip("\n")
+            if not line:
+                continue
+
+            m = HEADER_RE.match(line)
+            if m:
+                current_pass_id = _insert_pass(
+                    con,
+                    int(m.group("seq")),
+                    m.group("phase"),
+                    m.group("pass"),
+                    m.group("ir_unit"),
+                )
+                n_passes += 1
+                continue
+
+            if current_pass_id is None:
+                print(
+                    f"ir-tracker: data row before first pass header at line {line_no}",
+                    file=sys.stderr,
+                )
+                raise ValueError("data row before first pass header")
+
+            parts = line.split("\t", 7)
+            if len(parts) != 8:
+                print(
+                    f"ir-tracker: malformed tracker row at line {line_no}",
+                    file=sys.stderr,
+                )
+                raise ValueError("malformed tracker row")
+
+            file_path, line_s, col_s, func, bb, inst_seq_s, opcode, inst_text = parts
+            _insert_inst(
+                con,
+                file_cache,
+                current_pass_id,
+                file_path,
+                int(line_s),
+                int(col_s),
+                func,
+                bb,
+                int(inst_seq_s),
+                opcode,
+                inst_text,
+            )
+            n_rows += 1
+    return n_passes, n_rows
+
+
+def _build_db_from_jsonl(
+    con: sqlite3.Connection, input_path: str
+) -> tuple[int, int]:
+    file_cache: Dict[str, int] = {}
+    current_pass_id: Optional[int] = None
+    n_passes = 0
+    n_rows = 0
+
+    with open(input_path, "r", encoding="utf-8") as f:
+        for line_no, raw in enumerate(f, 1):
+            line = raw.strip()
+            if not line:
+                continue
+
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as err:
+                print(
+                    f"ir-tracker: malformed JSON at line {line_no}: {err}",
+                    file=sys.stderr,
+                )
+                raise ValueError("malformed json") from err
+
+            kind = obj.get("kind")
+            if kind == "pass":
+                try:
+                    current_pass_id = _insert_pass(
+                        con,
+                        int(obj["seq"]),
+                        str(obj["phase"]),
+                        str(obj["pass"]),
+                        str(obj["ir_unit"]),
+                    )
+                except KeyError as err:
+                    print(
+                        f"ir-tracker: missing pass field {err} at line {line_no}",
+                        file=sys.stderr,
+                    )
+                    raise ValueError("missing pass field") from err
+                n_passes += 1
+                continue
+
+            if kind == "inst":
+                if current_pass_id is None:
+                    print(
+                        f"ir-tracker: inst row before first pass record at line {line_no}",
+                        file=sys.stderr,
+                    )
+                    raise ValueError("inst row before first pass record")
+                try:
+                    _insert_inst(
+                        con,
+                        file_cache,
+                        current_pass_id,
+                        str(obj["file"]),
+                        int(obj["line"]),
+                        int(obj["col"]),
+                        str(obj["function"]),
+                        str(obj["block"]),
+                        int(obj["inst_seq"]),
+                        str(obj["opcode"]),
+                        str(obj["text"]),
+                    )
+                except KeyError as err:
+                    print(
+                        f"ir-tracker: missing inst field {err} at line {line_no}",
+                        file=sys.stderr,
+                    )
+                    raise ValueError("missing inst field") from err
+                n_rows += 1
+                continue
+
+            print(
+                f"ir-tracker: unknown record kind at line {line_no}: {kind!r}",
+                file=sys.stderr,
+            )
+            raise ValueError("unknown record kind")
+
+    return n_passes, n_rows
+
+
+def build_db(input_path: str, db_path: str) -> int:
+    if not input_path:
+        print("ir-tracker: empty input path", file=sys.stderr)
         return 1
-    if not os.path.isfile(text_input):
-        print(f"ir-tracker: text input not found: {text_input}", file=sys.stderr)
+    if not os.path.isfile(input_path):
+        print(f"ir-tracker: input not found: {input_path}", file=sys.stderr)
         return 1
 
     con = open_db_write(db_path)
     if not con:
         return 1
 
-    file_cache: Dict[str, int] = {}
-    current_pass_id: Optional[int] = None
-    n_passes = 0
-    n_rows = 0
-
     try:
         init_schema(con)
         con.commit()
         con.execute("BEGIN IMMEDIATE")
-        with open(text_input, "r", encoding="utf-8") as f:
-            for line_no, raw in enumerate(f, 1):
-                line = raw.rstrip("\n")
-                if not line:
-                    continue
-
-                m = HEADER_RE.match(line)
-                if m:
-                    current_pass_id = int(
-                        con.execute(
-                            f"INSERT INTO {T_PASSES}(seq, phase, pass_class, ir_unit) "
-                            f"VALUES(?, ?, ?, ?)",
-                            (
-                                int(m.group("seq")),
-                                m.group("phase"),
-                                m.group("pass"),
-                                m.group("ir_unit"),
-                            ),
-                        ).lastrowid
-                    )
-                    n_passes += 1
-                    continue
-
-                if current_pass_id is None:
-                    print(
-                        f"ir-tracker: data row before first pass header at line {line_no}",
-                        file=sys.stderr,
-                    )
-                    return 1
-
-                parts = line.split("\t", 7)
-                if len(parts) != 8:
-                    print(
-                        f"ir-tracker: malformed tracker row at line {line_no}",
-                        file=sys.stderr,
-                    )
-                    return 1
-
-                file_path, line_s, col_s, func, bb, inst_seq_s, opcode, inst_text = parts
-                file_id = _get_or_create_file_id(con, file_cache, file_path)
-                con.execute(
-                    f"INSERT INTO {T_INSTR}("
-                    "pass_id, function, basicblock, inst_seq, opcode, inst_text, "
-                    "file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                    (
-                        current_pass_id,
-                        func,
-                        bb,
-                        int(inst_seq_s),
-                        opcode,
-                        inst_text,
-                        file_id,
-                        int(line_s),
-                        int(col_s),
-                    ),
-                )
-                n_rows += 1
+        input_format = _detect_input_format(input_path)
+        if input_format == "jsonl":
+            n_passes, n_rows = _build_db_from_jsonl(con, input_path)
+        else:
+            n_passes, n_rows = _build_db_from_text(con, input_path)
         con.commit()
-    except sqlite3.Error as err:
+    except (sqlite3.Error, ValueError) as err:
         print(f"ir-tracker: sqlite error while building db: {err}", file=sys.stderr)
         return 1
     finally:
         con.close()
 
     print(
-        f"built {db_path} from {text_input}: {n_passes} pass snapshots, {n_rows} instruction rows"
+        f"built {db_path} from {input_path}: {n_passes} pass snapshots, {n_rows} instruction rows"
     )
     return 0
 
