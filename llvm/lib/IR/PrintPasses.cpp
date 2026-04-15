@@ -109,6 +109,24 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
+static cl::opt<std::string> IRTrackerDatabase(
+    "ir-tracker-database",
+    cl::desc("IR tracker: SQLite database path; record instructions with "
+             "debug locations after each pass"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
+static cl::opt<std::string> IRTrackerTextOutput(
+    "ir-tracker-text-output",
+    cl::desc("IR tracker: text output path; record instructions with debug "
+             "locations after each pass"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
+static cl::opt<std::string> ConciseIRPrintOutput(
+    "concise-ir-print-output",
+    cl::desc("Print-after-all experiment: materialize full IR, then write only "
+             "instruction lines that carry printed debug locations"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -163,6 +181,12 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
 }
+
+StringRef llvm::getIRTrackerDatabasePath() { return IRTrackerDatabase; }
+
+StringRef llvm::getIRTrackerTextOutputPath() { return IRTrackerTextOutput; }
+
+StringRef llvm::getConciseIRPrintOutputPath() { return ConciseIRPrintOutput; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

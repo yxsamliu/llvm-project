@@ -145,6 +145,13 @@ private:
   int Indent = 0;
 };
 
+/// IR tracker instrumentation that records instructions with debug locations
+/// after each pass into a SQLite database when \c -ir-tracker-database is set.
+class IRTrackerInstrumentation {
+public:
+  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
 class PreservedCFGCheckerInstrumentation {
 public:
   // Keeps sticky poisoned flag for the given basic block once it has been
@@ -599,6 +606,7 @@ private:
 class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
+  IRTrackerInstrumentation IRTracker;
   TimePassesHandler TimePasses;
   TimeProfilingPassesHandler TimeProfilingPasses;
   OptNoneInstrumentation OptNone;

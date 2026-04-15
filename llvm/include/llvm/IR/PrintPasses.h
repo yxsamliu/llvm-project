@@ -81,6 +81,15 @@ std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
 
+/// Non-empty when \c -ir-tracker-database is set.
+StringRef getIRTrackerDatabasePath();
+
+/// Non-empty when \c -ir-tracker-text-output is set.
+StringRef getIRTrackerTextOutputPath();
+
+/// Non-empty when \c -concise-ir-print-output is set.
+StringRef getConciseIRPrintOutputPath();
+
 } // namespace llvm
 
 #endif // LLVM_IR_PRINTPASSES_H
