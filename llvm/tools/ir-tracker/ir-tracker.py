@@ -2,7 +2,7 @@
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-"""Query SQLite databases produced by -ir-tracker-database."""
+"""Build and query SQLite databases for llvm/tools/ir-tracker."""
 
 from __future__ import annotations
 
@@ -11,6 +11,10 @@ import sys
 from typing import Optional, Sequence
 
 import irtrackdb
+
+
+def cmd_build(args: argparse.Namespace) -> int:
+    return irtrackdb.build_db(args.input, args.db)
 
 
 def cmd_passes(args: argparse.Namespace) -> int:
@@ -67,9 +71,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(
         prog="ir-tracker",
-        description="Query IR-tracker SQLite databases",
+        description="Build and query IR-tracker SQLite databases",
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
+
+    build = sub.add_parser("build", help="Build a SQLite DB from tracker text output")
+    build.add_argument("--input", required=True)
+    build.add_argument("--db", required=True)
+    build.set_defaults(func=cmd_build)
 
     passes = sub.add_parser("passes", help="List recorded passes")
     passes.add_argument("--db", required=True)

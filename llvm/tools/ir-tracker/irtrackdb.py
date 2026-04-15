@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sqlite3
 import sys
 from typing import Dict, List, NamedTuple, Optional, Sequence
@@ -14,6 +15,11 @@ T_FILES = "ir_tracker_files"
 T_INSTR = "ir_tracker_instructions"
 T_META = "ir_tracker_meta"
 T_PASSES = "ir_tracker_passes"
+SCHEMA_VERSION = 1
+
+HEADER_RE = re.compile(
+    r"^seq=(?P<seq>[0-9]+)\tphase=(?P<phase>[^\t]+)\tpass=(?P<pass>[^\t]+)\tir_unit=(?P<ir_unit>[^\t]+)$"
+)
 
 
 def open_db_readonly(path: str) -> Optional[sqlite3.Connection]:
@@ -26,6 +32,170 @@ def open_db_readonly(path: str) -> Optional[sqlite3.Connection]:
     con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     con.row_factory = sqlite3.Row
     return con
+
+
+def open_db_write(path: str) -> Optional[sqlite3.Connection]:
+    if not path:
+        print("ir-tracker: empty database path", file=sys.stderr)
+        return None
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    if os.path.exists(path):
+        os.remove(path)
+    con = sqlite3.connect(path)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def init_schema(con: sqlite3.Connection) -> None:
+    con.executescript(
+        f"""
+        PRAGMA foreign_keys = ON;
+        CREATE TABLE {T_META} (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+        CREATE TABLE {T_FILES} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          path TEXT NOT NULL UNIQUE
+        );
+        CREATE TABLE {T_PASSES} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          seq INTEGER NOT NULL,
+          phase TEXT NOT NULL,
+          pass_class TEXT NOT NULL,
+          ir_unit TEXT NOT NULL
+        );
+        CREATE UNIQUE INDEX ir_tracker_idx_passes_seq
+          ON {T_PASSES}(seq);
+        CREATE TABLE {T_INSTR} (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          pass_id INTEGER NOT NULL REFERENCES {T_PASSES}(id),
+          function TEXT NOT NULL,
+          basicblock TEXT NOT NULL,
+          inst_seq INTEGER NOT NULL,
+          opcode TEXT NOT NULL,
+          inst_text TEXT NOT NULL,
+          file_id INTEGER NOT NULL REFERENCES {T_FILES}(id),
+          line INTEGER NOT NULL,
+          col INTEGER NOT NULL
+        );
+        CREATE INDEX ir_tracker_idx_instr_file_loc
+          ON {T_INSTR}(file_id, line, col);
+        CREATE INDEX ir_tracker_idx_instr_pass
+          ON {T_INSTR}(pass_id);
+        """
+    )
+    con.execute(
+        f"INSERT INTO {T_META}(key, value) VALUES('schema_version', ?)",
+        (str(SCHEMA_VERSION),),
+    )
+
+
+def _get_or_create_file_id(
+    con: sqlite3.Connection, cache: Dict[str, int], path: str
+) -> int:
+    cached = cache.get(path)
+    if cached is not None:
+        return cached
+    con.execute(f"INSERT OR IGNORE INTO {T_FILES}(path) VALUES(?)", (path,))
+    row = con.execute(f"SELECT id FROM {T_FILES} WHERE path = ?", (path,)).fetchone()
+    assert row is not None
+    file_id = int(row["id"])
+    cache[path] = file_id
+    return file_id
+
+
+def build_db(text_input: str, db_path: str) -> int:
+    if not text_input:
+        print("ir-tracker: empty text input path", file=sys.stderr)
+        return 1
+    if not os.path.isfile(text_input):
+        print(f"ir-tracker: text input not found: {text_input}", file=sys.stderr)
+        return 1
+
+    con = open_db_write(db_path)
+    if not con:
+        return 1
+
+    file_cache: Dict[str, int] = {}
+    current_pass_id: Optional[int] = None
+    n_passes = 0
+    n_rows = 0
+
+    try:
+        init_schema(con)
+        con.commit()
+        con.execute("BEGIN IMMEDIATE")
+        with open(text_input, "r", encoding="utf-8") as f:
+            for line_no, raw in enumerate(f, 1):
+                line = raw.rstrip("\n")
+                if not line:
+                    continue
+
+                m = HEADER_RE.match(line)
+                if m:
+                    current_pass_id = int(
+                        con.execute(
+                            f"INSERT INTO {T_PASSES}(seq, phase, pass_class, ir_unit) "
+                            f"VALUES(?, ?, ?, ?)",
+                            (
+                                int(m.group("seq")),
+                                m.group("phase"),
+                                m.group("pass"),
+                                m.group("ir_unit"),
+                            ),
+                        ).lastrowid
+                    )
+                    n_passes += 1
+                    continue
+
+                if current_pass_id is None:
+                    print(
+                        f"ir-tracker: data row before first pass header at line {line_no}",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+                parts = line.split("\t", 7)
+                if len(parts) != 8:
+                    print(
+                        f"ir-tracker: malformed tracker row at line {line_no}",
+                        file=sys.stderr,
+                    )
+                    return 1
+
+                file_path, line_s, col_s, func, bb, inst_seq_s, opcode, inst_text = parts
+                file_id = _get_or_create_file_id(con, file_cache, file_path)
+                con.execute(
+                    f"INSERT INTO {T_INSTR}("
+                    "pass_id, function, basicblock, inst_seq, opcode, inst_text, "
+                    "file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        current_pass_id,
+                        func,
+                        bb,
+                        int(inst_seq_s),
+                        opcode,
+                        inst_text,
+                        file_id,
+                        int(line_s),
+                        int(col_s),
+                    ),
+                )
+                n_rows += 1
+        con.commit()
+    except sqlite3.Error as err:
+        print(f"ir-tracker: sqlite error while building db: {err}", file=sys.stderr)
+        return 1
+    finally:
+        con.close()
+
+    print(
+        f"built {db_path} from {text_input}: {n_passes} pass snapshots, {n_rows} instruction rows"
+    )
+    return 0
 
 
 def get_schema_version(con: sqlite3.Connection) -> int:
