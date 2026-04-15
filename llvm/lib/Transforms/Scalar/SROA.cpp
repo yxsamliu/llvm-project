@@ -5237,10 +5237,9 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
 ///     store float %d, ptr %p3
 ///   Canonicalizing this to a temporary <4 x float> store was enough to change
 ///   later vectorization without a clear benefit.
-static bool shouldCanonicalizeHomogeneousStructToVector(Partition &P,
-                                                        const DataLayout &DL,
-                                                        AllocaInst &AI,
-                                                        bool IsI64Candidate) {
+static bool shouldCanonicalizeHomogeneousStructToVector(
+    Partition &P, const DataLayout &DL, AllocaInst &AI,
+    bool IsRecoverableIntegerCandidate, bool IsI64Candidate) {
   bool HasWholePartitionUse = false;
   bool HasSubElementLoad = false;
   bool HasRecoverableSplittableTransfer = false;
@@ -5261,7 +5260,8 @@ static bool shouldCanonicalizeHomogeneousStructToVector(Partition &P,
       continue;
 
     if (S.isSplittable()) {
-      if (IsI64Candidate && IsInteriorSubaggregate &&
+      if (IsRecoverableIntegerCandidate && P.size() >= 16 &&
+          IsInteriorSubaggregate &&
           S.beginOffset() == P.beginOffset() &&
           S.endOffset() == P.endOffset() && isa<MemIntrinsic>(U->getUser()))
         HasRecoverableSplittableTransfer = true;
@@ -5408,7 +5408,8 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         // So this path is restricted to 64-bit integer lanes, and only for
         // interior partitions or original full records of size >= 32 bytes.
         bool AllowStructFallback = shouldCanonicalizeHomogeneousStructToVector(
-            P, DL, AI, VTy->getElementType()->isIntegerTy(64));
+            P, DL, AI, VTy->getElementType()->isIntegerTy(),
+            VTy->getElementType()->isIntegerTy(64));
         LLVM_DEBUG({
           dbgs() << "selectPartitionType struct-fallback-candidate"
                  << " func=" << AI.getFunction()->getName() << " alloca=";
