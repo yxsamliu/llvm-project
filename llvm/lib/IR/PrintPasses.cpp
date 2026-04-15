@@ -109,9 +109,9 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<std::string> IRTrackerTextOutput(
-    "ir-tracker-text-output",
-    cl::desc("IR tracker: text output path; record instructions with debug "
+static cl::opt<std::string> IRTrackerJSONOutput(
+    "ir-tracker-json-output",
+    cl::desc("IR tracker: JSON Lines output path; record instructions with debug "
              "locations after each pass"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
 
@@ -170,7 +170,7 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
          PrintFuncNames.count(std::string(FunctionName));
 }
 
-StringRef llvm::getIRTrackerTextOutputPath() { return IRTrackerTextOutput; }
+StringRef llvm::getIRTrackerJSONOutputPath() { return IRTrackerJSONOutput; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

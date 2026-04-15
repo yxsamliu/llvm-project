@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -398,15 +399,20 @@ static std::string getIRTrackerInstructionText(const Instruction &I,
   return Text;
 }
 
-class IRTrackerTextState {
+class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
 
-  void writePassHeader(unsigned Seq, StringRef Phase, StringRef PassName,
+  void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
-    *OS << "seq=" << Seq << '\t' << "phase=" << Phase << '\t' << "pass="
-        << PassName << '\t' << "ir_unit=" << IRUnit << '\n';
+    json::Object Obj;
+    Obj["kind"] = "pass";
+    Obj["seq"] = Seq;
+    Obj["phase"] = Phase.str();
+    Obj["pass"] = PassName.str();
+    Obj["ir_unit"] = IRUnit.str();
+    *OS << formatv("{0}\n", json::Value(std::move(Obj)));
   }
 
   void writeInstructionsInFunction(const Function &F) {
@@ -432,17 +438,24 @@ class IRTrackerTextState {
         if (FilePath.empty())
           continue;
 
-        *OS << FilePath << '\t' << Loc->getLine() << '\t' << Loc->getColumn()
-            << '\t' << FunctionName << '\t' << BBLabel << '\t' << InstSeq++
-            << '\t' << I.getOpcodeName() << '\t'
-            << getIRTrackerInstructionText(I, MST) << '\n';
+        json::Object Obj;
+        Obj["kind"] = "inst";
+        Obj["file"] = FilePath;
+        Obj["line"] = Loc->getLine();
+        Obj["col"] = Loc->getColumn();
+        Obj["function"] = FunctionName;
+        Obj["block"] = BBLabel;
+        Obj["inst_seq"] = InstSeq++;
+        Obj["opcode"] = std::string(I.getOpcodeName());
+        Obj["text"] = getIRTrackerInstructionText(I, MST);
+        *OS << formatv("{0}\n", json::Value(std::move(Obj)));
       }
     }
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
                StringRef IRUnit) {
-    writePassHeader(Seq, Phase, PassName, IRUnit);
+    writePassRecord(Seq, Phase, PassName, IRUnit);
     if (const auto *M = unwrapIR<Module>(IR)) {
       for (const Function &F : *M)
         writeInstructionsInFunction(F);
@@ -462,11 +475,11 @@ class IRTrackerTextState {
   }
 
 public:
-  explicit IRTrackerTextState(StringRef Path) {
+  explicit IRTrackerJSONState(StringRef Path) {
     std::error_code EC;
     OS = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_Text);
     if (EC)
-      report_fatal_error(Twine("ir-tracker text output open: ") +
+      report_fatal_error(Twine("ir-tracker json output open: ") +
                          EC.message());
   }
 
@@ -2628,11 +2641,11 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
 void IRTrackerInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-  StringRef Path = getIRTrackerTextOutputPath();
+  StringRef Path = getIRTrackerJSONOutputPath();
   if (Path.empty())
     return;
 
-  auto State = std::make_shared<IRTrackerTextState>(Path);
+  auto State = std::make_shared<IRTrackerJSONState>(Path);
   PIC.registerBeforeNonSkippedPassCallback(
       [State](StringRef PassID, Any IR) { State->beforePass(PassID, IR); });
   PIC.registerAfterPassCallback(
