@@ -35,6 +35,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/Path.h"
@@ -43,9 +44,6 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
-#ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
-#include <sqlite3.h>
-#endif
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -375,7 +373,6 @@ bool isInterestingFunction(const Function &F) {
   return isFunctionInPrintList(F.getName());
 }
 
-#ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
 static std::string getIRTrackerFilePath(const DILocation *Loc) {
   if (!Loc)
     return {};
@@ -401,89 +398,18 @@ static std::string getIRTrackerInstructionText(const Instruction &I,
   return Text;
 }
 
-class IRTrackerState {
-  sqlite3 *DB = nullptr;
-  sqlite3_stmt *StmtInsertPass = nullptr;
-  sqlite3_stmt *StmtInsertFileIgnore = nullptr;
-  sqlite3_stmt *StmtSelectFileId = nullptr;
-  sqlite3_stmt *StmtInsertInst = nullptr;
+class IRTrackerTextState {
+  std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
-  std::unordered_map<std::string, int> FileIdCache;
 
-  void check(int RC, const char *Ctx) const {
-    if (RC == SQLITE_OK || RC == SQLITE_DONE || RC == SQLITE_ROW)
-      return;
-    StringRef Msg = DB ? sqlite3_errmsg(DB) : sqlite3_errstr(RC);
-    report_fatal_error(Twine(Ctx) + ": " + Msg);
+  void writePassHeader(unsigned Seq, StringRef Phase, StringRef PassName,
+                       StringRef IRUnit) {
+    *OS << "seq=" << Seq << '\t' << "phase=" << Phase << '\t' << "pass="
+        << PassName << '\t' << "ir_unit=" << IRUnit << '\n';
   }
 
-  int getOrCreateFileId(StringRef Path) {
-    std::string Key = Path.str();
-    auto It = FileIdCache.find(Key);
-    if (It != FileIdCache.end())
-      return It->second;
-
-    check(sqlite3_bind_text(StmtInsertFileIgnore, 1, Key.data(),
-                            (int)Key.size(), SQLITE_TRANSIENT),
-          "sqlite3_bind_text(insert file)");
-    check(sqlite3_step(StmtInsertFileIgnore), "sqlite3_step(insert file)");
-    check(sqlite3_reset(StmtInsertFileIgnore), "sqlite3_reset(insert file)");
-
-    check(sqlite3_bind_text(StmtSelectFileId, 1, Key.data(), (int)Key.size(),
-                            SQLITE_TRANSIENT),
-          "sqlite3_bind_text(select file)");
-    if (sqlite3_step(StmtSelectFileId) != SQLITE_ROW)
-      report_fatal_error("ir-tracker: missing file row after insert");
-    int FileId = sqlite3_column_int(StmtSelectFileId, 0);
-    check(sqlite3_reset(StmtSelectFileId), "sqlite3_reset(select file)");
-    FileIdCache[Key] = FileId;
-    return FileId;
-  }
-
-  sqlite3_int64 insertPassRow(unsigned Seq, StringRef Phase, StringRef PassName,
-                              StringRef IRUnit) {
-    check(sqlite3_bind_int(StmtInsertPass, 1, (int)Seq), "bind seq");
-    check(sqlite3_bind_text(StmtInsertPass, 2, Phase.data(), (int)Phase.size(),
-                            SQLITE_TRANSIENT),
-          "bind phase");
-    check(sqlite3_bind_text(StmtInsertPass, 3, PassName.data(),
-                            (int)PassName.size(), SQLITE_TRANSIENT),
-          "bind pass class");
-    check(sqlite3_bind_text(StmtInsertPass, 4, IRUnit.data(),
-                            (int)IRUnit.size(), SQLITE_TRANSIENT),
-          "bind ir unit");
-    check(sqlite3_step(StmtInsertPass), "sqlite3_step(insert pass)");
-    check(sqlite3_reset(StmtInsertPass), "sqlite3_reset(insert pass)");
-    return sqlite3_last_insert_rowid(DB);
-  }
-
-  void insertInstructionRow(sqlite3_int64 PassRowId, StringRef FunctionName,
-                            StringRef BBLabel, unsigned InstSeq,
-                            StringRef Opcode, StringRef InstText, int FileId,
-                            unsigned Line, unsigned Col) {
-    check(sqlite3_bind_int64(StmtInsertInst, 1, PassRowId), "bind pass id");
-    check(sqlite3_bind_text(StmtInsertInst, 2, FunctionName.data(),
-                            (int)FunctionName.size(), SQLITE_TRANSIENT),
-          "bind function");
-    check(sqlite3_bind_text(StmtInsertInst, 3, BBLabel.data(),
-                            (int)BBLabel.size(), SQLITE_TRANSIENT),
-          "bind basic block");
-    check(sqlite3_bind_int(StmtInsertInst, 4, (int)InstSeq), "bind inst seq");
-    check(sqlite3_bind_text(StmtInsertInst, 5, Opcode.data(),
-                            (int)Opcode.size(), SQLITE_TRANSIENT),
-          "bind opcode");
-    check(sqlite3_bind_text(StmtInsertInst, 6, InstText.data(),
-                            (int)InstText.size(), SQLITE_TRANSIENT),
-          "bind inst text");
-    check(sqlite3_bind_int(StmtInsertInst, 7, FileId), "bind file id");
-    check(sqlite3_bind_int(StmtInsertInst, 8, (int)Line), "bind line");
-    check(sqlite3_bind_int(StmtInsertInst, 9, (int)Col), "bind col");
-    check(sqlite3_step(StmtInsertInst), "sqlite3_step(insert instruction)");
-    check(sqlite3_reset(StmtInsertInst), "sqlite3_reset(insert instruction)");
-  }
-
-  void indexInstructionsInFunction(const Function &F, sqlite3_int64 PassRowId) {
+  void writeInstructionsInFunction(const Function &F) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
 
@@ -506,158 +432,49 @@ class IRTrackerState {
         if (FilePath.empty())
           continue;
 
-        insertInstructionRow(
-            PassRowId, FunctionName, BBLabel, InstSeq++, I.getOpcodeName(),
-            getIRTrackerInstructionText(I, MST), getOrCreateFileId(FilePath),
-            Loc->getLine(), Loc->getColumn());
+        *OS << FilePath << '\t' << Loc->getLine() << '\t' << Loc->getColumn()
+            << '\t' << FunctionName << '\t' << BBLabel << '\t' << InstSeq++
+            << '\t' << I.getOpcodeName() << '\t'
+            << getIRTrackerInstructionText(I, MST) << '\n';
       }
     }
   }
 
-  void indexIR(Any IR, sqlite3_int64 PassRowId) {
+  void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
+               StringRef IRUnit) {
+    writePassHeader(Seq, Phase, PassName, IRUnit);
     if (const auto *M = unwrapIR<Module>(IR)) {
       for (const Function &F : *M)
-        indexInstructionsInFunction(F, PassRowId);
+        writeInstructionsInFunction(F);
       return;
     }
     if (const auto *F = unwrapIR<Function>(IR)) {
-      indexInstructionsInFunction(*F, PassRowId);
+      writeInstructionsInFunction(*F);
       return;
     }
     if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
       for (const LazyCallGraph::Node &N : *C)
-        indexInstructionsInFunction(N.getFunction(), PassRowId);
+        writeInstructionsInFunction(N.getFunction());
       return;
     }
     if (const auto *L = unwrapIR<Loop>(IR))
-      indexInstructionsInFunction(*L->getHeader()->getParent(), PassRowId);
-  }
-
-  void captureInitialIR(Any IR) {
-    if (InitialCaptured)
-      return;
-    InitialCaptured = true;
-    sqlite3_int64 PassRowId =
-        insertPassRow(0, "initial", "<initial>", getIRName(IR));
-    indexIR(IR, PassRowId);
+      writeInstructionsInFunction(*L->getHeader()->getParent());
   }
 
 public:
-  explicit IRTrackerState(StringRef Path) {
-    check(sqlite3_open_v2(Path.str().c_str(), &DB,
-                          SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr),
-          "sqlite3_open_v2");
-
-    const char *ResetSchema = R"SQL(
-DROP TABLE IF EXISTS ir_tracker_instructions;
-DROP TABLE IF EXISTS ir_tracker_passes;
-DROP TABLE IF EXISTS ir_tracker_files;
-DROP TABLE IF EXISTS ir_tracker_meta;
-)SQL";
-    char *Err = nullptr;
-    if (sqlite3_exec(DB, ResetSchema, nullptr, nullptr, &Err) != SQLITE_OK) {
-      std::string Msg = Err ? Err : "unknown error";
-      sqlite3_free(Err);
-      report_fatal_error(Twine("ir-tracker reset: ") + Msg);
-    }
-
-    const char *Schema = R"SQL(
-PRAGMA foreign_keys = ON;
-CREATE TABLE ir_tracker_meta (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-CREATE TABLE ir_tracker_files (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  path TEXT NOT NULL UNIQUE
-);
-CREATE TABLE ir_tracker_passes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  seq INTEGER NOT NULL,
-  phase TEXT NOT NULL,
-  pass_class TEXT NOT NULL,
-  ir_unit TEXT NOT NULL
-);
-CREATE UNIQUE INDEX ir_tracker_idx_passes_seq
-  ON ir_tracker_passes(seq);
-CREATE TABLE ir_tracker_instructions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  pass_id INTEGER NOT NULL REFERENCES ir_tracker_passes(id),
-  function TEXT NOT NULL,
-  basicblock TEXT NOT NULL,
-  inst_seq INTEGER NOT NULL,
-  opcode TEXT NOT NULL,
-  inst_text TEXT NOT NULL,
-  file_id INTEGER NOT NULL REFERENCES ir_tracker_files(id),
-  line INTEGER NOT NULL,
-  col INTEGER NOT NULL
-);
-CREATE INDEX ir_tracker_idx_instr_file_loc
-  ON ir_tracker_instructions(file_id, line, col);
-CREATE INDEX ir_tracker_idx_instr_pass
-  ON ir_tracker_instructions(pass_id);
-)SQL";
-    if (sqlite3_exec(DB, Schema, nullptr, nullptr, &Err) != SQLITE_OK) {
-      std::string Msg = Err ? Err : "unknown error";
-      sqlite3_free(Err);
-      report_fatal_error(Twine("ir-tracker schema: ") + Msg);
-    }
-    if (sqlite3_exec(DB,
-                     "INSERT INTO ir_tracker_meta(key, value) "
-                     "VALUES('schema_version', '1')",
-                     nullptr, nullptr, &Err) != SQLITE_OK) {
-      std::string Msg = Err ? Err : "unknown error";
-      sqlite3_free(Err);
-      report_fatal_error(Twine("ir-tracker metadata: ") + Msg);
-    }
-
-    check(sqlite3_prepare_v2(
-              DB,
-              "INSERT INTO ir_tracker_passes(seq, phase, pass_class, ir_unit) "
-              "VALUES(?, ?, ?, ?)",
-              -1, &StmtInsertPass, nullptr),
-          "sqlite3_prepare(insert pass)");
-    check(sqlite3_prepare_v2(
-              DB, "INSERT OR IGNORE INTO ir_tracker_files(path) VALUES(?)", -1,
-              &StmtInsertFileIgnore, nullptr),
-          "sqlite3_prepare(insert file)");
-    check(sqlite3_prepare_v2(DB,
-                             "SELECT id FROM ir_tracker_files WHERE path = ?",
-                             -1, &StmtSelectFileId, nullptr),
-          "sqlite3_prepare(select file)");
-    check(sqlite3_prepare_v2(
-              DB,
-              "INSERT INTO ir_tracker_instructions("
-              "pass_id, function, basicblock, inst_seq, opcode, inst_text, "
-              "file_id, line, col) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
-              -1, &StmtInsertInst, nullptr),
-          "sqlite3_prepare(insert instruction)");
-
-    check(sqlite3_exec(DB, "BEGIN IMMEDIATE", nullptr, nullptr, nullptr),
-          "sqlite3_exec(begin transaction)");
-  }
-
-  ~IRTrackerState() {
-    if (StmtInsertInst)
-      sqlite3_finalize(StmtInsertInst);
-    if (StmtSelectFileId)
-      sqlite3_finalize(StmtSelectFileId);
-    if (StmtInsertFileIgnore)
-      sqlite3_finalize(StmtInsertFileIgnore);
-    if (StmtInsertPass)
-      sqlite3_finalize(StmtInsertPass);
-    if (!DB)
-      return;
-    if (sqlite3_get_autocommit(DB) == 0)
-      check(sqlite3_exec(DB, "COMMIT", nullptr, nullptr, nullptr),
-            "sqlite3_exec(commit transaction)");
-    sqlite3_close(DB);
+  explicit IRTrackerTextState(StringRef Path) {
+    std::error_code EC;
+    OS = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_Text);
+    if (EC)
+      report_fatal_error(Twine("ir-tracker text output open: ") +
+                         EC.message());
   }
 
   void beforePass(StringRef PassID, Any IR) {
     if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
       return;
-    captureInitialIR(IR);
+    InitialCaptured = true;
+    writeIR(IR, 0, "initial", "<initial>", getIRName(IR));
   }
 
   void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
@@ -667,12 +484,9 @@ CREATE INDEX ir_tracker_idx_instr_pass
     StringRef PassName = PIC.getPassNameForClassName(PassID);
     if (PassName.empty())
       PassName = PassID;
-    sqlite3_int64 PassRowId =
-        insertPassRow(NextSeq++, "after", PassName, getIRName(IR));
-    indexIR(IR, PassRowId);
+    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR));
   }
 };
-#endif
 
 // Return true when this is a pass on IR for which printing
 // of changes is desired.
@@ -2814,23 +2628,17 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 
 void IRTrackerInstrumentation::registerCallbacks(
     PassInstrumentationCallbacks &PIC) {
-#ifdef LLVM_ENABLE_IR_TRACKER_SQLITE
-  StringRef Path = getIRTrackerDatabasePath();
+  StringRef Path = getIRTrackerTextOutputPath();
   if (Path.empty())
     return;
 
-  auto State = std::make_shared<IRTrackerState>(Path);
+  auto State = std::make_shared<IRTrackerTextState>(Path);
   PIC.registerBeforeNonSkippedPassCallback(
       [State](StringRef PassID, Any IR) { State->beforePass(PassID, IR); });
   PIC.registerAfterPassCallback(
       [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &) {
         State->afterPass(PassID, IR, PIC);
       });
-#else
-  if (!getIRTrackerDatabasePath().empty())
-    report_fatal_error(
-        "-ir-tracker-database requires an LLVM build linked against SQLite3");
-#endif
 }
 
 void StandardInstrumentations::registerCallbacks(

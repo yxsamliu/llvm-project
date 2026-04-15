@@ -1,9 +1,7 @@
-; REQUIRES: sqlite
-;
-; RUN: opt -disable-output -passes=instcombine -ir-tracker-database=%t.db %s
-; RUN: %python %S/Inputs/check-ir-tracker.py %t.db f g
-; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-database=%t-filter.db %s
-; RUN: %python %S/Inputs/check-ir-tracker.py %t-filter.db f
+; RUN: opt -disable-output -passes=instcombine -ir-tracker-text-output=%t.txt %s
+; RUN: FileCheck %s --input-file=%t.txt --check-prefix=ALL
+; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-text-output=%t-filter.txt %s
+; RUN: FileCheck %s --input-file=%t-filter.txt --check-prefix=FILTER
 
 define i32 @f(i32 %x) !dbg !6 {
 entry:
@@ -32,3 +30,24 @@ entry:
 !9 = !DILocation(line: 9, column: 3, scope: !6)
 !10 = !DILocation(line: 14, column: 3, scope: !7)
 !11 = !DILocation(line: 15, column: 3, scope: !7)
+
+; ALL: seq=0{{.*}}phase=initial{{.*}}pass=<initial>{{.*}}ir_unit=[module]
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}8{{.*}}3{{.*}}f{{.*}}entry{{.*}}0{{.*}}add{{.*}}%add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}9{{.*}}3{{.*}}f{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %add, !dbg !{{[0-9]+}}
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}14{{.*}}3{{.*}}g{{.*}}entry{{.*}}0{{.*}}mul{{.*}}%mul = mul i32 %x, 2, !dbg !{{[0-9]+}}
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}15{{.*}}3{{.*}}g{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %mul, !dbg !{{[0-9]+}}
+; ALL: seq=1{{.*}}phase=after{{.*}}pass=instcombine{{.*}}ir_unit=f
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}8{{.*}}3{{.*}}f{{.*}}entry{{.*}}0{{.*}}add{{.*}}%add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}9{{.*}}3{{.*}}f{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %add, !dbg !{{[0-9]+}}
+; ALL: seq=2{{.*}}phase=after{{.*}}pass=instcombine{{.*}}ir_unit=g
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}14{{.*}}3{{.*}}g{{.*}}entry{{.*}}0{{.*}}shl{{.*}}%mul = shl i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: /tmp/ir-tracker.c{{.*}}15{{.*}}3{{.*}}g{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %mul, !dbg !{{[0-9]+}}
+
+; FILTER: seq=0{{.*}}phase=initial{{.*}}pass=<initial>{{.*}}ir_unit=[module]
+; FILTER-NEXT: /tmp/ir-tracker.c{{.*}}8{{.*}}3{{.*}}f{{.*}}entry{{.*}}0{{.*}}add{{.*}}%add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; FILTER-NEXT: /tmp/ir-tracker.c{{.*}}9{{.*}}3{{.*}}f{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER-NOT: /tmp/ir-tracker.c{{.*}}14{{.*}}3{{.*}}g
+; FILTER: seq=1{{.*}}phase=after{{.*}}pass=instcombine{{.*}}ir_unit=f
+; FILTER-NEXT: /tmp/ir-tracker.c{{.*}}8{{.*}}3{{.*}}f{{.*}}entry{{.*}}0{{.*}}add{{.*}}%add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; FILTER-NEXT: /tmp/ir-tracker.c{{.*}}9{{.*}}3{{.*}}f{{.*}}entry{{.*}}1{{.*}}ret{{.*}}ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER-NOT: ir_unit=g
