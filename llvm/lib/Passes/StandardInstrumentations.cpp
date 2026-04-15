@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Regex.h"
@@ -523,6 +524,108 @@ public:
     OS = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_Text);
     if (EC)
       report_fatal_error(Twine("ir-tracker text output open: ") + EC.message());
+  }
+
+  void beforePass(StringRef PassID, Any IR) {
+    if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
+      return;
+    InitialCaptured = true;
+    writeIR(IR, 0, "initial", "<initial>", getIRName(IR));
+  }
+
+  void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
+    if (isIgnored(PassID) || !shouldPrintIR(IR))
+      return;
+
+    StringRef PassName = PIC.getPassNameForClassName(PassID);
+    if (PassName.empty())
+      PassName = PassID;
+    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR));
+  }
+};
+
+class IRTrackerJSONState {
+  std::unique_ptr<raw_fd_ostream> OS;
+  unsigned NextSeq = 1;
+  bool InitialCaptured = false;
+
+  void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
+                       StringRef IRUnit) {
+    json::Object Obj;
+    Obj["kind"] = "pass";
+    Obj["seq"] = Seq;
+    Obj["phase"] = Phase.str();
+    Obj["pass"] = PassName.str();
+    Obj["ir_unit"] = IRUnit.str();
+    *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+  }
+
+  void writeInstructionsInFunction(const Function &F) {
+    if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
+      return;
+
+    std::string FunctionName = F.getName().str();
+    ModuleSlotTracker MST(F.getParent());
+    MST.incorporateFunction(F);
+    for (const BasicBlock &BB : F) {
+      std::string BBLabel =
+          BB.hasName() ? BB.getName().str() : std::string("<unnamed>");
+      unsigned InstSeq = 0;
+      for (const Instruction &I : BB) {
+        const DebugLoc &DL = I.getDebugLoc();
+        if (!DL)
+          continue;
+        const DILocation *Loc = DL.get();
+        if (!Loc || Loc->getLine() == 0)
+          continue;
+
+        std::string FilePath = getIRTrackerFilePath(Loc);
+        if (FilePath.empty())
+          continue;
+
+        json::Object Obj;
+        Obj["kind"] = "inst";
+        Obj["file"] = FilePath;
+        Obj["line"] = Loc->getLine();
+        Obj["col"] = Loc->getColumn();
+        Obj["function"] = FunctionName;
+        Obj["block"] = BBLabel;
+        Obj["inst_seq"] = InstSeq++;
+        Obj["opcode"] = std::string(I.getOpcodeName());
+        Obj["text"] = getIRTrackerInstructionText(I, MST);
+        *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+      }
+    }
+  }
+
+  void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
+               StringRef IRUnit) {
+    writePassRecord(Seq, Phase, PassName, IRUnit);
+    if (const auto *M = unwrapIR<Module>(IR)) {
+      for (const Function &F : *M)
+        writeInstructionsInFunction(F);
+      return;
+    }
+    if (const auto *F = unwrapIR<Function>(IR)) {
+      writeInstructionsInFunction(*F);
+      return;
+    }
+    if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      for (const LazyCallGraph::Node &N : *C)
+        writeInstructionsInFunction(N.getFunction());
+      return;
+    }
+    if (const auto *L = unwrapIR<Loop>(IR))
+      writeInstructionsInFunction(*L->getHeader()->getParent());
+  }
+
+public:
+  explicit IRTrackerJSONState(StringRef Path) {
+    std::error_code EC;
+    OS = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_Text);
+    if (EC)
+      report_fatal_error(Twine("ir-tracker json output open: ") +
+                         EC.message());
   }
 
   void beforePass(StringRef PassID, Any IR) {
@@ -2986,6 +3089,19 @@ void IRTrackerInstrumentation::registerCallbacks(
     PIC.registerAfterPassCallback(
         [TextState, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &) {
           TextState->afterPass(PassID, IR, PIC);
+        });
+  }
+
+  StringRef JSONPath = getIRTrackerJSONOutputPath();
+  if (!JSONPath.empty()) {
+    auto JSONState = std::make_shared<IRTrackerJSONState>(JSONPath);
+    PIC.registerBeforeNonSkippedPassCallback([JSONState](StringRef PassID,
+                                                         Any IR) {
+      JSONState->beforePass(PassID, IR);
+    });
+    PIC.registerAfterPassCallback(
+        [JSONState, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &) {
+          JSONState->afterPass(PassID, IR, PIC);
         });
   }
 

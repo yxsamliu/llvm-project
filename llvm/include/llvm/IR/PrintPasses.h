@@ -87,6 +87,9 @@ StringRef getIRTrackerDatabasePath();
 /// Non-empty when \c -ir-tracker-text-output is set.
 StringRef getIRTrackerTextOutputPath();
 
+/// Non-empty when \c -ir-tracker-json-output is set.
+StringRef getIRTrackerJSONOutputPath();
+
 /// Non-empty when \c -concise-ir-print-output is set.
 StringRef getConciseIRPrintOutputPath();
 

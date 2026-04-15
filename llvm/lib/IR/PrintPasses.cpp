@@ -121,6 +121,12 @@ static cl::opt<std::string> IRTrackerTextOutput(
              "locations after each pass"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
 
+static cl::opt<std::string> IRTrackerJSONOutput(
+    "ir-tracker-json-output",
+    cl::desc("IR tracker: JSON Lines output path; record instructions with "
+             "debug locations after each pass"),
+    cl::value_desc("file"), cl::init(""), cl::Hidden);
+
 static cl::opt<std::string> ConciseIRPrintOutput(
     "concise-ir-print-output",
     cl::desc("Print-after-all experiment: materialize full IR, then write only "
@@ -185,6 +191,8 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
 StringRef llvm::getIRTrackerDatabasePath() { return IRTrackerDatabase; }
 
 StringRef llvm::getIRTrackerTextOutputPath() { return IRTrackerTextOutput; }
+
+StringRef llvm::getIRTrackerJSONOutputPath() { return IRTrackerJSONOutput; }
 
 StringRef llvm::getConciseIRPrintOutputPath() { return ConciseIRPrintOutput; }
 
