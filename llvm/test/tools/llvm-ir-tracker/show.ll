@@ -1,5 +1,5 @@
-; RUN: opt -disable-output -passes=no-op-module -ir-tracker-text-output=%t.txt %s
-; RUN: %ir-tracker build --input %t.txt --db %t.db
+; RUN: opt -disable-output -passes=no-op-module -ir-tracker-json-output=%t.jsonl %s
+; RUN: %ir-tracker build --input %t.jsonl --db %t.db
 ; RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
 ; RUN: %ir-tracker trace --db %t.db --file show.c --line 8 | FileCheck %s --check-prefix=TRACE
 ; RUN: %ir-tracker show --db %t.db --file show.c --line 8 --seq 0 | FileCheck %s --check-prefix=SEQ0

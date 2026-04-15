@@ -76,7 +76,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     build = sub.add_parser(
-        "build", help="Build a SQLite DB from tracker text or JSON output"
+        "build", help="Build a SQLite DB from tracker JSON or text output"
     )
     build.add_argument("--input", required=True)
     build.add_argument("--db", required=True)

@@ -1,5 +1,5 @@
-IR Tracker (IR text + SQLite query DB)
-======================================
+IR Tracker (IR JSONL + SQLite query DB)
+=======================================
 
 .. contents::
    :local:
@@ -8,13 +8,14 @@ Overview
 ========
 
 The **IR tracker** records how LLVM IR evolves through the new pass manager into a
-compact text file. A small Python tool can then post-process that text into a
+compact JSON Lines file. A small Python tool can then post-process that JSON
+output into a
 SQLite database for indexed queries. Each instruction row is tied to a debug
 location (``file``, ``line``, ``column`` from ``DILocation``), so you can ask
 which passes touched code that originated at a given source line.
 
 Recording is enabled with the hidden LLVM option
-``-ir-tracker-text-output=/absolute/path.txt``. The hooks live in
+``-ir-tracker-json-output=/absolute/path.jsonl``. The hooks live in
 ``StandardInstrumentations`` and therefore apply to any tool that runs the new
 pass manager with that instrumentation (``opt``, ``clang``, etc.).
 
@@ -26,7 +27,7 @@ Recording with ``opt``
 .. code-block:: bash
 
   opt -disable-output -passes='default<O2>' \
-    -ir-tracker-text-output=/tmp/pipeline.txt input.ll
+    -ir-tracker-json-output=/tmp/pipeline.jsonl input.ll
 
 Use an absolute output path. The input IR must already contain suitable
 ``!dbg`` attachments (for example, compile the source with ``-g`` and use
@@ -41,7 +42,7 @@ flag as ``opt``:
 .. code-block:: bash
 
   clang -O1 -emit-llvm -S -g sum.c -o sum.ll \
-    -mllvm -ir-tracker-text-output=/tmp/pipeline.txt
+    -mllvm -ir-tracker-json-output=/tmp/pipeline.jsonl
 
 Here ``-g`` ensures debug locations exist on instructions; ``-O1`` (or another
 ``-O`` level) selects the usual optimization pipeline that ``opt`` would run for
@@ -50,12 +51,12 @@ that tier.
 SQLite build step
 =================
 
-The Python driver can convert the text output into a SQLite database:
+The Python driver can convert the JSONL output into a SQLite database:
 
 .. code-block:: bash
 
   python3 llvm/tools/ir-tracker/ir-tracker.py build \
-    --input /tmp/pipeline.txt --db /tmp/pipeline.db
+    --input /tmp/pipeline.jsonl --db /tmp/pipeline.db
 
 The resulting database uses ``schema_version = 1`` in ``ir_tracker_meta``. The
 main tables are:
@@ -73,10 +74,10 @@ Query tool
 
 The Python driver lives at ``llvm/tools/ir-tracker/ir-tracker.py`` (installed
 under ``<prefix>/share/ir-tracker/`` when the ``ir-tracker`` install component
-is enabled). It can build the SQLite DB from tracker text output and then query
+is enabled). It can build the SQLite DB from tracker JSONL output and then query
 that DB. Subcommands:
 
-* ``build`` — convert tracker text output into a SQLite database
+* ``build`` — convert tracker JSONL output into a SQLite database
 * ``passes`` — list recorded passes in ``seq`` order
 * ``trace`` — summarize the first and last pass that still have instructions
   matching a source location
@@ -107,14 +108,14 @@ Recording (same command as in *Recording with ``clang``*):
 .. code-block:: bash
 
   clang -O1 -emit-llvm -S -g sum.c -o sum.ll \
-    -mllvm -ir-tracker-text-output=/tmp/pipeline.txt
+    -mllvm -ir-tracker-json-output=/tmp/pipeline.jsonl
 
 Then build the query database:
 
 .. code-block:: bash
 
   python3 llvm/tools/ir-tracker/ir-tracker.py build \
-    --input /tmp/pipeline.txt --db /tmp/pipeline.db
+    --input /tmp/pipeline.jsonl --db /tmp/pipeline.db
 
 The following excerpts come from a real ``ir-tracker`` run against the database
 produced that way. **Pass names and sequence numbers depend on your Clang/LLVM

@@ -9,7 +9,7 @@ MAIN: Build and query IR-tracker SQLite databases
 MAIN: {build,passes,trace,show,sql}
 
 BUILD: usage: ir-tracker build
-BUILD: tracker text or JSON
+BUILD: tracker JSON or text
 PASSES: usage: ir-tracker passes
 TRACE: usage: ir-tracker trace
 SHOW: usage: ir-tracker show
