@@ -109,10 +109,10 @@ static cl::list<std::string>
                             "options"),
                    cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<std::string> IRTrackerDatabase(
-    "ir-tracker-database",
-    cl::desc("IR tracker: SQLite database path; record instructions with "
-             "debug locations after each pass"),
+static cl::opt<std::string> IRTrackerJSONOutput(
+    "ir-tracker-json-output",
+    cl::desc("IR tracker: JSON Lines output path; record instructions with debug "
+             "locations after each pass"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
 
 /// This is a helper to determine whether to print IR before or
@@ -170,7 +170,7 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
          PrintFuncNames.count(std::string(FunctionName));
 }
 
-StringRef llvm::getIRTrackerDatabasePath() { return IRTrackerDatabase; }
+StringRef llvm::getIRTrackerJSONOutputPath() { return IRTrackerJSONOutput; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

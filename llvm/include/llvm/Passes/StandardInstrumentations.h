@@ -146,7 +146,7 @@ private:
 };
 
 /// IR tracker instrumentation that records instructions with debug locations
-/// after each pass into a SQLite database when \c -ir-tracker-database is set.
+/// after each pass into JSON Lines when \c -ir-tracker-json-output is set.
 class IRTrackerInstrumentation {
 public:
   LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);

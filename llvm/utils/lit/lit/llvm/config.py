@@ -147,9 +147,6 @@ class LLVMConfig(object):
         have_zlib = getattr(config, "have_zlib", None)
         if have_zlib:
             features.add("zlib")
-        have_sqlite = getattr(config, "have_sqlite", None)
-        if have_sqlite:
-            features.add("sqlite")
         have_zstd = getattr(config, "have_zstd", None)
         if have_zstd:
             features.add("zstd")
