@@ -15,6 +15,11 @@ entry:
   ret i32 %mul, !dbg !11
 }
 
+define i32 @h(i32 %x) {
+entry:
+  ret i32 %x
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
@@ -40,6 +45,8 @@ entry:
 ; ALL: {"ir_unit":"g","kind":"pass","pass":"instcombine","phase":"after","seq":2}
 ; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"shl","text":"  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}"}
 ; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
+; ALL: {"ir_unit":"h","kind":"pass","pass":"instcombine","phase":"after","seq":3}
+; ALL-NEXT: {"block":"entry","function":"h","inst_seq":0,"kind":"inst","opcode":"ret","text":"  ret i32 %x"}
 
 ; FILTER: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
 ; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
@@ -49,3 +56,5 @@ entry:
 ; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
 ; FILTER-NOT: "function":"g"
 ; FILTER-NOT: "ir_unit":"g"
+; FILTER-NOT: "function":"h"
+; FILTER-NOT: "ir_unit":"h"

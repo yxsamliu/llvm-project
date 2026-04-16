@@ -428,21 +428,18 @@ class IRTrackerJSONState {
       unsigned InstSeq = 0;
       for (const Instruction &I : BB) {
         const DebugLoc &DL = I.getDebugLoc();
-        if (!DL)
-          continue;
-        const DILocation *Loc = DL.get();
-        if (!Loc || Loc->getLine() == 0)
-          continue;
-
-        std::string FilePath = getIRTrackerFilePath(Loc);
-        if (FilePath.empty())
-          continue;
+        const DILocation *Loc = DL ? DL.get() : nullptr;
+        std::string FilePath;
+        if (Loc && Loc->getLine() != 0)
+          FilePath = getIRTrackerFilePath(Loc);
 
         json::Object Obj;
         Obj["kind"] = "inst";
-        Obj["file"] = FilePath;
-        Obj["line"] = Loc->getLine();
-        Obj["col"] = Loc->getColumn();
+        if (!FilePath.empty()) {
+          Obj["file"] = FilePath;
+          Obj["line"] = Loc->getLine();
+          Obj["col"] = Loc->getColumn();
+        }
         Obj["function"] = FunctionName;
         Obj["block"] = BBLabel;
         Obj["inst_seq"] = InstSeq++;
