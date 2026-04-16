@@ -399,12 +399,29 @@ static std::string getIRTrackerInstructionText(const Instruction &I,
   return Text;
 }
 
+static stable_hash hashInstruction(const Instruction &I) {
+  stable_hash H = stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
+                                      I.getNumOperands());
+  for (const Use &U : I.operands()) {
+    Value *V = U.get();
+    H = stable_hash_combine(H, V->getType()->getTypeID(),
+                            isa<Constant>(V) ? 1 : 0, isa<Argument>(V) ? 1 : 0);
+    if (auto *C = dyn_cast<ConstantInt>(V))
+      H = stable_hash_combine(H, C->getZExtValue());
+  }
+  if (I.isCommutative())
+    H = stable_hash_combine(H, 1);
+  if (auto *CI = dyn_cast<CmpInst>(&I))
+    H = stable_hash_combine(H, CI->getPredicate());
+  return H;
+}
+
 class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
   DenseMap<const Function *, stable_hash> FunctionHashes;
-  DenseMap<const Function *, std::vector<std::string>> FunctionInstTexts;
+  DenseMap<const Function *, std::vector<stable_hash>> FunctionInstHashes;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -425,29 +442,46 @@ class IRTrackerJSONState {
     }
 
     StringRef FunctionName = F.getName();
+
+    auto &PrevHashes = FunctionInstHashes[&F];
+    std::vector<stable_hash> NewHashes;
+    unsigned GlobalIdx = 0;
+    bool NeedMST = false;
+
+    for (const BasicBlock &BB : F)
+      for (const Instruction &I : BB) {
+        stable_hash H = hashInstruction(I);
+        NewHashes.push_back(H);
+        if (!SkipUnchanged || GlobalIdx >= PrevHashes.size() ||
+            PrevHashes[GlobalIdx] != H)
+          NeedMST = true;
+        ++GlobalIdx;
+      }
+
+    if (!NeedMST) {
+      PrevHashes = std::move(NewHashes);
+      return;
+    }
+
     ModuleSlotTracker MST(F.getParent());
     MST.incorporateFunction(F);
     SmallString<256> InstBuf;
-
-    auto &PrevTexts = FunctionInstTexts[&F];
-    std::vector<std::string> NewTexts;
-    unsigned GlobalIdx = 0;
+    GlobalIdx = 0;
 
     for (const BasicBlock &BB : F) {
       StringRef BBLabel = BB.hasName() ? BB.getName() : StringRef("<unnamed>");
       unsigned InstSeq = 0;
       for (const Instruction &I : BB) {
-        InstBuf.clear();
-        raw_svector_ostream IOS(InstBuf);
-        I.print(IOS, MST);
-
-        bool Changed = !SkipUnchanged || GlobalIdx >= PrevTexts.size() ||
-                       PrevTexts[GlobalIdx] != InstBuf;
-        NewTexts.push_back(std::string(InstBuf));
+        bool Changed = !SkipUnchanged || GlobalIdx >= PrevHashes.size() ||
+                       PrevHashes[GlobalIdx] != NewHashes[GlobalIdx];
 
         if (Changed) {
           const DebugLoc &DL = I.getDebugLoc();
           const DILocation *Loc = DL ? DL.get() : nullptr;
+
+          InstBuf.clear();
+          raw_svector_ostream IOS(InstBuf);
+          I.print(IOS, MST);
 
           *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
               << '\t' << I.getOpcodeName() << '\t';
@@ -467,7 +501,7 @@ class IRTrackerJSONState {
         ++GlobalIdx;
       }
     }
-    PrevTexts = std::move(NewTexts);
+    PrevHashes = std::move(NewHashes);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
