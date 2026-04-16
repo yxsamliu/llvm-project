@@ -31,23 +31,21 @@ entry:
 !10 = !DILocation(line: 14, column: 3, scope: !7)
 !11 = !DILocation(line: 15, column: 3, scope: !7)
 
-; ALL: {"kind":"pass","phase":"initial","pass":"<initial>","ir_unit":"[module]","seq":0}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"mul","text":"  %mul = mul i32 %x, 2, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
-; ALL: {"kind":"pass","phase":"after","pass":"instcombine","ir_unit":"f","seq":1}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL: {"kind":"pass","phase":"after","pass":"instcombine","ir_unit":"g","seq":2}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"shl","text":"  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
+; ALL: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
+; ALL: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
+; ALL: {"ir_unit":"g","kind":"pass","pass":"instcombine","phase":"after","seq":2}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"shl","text":"  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}"}
+; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
 
-; FILTER: {"kind":"pass","phase":"initial","pass":"<initial>","ir_unit":"[module]","seq":0}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
+; FILTER: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
+; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
+; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
+; FILTER: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
+; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
+; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
 ; FILTER-NOT: "function":"g"
-; FILTER: {"kind":"pass","phase":"after","pass":"instcombine","ir_unit":"f","seq":1}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp/ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
 ; FILTER-NOT: "ir_unit":"g"

@@ -111,8 +111,9 @@ static cl::list<std::string>
 
 static cl::opt<std::string> IRTrackerJSONOutput(
     "ir-tracker-json-output",
-    cl::desc("IR tracker: JSON Lines output path; record instructions with debug "
-             "locations after each pass"),
+    cl::desc(
+        "IR tracker: JSON Lines output path; record instructions with debug "
+        "locations after each pass"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
 
 /// This is a helper to determine whether to print IR before or

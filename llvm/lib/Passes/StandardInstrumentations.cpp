@@ -479,8 +479,7 @@ public:
     std::error_code EC;
     OS = std::make_unique<raw_fd_ostream>(Path, EC, sys::fs::OF_Text);
     if (EC)
-      report_fatal_error(Twine("ir-tracker json output open: ") +
-                         EC.message());
+      report_fatal_error(Twine("ir-tracker json output open: ") + EC.message());
   }
 
   void beforePass(StringRef PassID, Any IR) {
