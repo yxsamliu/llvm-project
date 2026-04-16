@@ -404,6 +404,7 @@ class IRTrackerJSONState {
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
   DenseMap<const Function *, stable_hash> FunctionHashes;
+  DenseMap<const Function *, std::vector<std::string>> FunctionInstTexts;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -427,31 +428,46 @@ class IRTrackerJSONState {
     ModuleSlotTracker MST(F.getParent());
     MST.incorporateFunction(F);
     SmallString<256> InstBuf;
+
+    auto &PrevTexts = FunctionInstTexts[&F];
+    std::vector<std::string> NewTexts;
+    unsigned GlobalIdx = 0;
+
     for (const BasicBlock &BB : F) {
       StringRef BBLabel = BB.hasName() ? BB.getName() : StringRef("<unnamed>");
       unsigned InstSeq = 0;
       for (const Instruction &I : BB) {
-        const DebugLoc &DL = I.getDebugLoc();
-        const DILocation *Loc = DL ? DL.get() : nullptr;
-
-        *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq++
-            << '\t' << I.getOpcodeName() << '\t';
-        if (Loc && Loc->getLine() != 0) {
-          std::string FilePath = getIRTrackerFilePath(Loc);
-          if (!FilePath.empty())
-            *OS << FilePath << '\t' << Loc->getLine() << '\t'
-                << Loc->getColumn();
-          else
-            *OS << "\t\t";
-        } else {
-          *OS << "\t\t";
-        }
         InstBuf.clear();
         raw_svector_ostream IOS(InstBuf);
         I.print(IOS, MST);
-        *OS << '\t' << InstBuf << '\n';
+
+        bool Changed = !SkipUnchanged || GlobalIdx >= PrevTexts.size() ||
+                       PrevTexts[GlobalIdx] != InstBuf;
+        NewTexts.push_back(std::string(InstBuf));
+
+        if (Changed) {
+          const DebugLoc &DL = I.getDebugLoc();
+          const DILocation *Loc = DL ? DL.get() : nullptr;
+
+          *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
+              << '\t' << I.getOpcodeName() << '\t';
+          if (Loc && Loc->getLine() != 0) {
+            std::string FilePath = getIRTrackerFilePath(Loc);
+            if (!FilePath.empty())
+              *OS << FilePath << '\t' << Loc->getLine() << '\t'
+                  << Loc->getColumn();
+            else
+              *OS << "\t\t";
+          } else {
+            *OS << "\t\t";
+          }
+          *OS << '\t' << InstBuf << '\n';
+        }
+        ++InstSeq;
+        ++GlobalIdx;
       }
     }
+    PrevTexts = std::move(NewTexts);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,

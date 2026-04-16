@@ -36,15 +36,20 @@ entry:
 !10 = !DILocation(line: 14, column: 3, scope: !7)
 !11 = !DILocation(line: 15, column: 3, scope: !7)
 
+; Initial capture: all instructions for f
 ; ALL: P	0	initial	<initial>	f
 ; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
 ; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+
+; After instcombine on f: no instruction rows (f unchanged)
 ; ALL: P	1	after	instcombine	f
-; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
-; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; ALL-NOT: I	f
+
+; After instcombine on g: g changed (mul -> shl)
 ; ALL: P	2	after	instcombine	g
 ; ALL-NEXT: I	g	entry	0	shl	/tmp{{[/\\]}}ir-tracker.c	14	3	  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}
-; ALL-NEXT: I	g	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	15	3	  ret i32 %mul, !dbg !{{[0-9]+}}
+
+; After instcombine on h: first time, all instructions
 ; ALL: P	3	after	instcombine	h
 ; ALL-NEXT: I	h	entry	0	ret			  ret i32 %x
 
@@ -52,9 +57,6 @@ entry:
 ; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
 ; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
 ; FILTER: P	1	after	instcombine	f
-; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
-; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER-NOT: I	f
 ; FILTER-NOT: I	g
-; FILTER-NOT: P	{{.*}}	g
 ; FILTER-NOT: I	h
-; FILTER-NOT: P	{{.*}}	h
