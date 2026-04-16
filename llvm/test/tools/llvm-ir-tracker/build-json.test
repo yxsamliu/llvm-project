@@ -1,0 +1,42 @@
+RUN: rm -f %t.jsonl %t.db
+RUN: %python - <<'PY' > %t.jsonl
+import json
+records = [
+    {"kind": "pass", "seq": 0, "phase": "initial", "pass": "<initial>", "ir_unit": "[module]"},
+    {
+        "kind": "inst",
+        "file": "/tmp/json.c",
+        "line": 8,
+        "col": 3,
+        "function": "f",
+        "block": "entry",
+        "inst_seq": 0,
+        "opcode": "add",
+        "text": "%a = add i32 %x, 1, !dbg !7",
+    },
+    {"kind": "pass", "seq": 1, "phase": "after", "pass": "no-op-module", "ir_unit": "[module]"},
+    {
+        "kind": "inst",
+        "file": "/tmp/json.c",
+        "line": 8,
+        "col": 3,
+        "function": "f",
+        "block": "entry",
+        "inst_seq": 0,
+        "opcode": "add",
+        "text": "%a = add i32 %x, 1, !dbg !7",
+    },
+]
+for rec in records:
+    print(json.dumps(rec))
+PY
+RUN: %ir-tracker build --input %t.jsonl --db %t.db | FileCheck %s --check-prefix=BUILD
+RUN: %ir-tracker passes --db %t.db | FileCheck %s --check-prefix=PASSES
+RUN: %ir-tracker trace --db %t.db --file json.c --line 8 | FileCheck %s --check-prefix=TRACE
+
+BUILD: built {{.*}} pass snapshots, 2 instruction rows
+PASSES: 0  id={{[0-9]+}}  initial  '<initial>'  on '[module]'
+PASSES: 1  id={{[0-9]+}}  after  'no-op-module'  on '[module]'
+PASSES: total passes recorded: 2
+TRACE: Matches at final pass (seq=1): 1 instruction(s)
+TRACE: First pass with any matching instruction: seq=0 <initial> on [module] (1 row(s))
