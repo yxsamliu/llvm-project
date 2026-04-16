@@ -403,6 +403,7 @@ class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
+  DenseMap<const Function *, stable_hash> FunctionHashes;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -415,9 +416,17 @@ class IRTrackerJSONState {
     *OS << formatv("{0}\n", json::Value(std::move(Obj)));
   }
 
-  void writeInstructionsInFunction(const Function &F) {
+  void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
+
+    if (SkipUnchanged) {
+      stable_hash Hash = StructuralHash(F, /*DetailedHash=*/true);
+      auto It = FunctionHashes.find(&F);
+      if (It != FunctionHashes.end() && It->second == Hash)
+        return;
+      FunctionHashes[&F] = Hash;
+    }
 
     std::string FunctionName = F.getName().str();
     ModuleSlotTracker MST(F.getParent());
@@ -451,24 +460,24 @@ class IRTrackerJSONState {
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
-               StringRef IRUnit) {
+               StringRef IRUnit, bool SkipUnchanged) {
     writePassRecord(Seq, Phase, PassName, IRUnit);
     if (const auto *M = unwrapIR<Module>(IR)) {
       for (const Function &F : *M)
-        writeInstructionsInFunction(F);
+        writeInstructionsInFunction(F, SkipUnchanged);
       return;
     }
     if (const auto *F = unwrapIR<Function>(IR)) {
-      writeInstructionsInFunction(*F);
+      writeInstructionsInFunction(*F, SkipUnchanged);
       return;
     }
     if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
       for (const LazyCallGraph::Node &N : *C)
-        writeInstructionsInFunction(N.getFunction());
+        writeInstructionsInFunction(N.getFunction(), SkipUnchanged);
       return;
     }
     if (const auto *L = unwrapIR<Loop>(IR))
-      writeInstructionsInFunction(*L->getHeader()->getParent());
+      writeInstructionsInFunction(*L->getHeader()->getParent(), SkipUnchanged);
   }
 
 public:
@@ -483,7 +492,8 @@ public:
     if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
       return;
     InitialCaptured = true;
-    writeIR(IR, 0, "initial", "<initial>", getIRName(IR));
+    writeIR(IR, 0, "initial", "<initial>", getIRName(IR),
+            /*SkipUnchanged=*/false);
   }
 
   void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
@@ -493,7 +503,8 @@ public:
     StringRef PassName = PIC.getPassNameForClassName(PassID);
     if (PassName.empty())
       PassName = PassID;
-    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR));
+    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR),
+            /*SkipUnchanged=*/true);
   }
 };
 
