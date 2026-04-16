@@ -407,13 +407,8 @@ class IRTrackerJSONState {
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
-    json::Object Obj;
-    Obj["kind"] = "pass";
-    Obj["seq"] = Seq;
-    Obj["phase"] = Phase.str();
-    Obj["pass"] = PassName.str();
-    Obj["ir_unit"] = IRUnit.str();
-    *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+    *OS << "P\t" << Seq << '\t' << Phase << '\t' << PassName << '\t' << IRUnit
+        << '\n';
   }
 
   void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
@@ -428,33 +423,33 @@ class IRTrackerJSONState {
       FunctionHashes[&F] = Hash;
     }
 
-    std::string FunctionName = F.getName().str();
+    StringRef FunctionName = F.getName();
     ModuleSlotTracker MST(F.getParent());
     MST.incorporateFunction(F);
+    SmallString<256> InstBuf;
     for (const BasicBlock &BB : F) {
-      std::string BBLabel =
-          BB.hasName() ? BB.getName().str() : std::string("<unnamed>");
+      StringRef BBLabel = BB.hasName() ? BB.getName() : StringRef("<unnamed>");
       unsigned InstSeq = 0;
       for (const Instruction &I : BB) {
         const DebugLoc &DL = I.getDebugLoc();
         const DILocation *Loc = DL ? DL.get() : nullptr;
-        std::string FilePath;
-        if (Loc && Loc->getLine() != 0)
-          FilePath = getIRTrackerFilePath(Loc);
 
-        json::Object Obj;
-        Obj["kind"] = "inst";
-        if (!FilePath.empty()) {
-          Obj["file"] = FilePath;
-          Obj["line"] = Loc->getLine();
-          Obj["col"] = Loc->getColumn();
+        *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq++
+            << '\t' << I.getOpcodeName() << '\t';
+        if (Loc && Loc->getLine() != 0) {
+          std::string FilePath = getIRTrackerFilePath(Loc);
+          if (!FilePath.empty())
+            *OS << FilePath << '\t' << Loc->getLine() << '\t'
+                << Loc->getColumn();
+          else
+            *OS << "\t\t";
+        } else {
+          *OS << "\t\t";
         }
-        Obj["function"] = FunctionName;
-        Obj["block"] = BBLabel;
-        Obj["inst_seq"] = InstSeq++;
-        Obj["opcode"] = std::string(I.getOpcodeName());
-        Obj["text"] = getIRTrackerInstructionText(I, MST);
-        *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+        InstBuf.clear();
+        raw_svector_ostream IOS(InstBuf);
+        I.print(IOS, MST);
+        *OS << '\t' << InstBuf << '\n';
       }
     }
   }

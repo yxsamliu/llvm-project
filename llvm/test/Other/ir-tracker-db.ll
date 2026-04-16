@@ -1,7 +1,7 @@
-; RUN: opt -disable-output -passes=instcombine -ir-tracker-json-output=%t.jsonl %s
-; RUN: FileCheck %s --input-file=%t.jsonl --check-prefix=ALL
-; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-json-output=%t-filter.jsonl %s
-; RUN: FileCheck %s --input-file=%t-filter.jsonl --check-prefix=FILTER
+; RUN: opt -disable-output -passes=instcombine -ir-tracker-json-output=%t.tsv %s
+; RUN: FileCheck %s --input-file=%t.tsv --check-prefix=ALL
+; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-json-output=%t-filter.tsv %s
+; RUN: FileCheck %s --input-file=%t-filter.tsv --check-prefix=FILTER
 
 define i32 @f(i32 %x) !dbg !6 {
 entry:
@@ -36,25 +36,25 @@ entry:
 !10 = !DILocation(line: 14, column: 3, scope: !7)
 !11 = !DILocation(line: 15, column: 3, scope: !7)
 
-; ALL: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL: {"ir_unit":"g","kind":"pass","pass":"instcombine","phase":"after","seq":2}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"shl","text":"  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
-; ALL: {"ir_unit":"h","kind":"pass","pass":"instcombine","phase":"after","seq":3}
-; ALL-NEXT: {"block":"entry","function":"h","inst_seq":0,"kind":"inst","opcode":"ret","text":"  ret i32 %x"}
+; ALL: P	0	initial	<initial>	f
+; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; ALL: P	1	after	instcombine	f
+; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; ALL: P	2	after	instcombine	g
+; ALL-NEXT: I	g	entry	0	shl	/tmp{{[/\\]}}ir-tracker.c	14	3	  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: I	g	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	15	3	  ret i32 %mul, !dbg !{{[0-9]+}}
+; ALL: P	3	after	instcombine	h
+; ALL-NEXT: I	h	entry	0	ret			  ret i32 %x
 
-; FILTER: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; FILTER: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; FILTER-NOT: "function":"g"
-; FILTER-NOT: "ir_unit":"g"
-; FILTER-NOT: "function":"h"
-; FILTER-NOT: "ir_unit":"h"
+; FILTER: P	0	initial	<initial>	f
+; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER: P	1	after	instcombine	f
+; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
+; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER-NOT: I	g
+; FILTER-NOT: P	{{.*}}	g
+; FILTER-NOT: I	h
+; FILTER-NOT: P	{{.*}}	h
