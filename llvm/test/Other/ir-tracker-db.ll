@@ -38,8 +38,8 @@ entry:
 
 ; Initial capture: all instructions for f
 ; ALL: P	0	initial	<initial>	f
-; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
-; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; ALL-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1
+; ALL-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add
 
 ; After instcombine on f: no instruction rows (f unchanged)
 ; ALL: P	1	after	instcombine	f
@@ -47,15 +47,15 @@ entry:
 
 ; After instcombine on g: g changed (mul -> shl)
 ; ALL: P	2	after	instcombine	g
-; ALL-NEXT: I	g	entry	0	shl	/tmp{{[/\\]}}ir-tracker.c	14	3	  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}
+; ALL-NEXT: I	g	entry	0	shl	/tmp{{[/\\]}}ir-tracker.c	14	3	  %mul = shl i32 %x, 1
 
 ; After instcombine on h: first time, all instructions
 ; ALL: P	3	after	instcombine	h
 ; ALL-NEXT: I	h	entry	0	ret			  ret i32 %x
 
 ; FILTER: P	0	initial	<initial>	f
-; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1, !dbg !{{[0-9]+}}
-; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add, !dbg !{{[0-9]+}}
+; FILTER-NEXT: I	f	entry	0	add	/tmp{{[/\\]}}ir-tracker.c	8	3	  %add = add i32 %x, 1
+; FILTER-NEXT: I	f	entry	1	ret	/tmp{{[/\\]}}ir-tracker.c	9	3	  ret i32 %add
 ; FILTER: P	1	after	instcombine	f
 ; FILTER-NOT: I	f
 ; FILTER-NOT: I	g

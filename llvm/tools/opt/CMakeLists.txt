@@ -35,6 +35,7 @@ add_llvm_library(LLVMOptDriver
   STATIC
   NewPMDriver.cpp
   optdriver.cpp
+  LLSourceDebugLoc.cpp
   PARTIAL_SOURCES_INTENDED
   DEPENDS
   intrinsics_gen

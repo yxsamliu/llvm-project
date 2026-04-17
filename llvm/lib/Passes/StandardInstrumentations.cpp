@@ -416,6 +416,23 @@ static stable_hash hashInstruction(const Instruction &I) {
   return H;
 }
 
+static stable_hash hashTrackerIdentity(const DILocation *Loc) {
+  if (!Loc)
+    return 0;
+  return stable_hash_combine(Loc->getLine(), Loc->getColumn(),
+                             xxh3_64bits(Loc->getDirectory()),
+                             xxh3_64bits(Loc->getFilename()));
+}
+
+static void stripIRTrackerDebugMetadata(SmallVectorImpl<char> &Text) {
+  StringRef S(Text.data(), Text.size());
+  size_t Pos = S.find(", !dbg !");
+  if (Pos == StringRef::npos)
+    Pos = S.find(" !dbg !");
+  if (Pos != StringRef::npos)
+    Text.resize(Pos);
+}
+
 class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
@@ -424,6 +441,8 @@ class IRTrackerJSONState {
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
+  DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
+      BlockInstIDs;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -437,21 +456,27 @@ class IRTrackerJSONState {
 
     auto &PrevBlkH = BlockHashes[&F];
     auto &PrevInstH = BlockInstHashes[&F];
+    auto &PrevInstIDs = BlockInstIDs[&F];
     SmallVector<stable_hash> NewBlkH;
     SmallVector<SmallVector<stable_hash>> NewInstH;
+    SmallVector<SmallVector<stable_hash>> NewInstIDs;
     stable_hash FuncH = 0;
 
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
       stable_hash BlkH = 0;
       SmallVector<stable_hash> InstH;
+      SmallVector<stable_hash> InstIDs;
       for (const Instruction &I : BB) {
         stable_hash H = hashInstruction(I);
         InstH.push_back(H);
+        const DILocation *Loc = I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
+        InstIDs.push_back(hashTrackerIdentity(Loc));
         BlkH = stable_hash_combine(BlkH, H);
       }
       NewBlkH.push_back(BlkH);
       NewInstH.push_back(std::move(InstH));
+      NewInstIDs.push_back(std::move(InstIDs));
       FuncH = stable_hash_combine(FuncH, BlkH);
       ++BlkIdx;
     }
@@ -480,6 +505,7 @@ class IRTrackerJSONState {
     if (!AnyBlockChanged) {
       PrevBlkH = std::move(NewBlkH);
       PrevInstH = std::move(NewInstH);
+      PrevInstIDs = std::move(NewInstIDs);
       return;
     }
 
@@ -497,14 +523,32 @@ class IRTrackerJSONState {
         StringRef BBLabel =
             BB.hasName() ? BB.getName() : StringRef("<unnamed>");
         auto &CurInstH = NewInstH[BlkIdx];
+        auto &CurInstIDs = NewInstIDs[BlkIdx];
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
                              : nullptr;
+        auto *OldInstIDs = (SkipUnchanged && BlkIdx < PrevInstIDs.size())
+                               ? &PrevInstIDs[BlkIdx]
+                               : nullptr;
+        DenseMap<stable_hash, stable_hash> OldByID;
+        if (OldInstH && OldInstIDs) {
+          for (size_t I = 0, E = std::min(OldInstH->size(), OldInstIDs->size());
+               I != E; ++I)
+            if ((*OldInstIDs)[I] != 0)
+              OldByID[(*OldInstIDs)[I]] = (*OldInstH)[I];
+        }
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
         for (const Instruction &I : BB) {
-          bool InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
-                             (*OldInstH)[InstIdx] != CurInstH[InstIdx];
+          stable_hash CurID = CurInstIDs[InstIdx];
+          bool InstChanged = true;
+          if (CurID != 0) {
+            auto It = OldByID.find(CurID);
+            InstChanged = It == OldByID.end() || It->second != CurInstH[InstIdx];
+          } else {
+            InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
+                          (*OldInstH)[InstIdx] != CurInstH[InstIdx];
+          }
 
           if (InstChanged) {
             const DebugLoc &DL = I.getDebugLoc();
@@ -513,6 +557,7 @@ class IRTrackerJSONState {
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
             I.print(IOS, MST);
+            stripIRTrackerDebugMetadata(InstBuf);
 
             *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
                 << '\t' << I.getOpcodeName() << '\t';
@@ -536,6 +581,7 @@ class IRTrackerJSONState {
     }
     PrevBlkH = std::move(NewBlkH);
     PrevInstH = std::move(NewInstH);
+    PrevInstIDs = std::move(NewInstIDs);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
