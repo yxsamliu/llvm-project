@@ -421,7 +421,9 @@ class IRTrackerJSONState {
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
   DenseMap<const Function *, stable_hash> FunctionHashes;
-  DenseMap<const Function *, std::vector<stable_hash>> FunctionInstHashes;
+  DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
+  DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
+      BlockInstHashes;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -433,75 +435,107 @@ class IRTrackerJSONState {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
 
-    if (SkipUnchanged) {
-      stable_hash Hash = StructuralHash(F, /*DetailedHash=*/true);
-      auto It = FunctionHashes.find(&F);
-      if (It != FunctionHashes.end() && It->second == Hash)
-        return;
-      FunctionHashes[&F] = Hash;
-    }
+    auto &PrevBlkH = BlockHashes[&F];
+    auto &PrevInstH = BlockInstHashes[&F];
+    SmallVector<stable_hash> NewBlkH;
+    SmallVector<SmallVector<stable_hash>> NewInstH;
+    stable_hash FuncH = 0;
 
-    StringRef FunctionName = F.getName();
-
-    auto &PrevHashes = FunctionInstHashes[&F];
-    std::vector<stable_hash> NewHashes;
-    unsigned GlobalIdx = 0;
-    bool NeedMST = false;
-
-    for (const BasicBlock &BB : F)
+    unsigned BlkIdx = 0;
+    for (const BasicBlock &BB : F) {
+      stable_hash BlkH = 0;
+      SmallVector<stable_hash> InstH;
       for (const Instruction &I : BB) {
         stable_hash H = hashInstruction(I);
-        NewHashes.push_back(H);
-        if (!SkipUnchanged || GlobalIdx >= PrevHashes.size() ||
-            PrevHashes[GlobalIdx] != H)
-          NeedMST = true;
-        ++GlobalIdx;
+        InstH.push_back(H);
+        BlkH = stable_hash_combine(BlkH, H);
       }
+      NewBlkH.push_back(BlkH);
+      NewInstH.push_back(std::move(InstH));
+      FuncH = stable_hash_combine(FuncH, BlkH);
+      ++BlkIdx;
+    }
 
-    if (!NeedMST) {
-      PrevHashes = std::move(NewHashes);
+    if (SkipUnchanged) {
+      auto It = FunctionHashes.find(&F);
+      if (It != FunctionHashes.end() && It->second == FuncH) {
+        return;
+      }
+      FunctionHashes[&F] = FuncH;
+    } else {
+      FunctionHashes[&F] = FuncH;
+    }
+
+    bool AnyBlockChanged = false;
+    BlkIdx = 0;
+    for (const BasicBlock &BB : F) {
+      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx]) {
+        AnyBlockChanged = true;
+        break;
+      }
+      ++BlkIdx;
+    }
+
+    if (!AnyBlockChanged) {
+      PrevBlkH = std::move(NewBlkH);
+      PrevInstH = std::move(NewInstH);
       return;
     }
 
+    StringRef FunctionName = F.getName();
     ModuleSlotTracker MST(F.getParent());
     MST.incorporateFunction(F);
     SmallString<256> InstBuf;
-    GlobalIdx = 0;
+    BlkIdx = 0;
 
     for (const BasicBlock &BB : F) {
-      StringRef BBLabel = BB.hasName() ? BB.getName() : StringRef("<unnamed>");
-      unsigned InstSeq = 0;
-      for (const Instruction &I : BB) {
-        bool Changed = !SkipUnchanged || GlobalIdx >= PrevHashes.size() ||
-                       PrevHashes[GlobalIdx] != NewHashes[GlobalIdx];
+      bool BlockChanged = !SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+                          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx];
 
-        if (Changed) {
-          const DebugLoc &DL = I.getDebugLoc();
-          const DILocation *Loc = DL ? DL.get() : nullptr;
+      if (BlockChanged) {
+        StringRef BBLabel =
+            BB.hasName() ? BB.getName() : StringRef("<unnamed>");
+        auto &CurInstH = NewInstH[BlkIdx];
+        auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
+                             ? &PrevInstH[BlkIdx]
+                             : nullptr;
+        unsigned InstSeq = 0;
+        unsigned InstIdx = 0;
+        for (const Instruction &I : BB) {
+          bool InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
+                             (*OldInstH)[InstIdx] != CurInstH[InstIdx];
 
-          InstBuf.clear();
-          raw_svector_ostream IOS(InstBuf);
-          I.print(IOS, MST);
+          if (InstChanged) {
+            const DebugLoc &DL = I.getDebugLoc();
+            const DILocation *Loc = DL ? DL.get() : nullptr;
 
-          *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
-              << '\t' << I.getOpcodeName() << '\t';
-          if (Loc && Loc->getLine() != 0) {
-            std::string FilePath = getIRTrackerFilePath(Loc);
-            if (!FilePath.empty())
-              *OS << FilePath << '\t' << Loc->getLine() << '\t'
-                  << Loc->getColumn();
-            else
+            InstBuf.clear();
+            raw_svector_ostream IOS(InstBuf);
+            I.print(IOS, MST);
+
+            *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
+                << '\t' << I.getOpcodeName() << '\t';
+            if (Loc && Loc->getLine() != 0) {
+              std::string FilePath = getIRTrackerFilePath(Loc);
+              if (!FilePath.empty())
+                *OS << FilePath << '\t' << Loc->getLine() << '\t'
+                    << Loc->getColumn();
+              else
+                *OS << "\t\t";
+            } else {
               *OS << "\t\t";
-          } else {
-            *OS << "\t\t";
+            }
+            *OS << '\t' << InstBuf << '\n';
           }
-          *OS << '\t' << InstBuf << '\n';
+          ++InstSeq;
+          ++InstIdx;
         }
-        ++InstSeq;
-        ++GlobalIdx;
       }
+      ++BlkIdx;
     }
-    PrevHashes = std::move(NewHashes);
+    PrevBlkH = std::move(NewBlkH);
+    PrevInstH = std::move(NewInstH);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
