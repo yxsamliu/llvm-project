@@ -438,17 +438,30 @@ class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
+  unsigned NextTrackerID = 1;
   DenseMap<const Function *, stable_hash> FunctionHashes;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
-  DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
-      BlockInstIDs;
+  DenseMap<stable_hash, unsigned> LocKeyToTrackerID;
+  DenseMap<unsigned, stable_hash> TrackerIDToPrevHash;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
     *OS << "P\t" << Seq << '\t' << Phase << '\t' << PassName << '\t' << IRUnit
         << '\n';
+  }
+
+  unsigned getOrCreateTrackerID(const DILocation *Loc) {
+    stable_hash Key = hashTrackerIdentity(Loc);
+    if (Key == 0)
+      return 0;
+    auto It = LocKeyToTrackerID.find(Key);
+    if (It != LocKeyToTrackerID.end())
+      return It->second;
+    unsigned ID = NextTrackerID++;
+    LocKeyToTrackerID[Key] = ID;
+    return ID;
   }
 
   void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
@@ -457,7 +470,6 @@ class IRTrackerJSONState {
 
     auto &PrevBlkH = BlockHashes[&F];
     auto &PrevInstH = BlockInstHashes[&F];
-    auto &PrevInstIDs = BlockInstIDs[&F];
     SmallVector<stable_hash> NewBlkH;
     SmallVector<SmallVector<stable_hash>> NewInstH;
     SmallVector<SmallVector<stable_hash>> NewInstIDs;
@@ -472,7 +484,7 @@ class IRTrackerJSONState {
         stable_hash H = hashInstruction(I);
         InstH.push_back(H);
         const DILocation *Loc = I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
-        InstIDs.push_back(hashTrackerIdentity(Loc));
+        InstIDs.push_back(getOrCreateTrackerID(Loc));
         BlkH = stable_hash_combine(BlkH, H);
       }
       NewBlkH.push_back(BlkH);
@@ -506,7 +518,6 @@ class IRTrackerJSONState {
     if (!AnyBlockChanged) {
       PrevBlkH = std::move(NewBlkH);
       PrevInstH = std::move(NewInstH);
-      PrevInstIDs = std::move(NewInstIDs);
       return;
     }
 
@@ -528,24 +539,15 @@ class IRTrackerJSONState {
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
                              : nullptr;
-        auto *OldInstIDs = (SkipUnchanged && BlkIdx < PrevInstIDs.size())
-                               ? &PrevInstIDs[BlkIdx]
-                               : nullptr;
-        DenseMap<stable_hash, stable_hash> OldByID;
-        if (OldInstH && OldInstIDs) {
-          for (size_t I = 0, E = std::min(OldInstH->size(), OldInstIDs->size());
-               I != E; ++I)
-            if ((*OldInstIDs)[I] != 0)
-              OldByID[(*OldInstIDs)[I]] = (*OldInstH)[I];
-        }
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
         for (const Instruction &I : BB) {
           stable_hash CurID = CurInstIDs[InstIdx];
           bool InstChanged = true;
           if (CurID != 0) {
-            auto It = OldByID.find(CurID);
-            InstChanged = It == OldByID.end() || It->second != CurInstH[InstIdx];
+            auto It = TrackerIDToPrevHash.find(static_cast<unsigned>(CurID));
+            InstChanged = It == TrackerIDToPrevHash.end() ||
+                          It->second != CurInstH[InstIdx];
           } else {
             InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
                           (*OldInstH)[InstIdx] != CurInstH[InstIdx];
@@ -574,6 +576,9 @@ class IRTrackerJSONState {
             }
             *OS << '\t' << InstBuf << '\n';
           }
+          if (CurID != 0)
+            TrackerIDToPrevHash[static_cast<unsigned>(CurID)] =
+                CurInstH[InstIdx];
           ++InstSeq;
           ++InstIdx;
         }
@@ -582,7 +587,6 @@ class IRTrackerJSONState {
     }
     PrevBlkH = std::move(NewBlkH);
     PrevInstH = std::move(NewInstH);
-    PrevInstIDs = std::move(NewInstIDs);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
