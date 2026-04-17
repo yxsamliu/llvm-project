@@ -419,9 +419,10 @@ static stable_hash hashInstruction(const Instruction &I) {
 static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   if (!Loc)
     return 0;
-  return stable_hash_combine(Loc->getLine(), Loc->getColumn(),
-                             xxh3_64bits(Loc->getDirectory()),
-                             xxh3_64bits(Loc->getFilename()));
+  unsigned ScopeLine = 0;
+  if (DISubprogram *SP = Loc->getScope()->getSubprogram())
+    ScopeLine = SP->getLine();
+  return stable_hash_combine(Loc->getLine(), Loc->getColumn(), ScopeLine);
 }
 
 static void stripIRTrackerDebugMetadata(SmallVectorImpl<char> &Text) {
