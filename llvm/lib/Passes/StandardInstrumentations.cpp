@@ -426,13 +426,17 @@ static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   return stable_hash_combine(Loc->getLine(), Loc->getColumn(), ScopeLine);
 }
 
-static void stripIRTrackerDebugMetadata(SmallVectorImpl<char> &Text) {
-  StringRef S(Text.data(), Text.size());
-  size_t Pos = S.find(", !dbg !");
-  if (Pos == StringRef::npos)
-    Pos = S.find(" !dbg !");
-  if (Pos != StringRef::npos)
-    Text.resize(Pos);
+static void printIRTrackerInstruction(raw_svector_ostream &IOS,
+                                      const Instruction &I,
+                                      ModuleSlotTracker &MST) {
+  if (DebugLoc DL = I.getDebugLoc()) {
+    Instruction &MutableI = const_cast<Instruction &>(I);
+    MutableI.setDebugLoc(DebugLoc());
+    I.print(IOS, MST);
+    MutableI.setDebugLoc(DL);
+    return;
+  }
+  I.print(IOS, MST);
 }
 
 class IRTrackerJSONState {
@@ -553,8 +557,7 @@ class IRTrackerJSONState {
           if (InstChanged) {
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
-            I.print(IOS, MST);
-            stripIRTrackerDebugMetadata(InstBuf);
+            printIRTrackerInstruction(IOS, I, MST);
 
             if (CurID != 0)
               writeTrackerRecord(CurID, Loc);
