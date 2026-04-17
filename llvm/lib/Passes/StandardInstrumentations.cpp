@@ -525,6 +525,26 @@ class IRTrackerJSONState {
       writeInstructionsInFunction(*L->getHeader()->getParent(), SkipUnchanged);
   }
 
+  bool allFunctionsKnown(Any IR) {
+    if (const auto *M = unwrapIR<Module>(IR)) {
+      for (const Function &F : *M)
+        if (!F.isDeclaration() && !FunctionHashes.count(&F))
+          return false;
+      return true;
+    }
+    if (const auto *F = unwrapIR<Function>(IR))
+      return F->isDeclaration() || FunctionHashes.count(F);
+    if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      for (const LazyCallGraph::Node &N : *C)
+        if (!FunctionHashes.count(&N.getFunction()))
+          return false;
+      return true;
+    }
+    if (const auto *L = unwrapIR<Loop>(IR))
+      return FunctionHashes.count(L->getHeader()->getParent());
+    return false;
+  }
+
 public:
   explicit IRTrackerJSONState(StringRef Path) {
     std::error_code EC;
@@ -541,13 +561,20 @@ public:
             /*SkipUnchanged=*/false);
   }
 
-  void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
+  void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC,
+                 const PreservedAnalyses &PA) {
     if (isIgnored(PassID) || !shouldPrintIR(IR))
       return;
 
     StringRef PassName = PIC.getPassNameForClassName(PassID);
     if (PassName.empty())
       PassName = PassID;
+
+    if (PA.areAllPreserved() && allFunctionsKnown(IR)) {
+      writePassRecord(NextSeq++, "after", PassName, getIRName(IR));
+      return;
+    }
+
     writeIR(IR, NextSeq++, "after", PassName, getIRName(IR),
             /*SkipUnchanged=*/true);
   }
@@ -2701,8 +2728,8 @@ void IRTrackerInstrumentation::registerCallbacks(
   PIC.registerBeforeNonSkippedPassCallback(
       [State](StringRef PassID, Any IR) { State->beforePass(PassID, IR); });
   PIC.registerAfterPassCallback(
-      [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &) {
-        State->afterPass(PassID, IR, PIC);
+      [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &PA) {
+        State->afterPass(PassID, IR, PIC, PA);
       });
 }
 
