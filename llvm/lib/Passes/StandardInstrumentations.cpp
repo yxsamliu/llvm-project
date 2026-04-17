@@ -481,26 +481,21 @@ class IRTrackerJSONState {
     auto &PrevBlkH = BlockHashes[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     SmallVector<stable_hash> NewBlkH;
-    SmallVector<SmallVector<stable_hash>> NewInstH;
-    SmallVector<SmallVector<stable_hash>> NewInstIDs;
+    SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
       stable_hash BlkH = 0;
-      SmallVector<stable_hash> InstH;
-      SmallVector<stable_hash> InstIDs;
       for (const Instruction &I : BB) {
         stable_hash H = hashInstruction(I);
-        InstH.push_back(H);
-        const DILocation *Loc = I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
-        InstIDs.push_back(getOrCreateTrackerID(Loc));
         BlkH = stable_hash_combine(BlkH, H);
       }
       NewBlkH.push_back(BlkH);
-      NewInstH.push_back(std::move(InstH));
-      NewInstIDs.push_back(std::move(InstIDs));
       FuncH = stable_hash_combine(FuncH, BlkH);
+      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+          PrevBlkH[BlkIdx] != BlkH)
+        ChangedBlocks.push_back(BlkIdx);
       ++BlkIdx;
     }
 
@@ -514,20 +509,8 @@ class IRTrackerJSONState {
       FunctionHashes[&F] = FuncH;
     }
 
-    bool AnyBlockChanged = false;
-    BlkIdx = 0;
-    for (const BasicBlock &BB : F) {
-      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx]) {
-        AnyBlockChanged = true;
-        break;
-      }
-      ++BlkIdx;
-    }
-
-    if (!AnyBlockChanged) {
+    if (ChangedBlocks.empty()) {
       PrevBlkH = std::move(NewBlkH);
-      PrevInstH = std::move(NewInstH);
       return;
     }
 
@@ -536,60 +519,62 @@ class IRTrackerJSONState {
     MST.incorporateFunction(F);
     SmallString<256> InstBuf;
     BlkIdx = 0;
+    unsigned ChangedBlockPos = 0;
 
     for (const BasicBlock &BB : F) {
-      bool BlockChanged = !SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-                          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx];
+      bool BlockChanged = ChangedBlockPos < ChangedBlocks.size() &&
+                          ChangedBlocks[ChangedBlockPos] == BlkIdx;
 
       if (BlockChanged) {
+        ++ChangedBlockPos;
         StringRef BBLabel =
             BB.hasName() ? BB.getName() : StringRef("<unnamed>");
-        auto &CurInstH = NewInstH[BlkIdx];
-        auto &CurInstIDs = NewInstIDs[BlkIdx];
+        SmallVector<stable_hash> CurInstH;
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
                              : nullptr;
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
         for (const Instruction &I : BB) {
-          stable_hash CurID = CurInstIDs[InstIdx];
+          stable_hash CurH = hashInstruction(I);
+          CurInstH.push_back(CurH);
+          const DILocation *Loc =
+              I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
+          unsigned CurID = getOrCreateTrackerID(Loc);
           bool InstChanged = true;
           if (CurID != 0) {
-            auto It = TrackerIDToPrevHash.find(static_cast<unsigned>(CurID));
-            InstChanged = It == TrackerIDToPrevHash.end() ||
-                          It->second != CurInstH[InstIdx];
+            auto It = TrackerIDToPrevHash.find(CurID);
+            InstChanged = It == TrackerIDToPrevHash.end() || It->second != CurH;
           } else {
             InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
-                          (*OldInstH)[InstIdx] != CurInstH[InstIdx];
+                          (*OldInstH)[InstIdx] != CurH;
           }
 
           if (InstChanged) {
-            const DebugLoc &DL = I.getDebugLoc();
-            const DILocation *Loc = DL ? DL.get() : nullptr;
-
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
             I.print(IOS, MST);
             stripIRTrackerDebugMetadata(InstBuf);
 
             if (CurID != 0)
-              writeTrackerRecord(static_cast<unsigned>(CurID), Loc);
+              writeTrackerRecord(CurID, Loc);
 
             *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
-                << '\t' << I.getOpcodeName() << '\t'
-                << static_cast<unsigned>(CurID) << '\t' << InstBuf << '\n';
+                << '\t' << I.getOpcodeName() << '\t' << CurID << '\t' << InstBuf
+                << '\n';
           }
           if (CurID != 0)
-            TrackerIDToPrevHash[static_cast<unsigned>(CurID)] =
-                CurInstH[InstIdx];
+            TrackerIDToPrevHash[CurID] = CurH;
           ++InstSeq;
           ++InstIdx;
         }
+        if (BlkIdx >= PrevInstH.size())
+          PrevInstH.resize(BlkIdx + 1);
+        PrevInstH[BlkIdx] = std::move(CurInstH);
       }
       ++BlkIdx;
     }
     PrevBlkH = std::move(NewBlkH);
-    PrevInstH = std::move(NewInstH);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
