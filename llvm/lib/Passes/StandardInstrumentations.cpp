@@ -417,6 +417,15 @@ static stable_hash hashInstruction(const Instruction &I) {
   return H;
 }
 
+static stable_hash hashBlockFingerprint(const BasicBlock &BB) {
+  if (BB.empty())
+    return 0;
+  const Instruction &First = BB.front();
+  const Instruction &Last = BB.back();
+  return stable_hash_combine(static_cast<stable_hash>(BB.size()),
+                             hashInstruction(First), hashInstruction(Last));
+}
+
 static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   if (!Loc)
     return 0;
@@ -441,6 +450,7 @@ class IRTrackerJSONState {
   bool InitialCaptured = false;
   unsigned NextTrackerID = 1;
   DenseMap<const Function *, stable_hash> FunctionHashes;
+  DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
@@ -479,17 +489,27 @@ class IRTrackerJSONState {
       return;
 
     auto &PrevBlkH = BlockHashes[&F];
+    auto &PrevBlkFP = BlockFingerprints[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     SmallVector<stable_hash> NewBlkH;
+    SmallVector<stable_hash> NewBlkFP;
     SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
+      stable_hash BlkFP = hashBlockFingerprint(BB);
+      NewBlkFP.push_back(BlkFP);
       stable_hash BlkH = 0;
-      for (const Instruction &I : BB) {
-        stable_hash H = hashInstruction(I);
-        BlkH = stable_hash_combine(BlkH, H);
+      bool FingerprintUnchanged = SkipUnchanged && BlkIdx < PrevBlkFP.size() &&
+                                  PrevBlkFP[BlkIdx] == BlkFP;
+      if (FingerprintUnchanged && BlkIdx < PrevBlkH.size()) {
+        BlkH = PrevBlkH[BlkIdx];
+      } else {
+        for (const Instruction &I : BB) {
+          stable_hash H = hashInstruction(I);
+          BlkH = stable_hash_combine(BlkH, H);
+        }
       }
       NewBlkH.push_back(BlkH);
       FuncH = stable_hash_combine(FuncH, BlkH);
@@ -510,6 +530,7 @@ class IRTrackerJSONState {
     }
 
     if (ChangedBlocks.empty()) {
+      PrevBlkFP = std::move(NewBlkFP);
       PrevBlkH = std::move(NewBlkH);
       return;
     }
@@ -574,6 +595,7 @@ class IRTrackerJSONState {
       }
       ++BlkIdx;
     }
+    PrevBlkFP = std::move(NewBlkFP);
     PrevBlkH = std::move(NewBlkH);
   }
 
