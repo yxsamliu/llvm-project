@@ -14,6 +14,7 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -445,11 +446,20 @@ class IRTrackerJSONState {
       BlockInstHashes;
   DenseMap<stable_hash, unsigned> LocKeyToTrackerID;
   DenseMap<unsigned, stable_hash> TrackerIDToPrevHash;
+  DenseSet<unsigned> EmittedTrackerMetadata;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
     *OS << "P\t" << Seq << '\t' << Phase << '\t' << PassName << '\t' << IRUnit
         << '\n';
+  }
+
+  void writeTrackerRecord(unsigned ID, const DILocation *Loc) {
+    if (!Loc || ID == 0 || !EmittedTrackerMetadata.insert(ID).second)
+      return;
+    std::string FilePath = getIRTrackerFilePath(Loc);
+    *OS << "T\t" << ID << '\t' << FilePath << '\t' << Loc->getLine() << '\t'
+        << Loc->getColumn() << '\n';
   }
 
   unsigned getOrCreateTrackerID(const DILocation *Loc) {
@@ -562,19 +572,12 @@ class IRTrackerJSONState {
             I.print(IOS, MST);
             stripIRTrackerDebugMetadata(InstBuf);
 
+            if (CurID != 0)
+              writeTrackerRecord(static_cast<unsigned>(CurID), Loc);
+
             *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
-                << '\t' << I.getOpcodeName() << '\t';
-            if (Loc && Loc->getLine() != 0) {
-              std::string FilePath = getIRTrackerFilePath(Loc);
-              if (!FilePath.empty())
-                *OS << FilePath << '\t' << Loc->getLine() << '\t'
-                    << Loc->getColumn();
-              else
-                *OS << "\t\t";
-            } else {
-              *OS << "\t\t";
-            }
-            *OS << '\t' << InstBuf << '\n';
+                << '\t' << I.getOpcodeName() << '\t'
+                << static_cast<unsigned>(CurID) << '\t' << InstBuf << '\n';
           }
           if (CurID != 0)
             TrackerIDToPrevHash[static_cast<unsigned>(CurID)] =
