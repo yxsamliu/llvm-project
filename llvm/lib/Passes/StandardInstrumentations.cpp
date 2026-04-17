@@ -481,99 +481,82 @@ class IRTrackerJSONState {
     auto &PrevBlkH = BlockHashes[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     SmallVector<stable_hash> NewBlkH;
-    SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
+    StringRef FunctionName = F.getName();
+    std::unique_ptr<ModuleSlotTracker> MST;
+    SmallString<256> InstBuf;
 
     unsigned BlkIdx = 0;
+    bool AnyInstChanged = false;
     for (const BasicBlock &BB : F) {
+      StringRef BBLabel = BB.hasName() ? BB.getName() : StringRef("<unnamed>");
       stable_hash BlkH = 0;
+      SmallVector<stable_hash> CurInstH;
+      auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
+                           ? &PrevInstH[BlkIdx]
+                           : nullptr;
+      unsigned InstSeq = 0;
+      unsigned InstIdx = 0;
+
       for (const Instruction &I : BB) {
-        stable_hash H = hashInstruction(I);
-        BlkH = stable_hash_combine(BlkH, H);
+        stable_hash CurH = hashInstruction(I);
+        CurInstH.push_back(CurH);
+        BlkH = stable_hash_combine(BlkH, CurH);
+
+        const DILocation *Loc =
+            I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
+        unsigned CurID = getOrCreateTrackerID(Loc);
+        bool InstChanged = true;
+        if (CurID != 0) {
+          auto It = TrackerIDToPrevHash.find(CurID);
+          InstChanged = It == TrackerIDToPrevHash.end() || It->second != CurH;
+        } else {
+          InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
+                        (*OldInstH)[InstIdx] != CurH;
+        }
+
+        if (InstChanged) {
+          AnyInstChanged = true;
+          if (!MST) {
+            MST = std::make_unique<ModuleSlotTracker>(F.getParent());
+            MST->incorporateFunction(F);
+          }
+
+          InstBuf.clear();
+          raw_svector_ostream IOS(InstBuf);
+          I.print(IOS, *MST);
+          stripIRTrackerDebugMetadata(InstBuf);
+
+          if (CurID != 0)
+            writeTrackerRecord(CurID, Loc);
+
+          *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
+              << '\t' << I.getOpcodeName() << '\t' << CurID << '\t' << InstBuf
+              << '\n';
+        }
+        if (CurID != 0)
+          TrackerIDToPrevHash[CurID] = CurH;
+        ++InstSeq;
+        ++InstIdx;
       }
+
       NewBlkH.push_back(BlkH);
       FuncH = stable_hash_combine(FuncH, BlkH);
-      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-          PrevBlkH[BlkIdx] != BlkH)
-        ChangedBlocks.push_back(BlkIdx);
+      if (BlkIdx >= PrevInstH.size())
+        PrevInstH.resize(BlkIdx + 1);
+      PrevInstH[BlkIdx] = std::move(CurInstH);
       ++BlkIdx;
     }
 
     if (SkipUnchanged) {
       auto It = FunctionHashes.find(&F);
-      if (It != FunctionHashes.end() && It->second == FuncH) {
+      if (It != FunctionHashes.end() && It->second == FuncH &&
+          !AnyInstChanged) {
+        PrevBlkH = std::move(NewBlkH);
         return;
       }
-      FunctionHashes[&F] = FuncH;
-    } else {
-      FunctionHashes[&F] = FuncH;
     }
-
-    if (ChangedBlocks.empty()) {
-      PrevBlkH = std::move(NewBlkH);
-      return;
-    }
-
-    StringRef FunctionName = F.getName();
-    ModuleSlotTracker MST(F.getParent());
-    MST.incorporateFunction(F);
-    SmallString<256> InstBuf;
-    BlkIdx = 0;
-    unsigned ChangedBlockPos = 0;
-
-    for (const BasicBlock &BB : F) {
-      bool BlockChanged = ChangedBlockPos < ChangedBlocks.size() &&
-                          ChangedBlocks[ChangedBlockPos] == BlkIdx;
-
-      if (BlockChanged) {
-        ++ChangedBlockPos;
-        StringRef BBLabel =
-            BB.hasName() ? BB.getName() : StringRef("<unnamed>");
-        SmallVector<stable_hash> CurInstH;
-        auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
-                             ? &PrevInstH[BlkIdx]
-                             : nullptr;
-        unsigned InstSeq = 0;
-        unsigned InstIdx = 0;
-        for (const Instruction &I : BB) {
-          stable_hash CurH = hashInstruction(I);
-          CurInstH.push_back(CurH);
-          const DILocation *Loc =
-              I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
-          unsigned CurID = getOrCreateTrackerID(Loc);
-          bool InstChanged = true;
-          if (CurID != 0) {
-            auto It = TrackerIDToPrevHash.find(CurID);
-            InstChanged = It == TrackerIDToPrevHash.end() || It->second != CurH;
-          } else {
-            InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
-                          (*OldInstH)[InstIdx] != CurH;
-          }
-
-          if (InstChanged) {
-            InstBuf.clear();
-            raw_svector_ostream IOS(InstBuf);
-            I.print(IOS, MST);
-            stripIRTrackerDebugMetadata(InstBuf);
-
-            if (CurID != 0)
-              writeTrackerRecord(CurID, Loc);
-
-            *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
-                << '\t' << I.getOpcodeName() << '\t' << CurID << '\t' << InstBuf
-                << '\n';
-          }
-          if (CurID != 0)
-            TrackerIDToPrevHash[CurID] = CurH;
-          ++InstSeq;
-          ++InstIdx;
-        }
-        if (BlkIdx >= PrevInstH.size())
-          PrevInstH.resize(BlkIdx + 1);
-        PrevInstH[BlkIdx] = std::move(CurInstH);
-      }
-      ++BlkIdx;
-    }
+    FunctionHashes[&F] = FuncH;
     PrevBlkH = std::move(NewBlkH);
   }
 
