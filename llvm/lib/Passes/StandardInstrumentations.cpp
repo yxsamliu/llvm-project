@@ -455,7 +455,7 @@ class IRTrackerJSONState {
   DenseMap<const Function *, SmallVector<bool>> BlockHasZeroIDs;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
-  DenseMap<const Function *, unsigned> NextSyntheticLine;
+  DenseMap<const Function *, SmallVector<SmallVector<unsigned>>> BlockTempIDs;
   DenseMap<stable_hash, unsigned> LocKeyToTrackerID;
   DenseMap<unsigned, stable_hash> TrackerIDToPrevHash;
   DenseSet<unsigned> EmittedTrackerMetadata;
@@ -486,30 +486,6 @@ class IRTrackerJSONState {
     return ID;
   }
 
-  unsigned getOrPromoteTrackerID(Instruction &I, const Function &F) {
-    if (const DILocation *Loc =
-            I.getDebugLoc() ? I.getDebugLoc().get() : nullptr)
-      return getOrCreateTrackerID(Loc);
-
-    DISubprogram *SP = F.getSubprogram();
-    if (!SP)
-      return 0;
-
-    unsigned &NextLine = NextSyntheticLine[&F];
-    if (NextLine == 0) {
-      NextLine = SP->getLine() + 1;
-      for (const BasicBlock &BB : F)
-        for (const Instruction &J : BB)
-          if (const DILocation *DL =
-                  J.getDebugLoc() ? J.getDebugLoc().get() : nullptr)
-            NextLine = std::max(NextLine, DL->getLine() + 1);
-    }
-
-    DebugLoc NewDL = DILocation::get(F.getContext(), NextLine++, 0, SP);
-    I.setDebugLoc(NewDL);
-    return getOrCreateTrackerID(NewDL.get());
-  }
-
   void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
@@ -518,6 +494,7 @@ class IRTrackerJSONState {
     auto &PrevBlkFP = BlockFingerprints[&F];
     auto &PrevBlkHasZeroIDs = BlockHasZeroIDs[&F];
     auto &PrevInstH = BlockInstHashes[&F];
+    auto &PrevTempIDs = BlockTempIDs[&F];
     SmallVector<stable_hash> NewBlkH;
     SmallVector<stable_hash> NewBlkFP;
     SmallVector<bool> NewBlkHasZeroIDs;
@@ -587,18 +564,32 @@ class IRTrackerJSONState {
             BB.hasName() ? BB.getName() : StringRef("<unnamed>");
         bool NeedFallback = NewBlkHasZeroIDs[BlkIdx];
         SmallVector<stable_hash> CurInstH;
+        SmallVector<unsigned> CurTempIDs;
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
                              : nullptr;
+        auto *OldTempIDs = (SkipUnchanged && BlkIdx < PrevTempIDs.size())
+                               ? &PrevTempIDs[BlkIdx]
+                               : nullptr;
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
         for (Instruction &I : const_cast<BasicBlock &>(BB)) {
           stable_hash CurH = hashInstruction(I);
           if (NeedFallback)
             CurInstH.push_back(CurH);
-          unsigned CurID = getOrPromoteTrackerID(I, F);
           const DILocation *Loc =
               I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
+          unsigned CurID = getOrCreateTrackerID(Loc);
+          if (CurID == 0) {
+            if (OldTempIDs && InstIdx < OldTempIDs->size() &&
+                (*OldTempIDs)[InstIdx] != 0)
+              CurID = (*OldTempIDs)[InstIdx];
+            else
+              CurID = NextTrackerID++;
+            CurTempIDs.push_back(CurID);
+          } else if (NeedFallback) {
+            CurTempIDs.push_back(0);
+          }
           bool InstChanged = true;
           if (CurID != 0) {
             auto It = TrackerIDToPrevHash.find(CurID);
@@ -630,6 +621,9 @@ class IRTrackerJSONState {
           if (BlkIdx >= PrevInstH.size())
             PrevInstH.resize(BlkIdx + 1);
           PrevInstH[BlkIdx] = std::move(CurInstH);
+          if (BlkIdx >= PrevTempIDs.size())
+            PrevTempIDs.resize(BlkIdx + 1);
+          PrevTempIDs[BlkIdx] = std::move(CurTempIDs);
         }
       }
       ++BlkIdx;
