@@ -452,6 +452,7 @@ class IRTrackerJSONState {
   DenseMap<const Function *, stable_hash> FunctionHashes;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
+  DenseMap<const Function *, SmallVector<bool>> BlockHasZeroIDs;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
   DenseMap<stable_hash, unsigned> LocKeyToTrackerID;
@@ -490,9 +491,11 @@ class IRTrackerJSONState {
 
     auto &PrevBlkH = BlockHashes[&F];
     auto &PrevBlkFP = BlockFingerprints[&F];
+    auto &PrevBlkHasZeroIDs = BlockHasZeroIDs[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     SmallVector<stable_hash> NewBlkH;
     SmallVector<stable_hash> NewBlkFP;
+    SmallVector<bool> NewBlkHasZeroIDs;
     SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
@@ -501,16 +504,22 @@ class IRTrackerJSONState {
       stable_hash BlkFP = hashBlockFingerprint(BB);
       NewBlkFP.push_back(BlkFP);
       stable_hash BlkH = 0;
+      bool HasZeroID = false;
       bool FingerprintUnchanged = SkipUnchanged && BlkIdx < PrevBlkFP.size() &&
                                   PrevBlkFP[BlkIdx] == BlkFP;
       if (FingerprintUnchanged && BlkIdx < PrevBlkH.size()) {
         BlkH = PrevBlkH[BlkIdx];
+        if (BlkIdx < PrevBlkHasZeroIDs.size())
+          HasZeroID = PrevBlkHasZeroIDs[BlkIdx];
       } else {
         for (const Instruction &I : BB) {
           stable_hash H = hashInstruction(I);
           BlkH = stable_hash_combine(BlkH, H);
+          if (!I.getDebugLoc())
+            HasZeroID = true;
         }
       }
+      NewBlkHasZeroIDs.push_back(HasZeroID);
       NewBlkH.push_back(BlkH);
       FuncH = stable_hash_combine(FuncH, BlkH);
       if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
@@ -531,6 +540,7 @@ class IRTrackerJSONState {
 
     if (ChangedBlocks.empty()) {
       PrevBlkFP = std::move(NewBlkFP);
+      PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
       PrevBlkH = std::move(NewBlkH);
       return;
     }
@@ -550,6 +560,7 @@ class IRTrackerJSONState {
         ++ChangedBlockPos;
         StringRef BBLabel =
             BB.hasName() ? BB.getName() : StringRef("<unnamed>");
+        bool NeedFallback = NewBlkHasZeroIDs[BlkIdx];
         SmallVector<stable_hash> CurInstH;
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
@@ -558,7 +569,8 @@ class IRTrackerJSONState {
         unsigned InstIdx = 0;
         for (const Instruction &I : BB) {
           stable_hash CurH = hashInstruction(I);
-          CurInstH.push_back(CurH);
+          if (NeedFallback)
+            CurInstH.push_back(CurH);
           const DILocation *Loc =
               I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
           unsigned CurID = getOrCreateTrackerID(Loc);
@@ -589,13 +601,16 @@ class IRTrackerJSONState {
           ++InstSeq;
           ++InstIdx;
         }
-        if (BlkIdx >= PrevInstH.size())
-          PrevInstH.resize(BlkIdx + 1);
-        PrevInstH[BlkIdx] = std::move(CurInstH);
+        if (NeedFallback) {
+          if (BlkIdx >= PrevInstH.size())
+            PrevInstH.resize(BlkIdx + 1);
+          PrevInstH[BlkIdx] = std::move(CurInstH);
+        }
       }
       ++BlkIdx;
     }
     PrevBlkFP = std::move(NewBlkFP);
+    PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
     PrevBlkH = std::move(NewBlkH);
   }
 
