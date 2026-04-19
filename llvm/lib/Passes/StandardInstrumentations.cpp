@@ -410,7 +410,7 @@ static stable_hash hashInstruction(const Instruction &I) {
     H = stable_hash_combine(H, V->getType()->getTypeID(),
                             isa<Constant>(V) ? 1 : 0, isa<Argument>(V) ? 1 : 0);
     if (auto *C = dyn_cast<ConstantInt>(V))
-      H = stable_hash_combine(H, C->getZExtValue());
+      H = stable_hash_combine(H, static_cast<stable_hash>(hash_value(C->getValue())));
   }
   if (I.isCommutative())
     H = stable_hash_combine(H, 1);
