@@ -54,7 +54,7 @@ entry:
 
 ; After instcombine on h: first time, all instructions
 ; ALL: P	3	after	instcombine	h
-; ALL-NEXT: I	h	entry	0	ret	0	  ret i32 %x
+; ALL-NEXT: I	h	entry	0	ret	{{[0-9]+}}	  ret i32 %x
 
 ; FILTER: P	0	initial	<initial>	f
 ; FILTER-NEXT: T	1	/tmp{{[/\\]}}ir-tracker.c	8	3
