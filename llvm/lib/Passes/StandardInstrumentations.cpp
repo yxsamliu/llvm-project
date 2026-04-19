@@ -46,6 +46,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -571,6 +572,9 @@ class IRTrackerJSONState {
         auto *OldTempIDs = (SkipUnchanged && BlkIdx < PrevTempIDs.size())
                                ? &PrevTempIDs[BlkIdx]
                                : nullptr;
+        SmallVector<bool> UsedOldTempIDs;
+        if (OldTempIDs)
+          UsedOldTempIDs.assign(OldTempIDs->size(), false);
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
         for (Instruction &I : const_cast<BasicBlock &>(BB)) {
@@ -581,11 +585,42 @@ class IRTrackerJSONState {
               I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
           unsigned CurID = getOrCreateTrackerID(Loc);
           if (CurID == 0) {
-            if (OldTempIDs && InstIdx < OldTempIDs->size() &&
-                (*OldTempIDs)[InstIdx] != 0)
-              CurID = (*OldTempIDs)[InstIdx];
-            else
+            int MatchedIdx = -1;
+            if (OldTempIDs && OldInstH) {
+              if (InstIdx < OldTempIDs->size() && InstIdx < OldInstH->size() &&
+                  (*OldTempIDs)[InstIdx] != 0 && !UsedOldTempIDs[InstIdx] &&
+                  (*OldInstH)[InstIdx] == CurH) {
+                MatchedIdx = InstIdx;
+              } else {
+                int BestIdx = -1;
+                int BestDist = std::numeric_limits<int>::max();
+                bool AmbiguousBest = false;
+                for (size_t J = 0,
+                            E = std::min(OldTempIDs->size(), OldInstH->size());
+                     J != E; ++J) {
+                  if ((*OldTempIDs)[J] == 0 || UsedOldTempIDs[J] ||
+                      (*OldInstH)[J] != CurH)
+                    continue;
+                  int Dist =
+                      std::abs(static_cast<int>(J) - static_cast<int>(InstIdx));
+                  if (Dist < BestDist) {
+                    BestDist = Dist;
+                    BestIdx = static_cast<int>(J);
+                    AmbiguousBest = false;
+                  } else if (Dist == BestDist) {
+                    AmbiguousBest = true;
+                  }
+                }
+                if (BestIdx >= 0 && !AmbiguousBest)
+                  MatchedIdx = BestIdx;
+              }
+            }
+            if (MatchedIdx >= 0) {
+              CurID = (*OldTempIDs)[MatchedIdx];
+              UsedOldTempIDs[MatchedIdx] = true;
+            } else {
               CurID = NextTrackerID++;
+            }
             CurTempIDs.push_back(CurID);
           } else if (NeedFallback) {
             CurTempIDs.push_back(0);
