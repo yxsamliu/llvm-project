@@ -11,6 +11,7 @@ import sys
 from typing import Optional, Sequence
 
 import irtrackdb
+import irtrackhtml
 
 
 def cmd_build(args: argparse.Namespace) -> int:
@@ -52,6 +53,23 @@ def cmd_show(args: argparse.Namespace) -> int:
             args.opcode or "",
             args.seq,
             args.all_passes,
+        )
+    finally:
+        con.close()
+
+
+def cmd_html(args: argparse.Namespace) -> int:
+    con = irtrackdb.open_db_readonly(args.db)
+    if not con:
+        return 1
+    try:
+        return irtrackhtml.generate_html(
+            con,
+            args.output_dir,
+            args.source_dir or [],
+            args.all_passes,
+            args.no_highlight,
+            args.file or "",
         )
     finally:
         con.close()
@@ -103,6 +121,37 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     show.add_argument("--seq", type=int, default=-1)
     show.add_argument("--all-passes", action="store_true")
     show.set_defaults(func=cmd_show)
+
+    html_p = sub.add_parser(
+        "html", help="Generate a static HTML report from a tracker DB"
+    )
+    html_p.add_argument("--db", required=True)
+    html_p.add_argument(
+        "--output-dir", "-o", required=True, help="Directory to write HTML files into"
+    )
+    html_p.add_argument(
+        "--source-dir",
+        "-s",
+        action="append",
+        default=[],
+        help="Directory to search for source files (may be passed multiple times)",
+    )
+    html_p.add_argument(
+        "--file",
+        default="",
+        help="Only emit pages for source paths containing this substring",
+    )
+    html_p.add_argument(
+        "--all-passes",
+        action="store_true",
+        help="Emit every pass snapshot, not just changed ones",
+    )
+    html_p.add_argument(
+        "--no-highlight",
+        action="store_true",
+        help="Do not use Pygments for source syntax highlighting",
+    )
+    html_p.set_defaults(func=cmd_html)
 
     sql = sub.add_parser("sql", help="Run a read-only SQL query")
     sql.add_argument("--db", required=True)

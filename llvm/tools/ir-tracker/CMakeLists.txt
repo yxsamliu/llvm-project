@@ -1,6 +1,7 @@
 set(files
   "ir-tracker.py"
-  "irtrackdb.py")
+  "irtrackdb.py"
+  "irtrackhtml.py")
 
 foreach(file ${files})
   install(PROGRAMS ${file}
