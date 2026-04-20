@@ -3,297 +3,562 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 """HTML report generator for ir-tracker SQLite databases.
 
-Mirrors opt-viewer's static-site model: emit one HTML page per source file
-plus an index page, with no required third-party dependencies. Pygments is
-used for syntax highlighting if available, otherwise source is rendered as
-plain ``<pre>`` text.
+Generates a static, three-panel site organized by function:
+
+  * ``index.html`` — function list grouped by file, with row counts.
+  * One ``<safe>.html`` per function containing:
+
+      - Left panel: full function list (links to other function pages).
+      - Middle panel: the *initial* IR snapshot of the function (the smallest
+        recorded ``seq``). Each instruction is clickable.
+      - Right panel: when an instruction is clicked, the panel shows the
+        full pass-by-pass history of all instructions sharing that source
+        location, deduplicated when text is unchanged.
+
+The page is fully static; per-function history is embedded inline as JSON.
 """
 
 from __future__ import annotations
 
 import html
+import json
 import os
 import re
 import sqlite3
 import sys
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import irtrackdb
 
-try:
-    from pygments import highlight as _pyg_highlight
-    from pygments.formatters import HtmlFormatter as _PygHtmlFormatter
-    from pygments.lexers import get_lexer_for_filename, guess_lexer
-
-    _HAVE_PYGMENTS = True
-except ImportError:  # pragma: no cover - optional
-    _HAVE_PYGMENTS = False
-
 
 _STYLE_CSS = """\
-body { font-family: -apple-system, Segoe UI, sans-serif; margin: 1em; color: #222; }
-h1 { font-size: 1.4em; }
-h2 { font-size: 1.1em; margin-top: 1.5em; }
-table { border-collapse: collapse; width: 100%; }
-table.index td, table.index th { border-bottom: 1px solid #eee; padding: 4px 8px; text-align: left; }
-table.source { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
-table.source td { vertical-align: top; padding: 0 6px; }
-td.lineno { color: #888; text-align: right; user-select: none; width: 4em; border-right: 1px solid #eee; }
-td.badge { width: 5em; text-align: right; }
-td.src { white-space: pre; }
-.badge-link { display: inline-block; background: #eef; color: #225; padding: 0 6px;
-              border-radius: 8px; text-decoration: none; font-size: 11px; cursor: pointer; }
-.badge-link:hover { background: #dde; }
-.passes { display: none; background: #fafafa; border-left: 3px solid #99a;
-          padding: 6px 10px; margin: 4px 0 4px 4em; }
-.passes.open { display: block; }
-.pass-hdr { font-weight: bold; color: #335; margin-top: 6px; }
-.func { color: #553; margin-left: 1em; }
-.inst { white-space: pre; margin-left: 2em; color: #111; }
-.muted { color: #888; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, Segoe UI, sans-serif; color: #222; }
+header { padding: 6px 12px; background: #223; color: #fff; font-size: 13px; }
+header a { color: #cdf; text-decoration: none; }
+.layout { display: flex; height: calc(100vh - 30px); }
+.panel { overflow: auto; padding: 8px 12px; }
+.panel h3 { font-size: 11px; text-transform: uppercase; color: #666; margin: 0 0 6px 0; letter-spacing: .5px; }
+#funcs { width: 18%; border-right: 1px solid #ccc; background: #f7f7fb; font-size: 12px; }
+#funcs ul { list-style: none; padding-left: 6px; margin: 4px 0 12px 0; }
+#funcs li { margin: 1px 0; }
+#funcs a { text-decoration: none; color: #224; }
+#funcs a.current { font-weight: bold; color: #b00; }
+#funcs .file { font-weight: bold; margin-top: 6px; color: #555; }
+#filter { width: 95%; padding: 3px; margin-top: 4px; }
+#initial, #final { width: 27%; border-right: 1px solid #ccc; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+#history { width: 28%; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.bb { color: #553; font-weight: bold; margin: 8px 0 2px 0; }
+.inst { white-space: pre; padding: 1px 4px; cursor: pointer; border-radius: 3px; }
+.inst:hover { background: #eef; }
+.inst.linked { background: #fff1c4; }
+.inst.selected { background: #ffe080; outline: 1px solid #caa040; }
+.inst.no-loc { cursor: default; color: #888; }
+.inst.no-loc:hover { background: transparent; }
+.inst.dead { color: #999; text-decoration: line-through; }
+.final-text { white-space: pre; margin: 0; font-size: 12px; color: #111; }
+.loc { color: #888; font-size: 10px; margin-left: 8px; }
+.opc { color: #058; }
+.empty { color: #888; padding: 12px; }
+.pass-hdr { font-weight: bold; color: #335; margin: 8px 0 2px 0; }
+.func-hdr { color: #553; margin-left: 1em; font-size: 11px; }
+.snap-inst { white-space: pre; margin-left: 2em; color: #111; }
+.changed { background: #f0fff0; }
+.tag { display: inline-block; padding: 0 6px; border-radius: 8px; font-size: 10px; margin-left: 6px; vertical-align: 1px; }
+.tag-final { background: #d6f5d6; color: #064; }
+.tag-last  { background: #ffe0b3; color: #840; }
+.tag-gone  { background: #f7c8c8; color: #800; }
+table.idx { border-collapse: collapse; }
+table.idx td, table.idx th { padding: 3px 8px; border-bottom: 1px solid #eee; text-align: left; font-size: 12px; }
 """
 
 _SCRIPT_JS = """\
-function trackerToggle(id) {
-  var e = document.getElementById(id);
-  if (!e) return false;
-  e.classList.toggle('open');
-  return false;
+function renderHistory(loc) {
+  var box = document.getElementById('history');
+  var groups = (window.HIST || {})[loc];
+  if (!groups || groups.length === 0) {
+    box.innerHTML = '<div class="empty">No history for this location.</div>';
+    return;
+  }
+  var parts = ['<div class="pass-hdr">Location: ' + escapeHtml(loc) + '</div>'];
+  parts.push('<div class="empty">' + groups.length + ' distinct snapshot(s)</div>');
+  for (var i = 0; i < groups.length; i++) {
+    var g = groups[i];
+    var tag = '';
+    if (g.vanished) {
+      tag = ' <span class="tag tag-gone">removed by/before this pass</span>';
+    } else if (g.final) {
+      tag = g.alive_at_end
+            ? ' <span class="tag tag-final">final (alive at end)</span>'
+            : ' <span class="tag tag-last">last seen here</span>';
+    }
+    parts.push('<div class="pass-hdr">seq=' + g.seq + ' ' + escapeHtml(g.pass)
+               + tag + ' <span class="loc">on ' + escapeHtml(g.ir_unit) + '</span></div>');
+    if (g.vanished) {
+      parts.push('<div class="empty">(no instructions at this location)</div>');
+      continue;
+    }
+    var lastBlock = '';
+    for (var j = 0; j < g.insts.length; j++) {
+      var it = g.insts[j];
+      if (it.block !== lastBlock) {
+        parts.push('<div class="func-hdr">block ' + escapeHtml(it.block) + ':</div>');
+        lastBlock = it.block;
+      }
+      parts.push('<div class="snap-inst">' + escapeHtml(it.text) + '</div>');
+    }
+  }
+  box.innerHTML = parts.join('');
 }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+function instsWithLoc(loc) {
+  var all = document.querySelectorAll('.inst[data-loc]');
+  var out = [];
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].getAttribute('data-loc') === loc) out.push(all[i]);
+  }
+  return out;
+}
+function clearClass(cls) {
+  var prev = document.getElementsByClassName(cls);
+  while (prev.length) prev[0].classList.remove(cls);
+}
+function selectInst(el) {
+  clearClass('selected');
+  clearClass('linked');
+  var loc = el.getAttribute('data-loc');
+  if (!loc) return;
+  var peers = instsWithLoc(loc);
+  for (var i = 0; i < peers.length; i++) peers[i].classList.add('selected');
+  renderHistory(loc);
+}
+function hoverInst(el, enter) {
+  var loc = el.getAttribute('data-loc');
+  if (!loc) return;
+  var peers = instsWithLoc(loc);
+  for (var i = 0; i < peers.length; i++) {
+    if (peers[i].classList.contains('selected')) continue;
+    if (enter) peers[i].classList.add('linked');
+    else peers[i].classList.remove('linked');
+  }
+}
+function filterFuncs() {
+  var q = document.getElementById('filter').value.toLowerCase();
+  var items = document.querySelectorAll('#funcs li');
+  for (var i = 0; i < items.length; i++) {
+    var t = items[i].textContent.toLowerCase();
+    items[i].style.display = (q === '' || t.indexOf(q) >= 0) ? '' : 'none';
+  }
+}
+window.addEventListener('DOMContentLoaded', function() {
+  var first = document.querySelector('#initial .inst[data-loc]');
+  if (first) selectInst(first);
+});
 """
 
 
-def _safe_filename(path: str) -> str:
-    return re.sub(r"[^A-Za-z0-9._-]", "_", path).strip("_") or "file"
+def _safe_filename(name: str) -> str:
+    return re.sub(r"[^A-Za-z0-9._-]", "_", name).strip("_") or "x"
 
 
-def _html_escape(text: str) -> str:
-    return html.escape(text, quote=False)
+def _esc(s: str) -> str:
+    return html.escape(s, quote=False)
 
 
-def _pygments_highlight_lines(filename: str, text: str) -> Optional[List[str]]:
-    if not _HAVE_PYGMENTS:
-        return None
-    try:
-        lexer = get_lexer_for_filename(filename, stripnl=False)
-    except Exception:
-        try:
-            lexer = guess_lexer(text, stripnl=False)
-        except Exception:
-            return None
-    formatter = _PygHtmlFormatter(nowrap=True, noclasses=True)
-    rendered = _pyg_highlight(text, lexer, formatter)
-    if isinstance(rendered, bytes):
-        rendered = rendered.decode("utf-8", errors="replace")
-    return rendered.splitlines()
-
-
-def _resolve_source(file_path: str, source_dirs: Sequence[str]) -> Optional[str]:
-    if os.path.isabs(file_path) and os.path.isfile(file_path):
-        return file_path
-    base = os.path.basename(file_path)
-    for d in source_dirs:
-        for cand in (os.path.join(d, file_path), os.path.join(d, base)):
-            if os.path.isfile(cand):
-                return cand
-    if os.path.isfile(file_path):
-        return file_path
-    return None
-
-
-def _read_source(path: str) -> Optional[str]:
-    try:
-        with open(path, "r", encoding="utf-8", errors="replace") as f:
-            return f.read()
-    except OSError:
-        return None
-
-
-def _files_in_db(con: sqlite3.Connection) -> List[Tuple[int, str]]:
+def _functions(con: sqlite3.Connection) -> List[Tuple[str, str, int, int, str]]:
+    """Return list of ``(function, file_path, n_insts, n_passes, page)``."""
     rows = con.execute(
-        f"SELECT f.id, f.path, COUNT(i.id) AS n "
-        f"FROM {irtrackdb.T_FILES} f "
-        f"LEFT JOIN {irtrackdb.T_INSTR} i ON i.file_id = f.id "
-        f"GROUP BY f.id ORDER BY f.path"
-    ).fetchall()
-    return [(int(r["id"]), r["path"]) for r in rows if int(r["n"]) > 0]
-
-
-def _instrs_for_file(
-    con: sqlite3.Connection, file_id: int
-) -> Dict[int, List[irtrackdb.ShowInstRow]]:
-    """Return {line: [ShowInstRow ...]} ordered by seq, function, block, inst_seq."""
-    by_line: Dict[int, List[irtrackdb.ShowInstRow]] = {}
-    query = (
-        f"SELECT i.line, p.seq, p.pass_class, p.ir_unit, "
-        f"i.function, i.basicblock, i.inst_seq, i.inst_text "
+        f"SELECT i.function AS function, f.path AS file_path, "
+        f"COUNT(*) AS n_insts, COUNT(DISTINCT i.pass_id) AS n_passes "
         f"FROM {irtrackdb.T_INSTR} i "
-        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
-        f"WHERE i.file_id = ? "
-        f"ORDER BY i.line, p.seq, i.function, i.basicblock, i.inst_seq"
-    )
-    for row in con.execute(query, (file_id,)):
-        rec = irtrackdb.ShowInstRow(
-            int(row["seq"]),
-            row["pass_class"] or "",
-            row["ir_unit"] or "",
-            row["function"] or "",
-            row["basicblock"] or "",
-            row["inst_text"] or "",
-        )
-        by_line.setdefault(int(row["line"]), []).append(rec)
-    return by_line
-
-
-def _dedup_groups(
-    rows: Sequence[irtrackdb.ShowInstRow], all_passes: bool
-) -> List[List[irtrackdb.ShowInstRow]]:
-    """Group rows by seq; drop groups whose instruction text is identical to the
-    previous emitted group when not ``all_passes`` (matches ``run_show``)."""
-    by_seq: Dict[int, List[irtrackdb.ShowInstRow]] = {}
+        f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
+        f"WHERE i.function != '' "
+        f"GROUP BY i.function, f.id "
+        f"ORDER BY f.path, i.function"
+    ).fetchall()
+    out = []
+    used: Dict[str, int] = {}
     for r in rows:
-        by_seq.setdefault(r.seq, []).append(r)
-
-    out: List[List[irtrackdb.ShowInstRow]] = []
-    last_fp: Optional[str] = None
-    for seq in sorted(by_seq):
-        group = by_seq[seq]
-        fp = "\n".join(r.inst_text for r in group)
-        if not all_passes and fp == last_fp:
-            continue
-        out.append(group)
-        last_fp = fp
+        base = "fn-" + _safe_filename(r["function"])
+        n = used.get(base, 0)
+        used[base] = n + 1
+        page = base + (f"-{n}" if n else "") + ".html"
+        out.append(
+            (r["function"], r["file_path"], int(r["n_insts"]), int(r["n_passes"]), page)
+        )
     return out
 
 
-def _render_passes_block(
-    groups: Sequence[Sequence[irtrackdb.ShowInstRow]],
-) -> str:
-    if not groups:
-        return '<span class="muted">no recorded snapshots</span>'
-    parts: List[str] = []
-    for group in groups:
-        head = group[0]
-        parts.append(
-            '<div class="pass-hdr">seq={s} {p} <span class="muted">on {u}</span></div>'.format(
-                s=head.seq,
-                p=_html_escape(head.pass_class),
-                u=_html_escape(head.ir_unit),
-            )
+def _initial_seq(con: sqlite3.Connection, function: str) -> int:
+    """Smallest recorded pass ``seq`` for a function whose phase is the
+    initial capture. We intentionally exclude ``phase='final'`` rows so that
+    a function first seen in the synthetic final snapshot (e.g. one that had
+    no activity during the pipeline) does not get treated as an "initial"."""
+    row = con.execute(
+        f"SELECT MIN(p.seq) AS s "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"WHERE i.function = ? AND p.phase <> 'final'",
+        (function,),
+    ).fetchone()
+    return -1 if row is None or row["s"] is None else int(row["s"])
+
+
+def _final_seq(con: sqlite3.Connection, function: str) -> int:
+    """Return the ``seq`` of the synthetic ``phase='final'`` pass that has
+    rows for this function, or ``-1`` when the DB predates that recorder
+    change or the function did not survive to the final snapshot."""
+    row = con.execute(
+        f"SELECT MAX(p.seq) AS s "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"WHERE i.function = ? AND p.phase = 'final'",
+        (function,),
+    ).fetchone()
+    return -1 if row is None or row["s"] is None else int(row["s"])
+
+
+def _final_ir_rows(
+    con: sqlite3.Connection, function: str, seq: int
+) -> List[sqlite3.Row]:
+    return con.execute(
+        f"SELECT i.basicblock, i.inst_seq, i.opcode, i.inst_text, "
+        f"f.path AS file_path, i.line, i.col "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
+        f"WHERE i.function = ? AND p.seq = ? "
+        f"ORDER BY i.id",
+        (function, seq),
+    ).fetchall()
+
+
+def _initial_ir(
+    con: sqlite3.Connection, function: str, seq: int
+) -> List[sqlite3.Row]:
+    # Order by recording order (``i.id``) rather than ``(basicblock, inst_seq)``
+    # because the cost-improvement recorder often labels every block as
+    # ``<unnamed>`` and ``inst_seq`` is the *per-block* instruction index that
+    # restarts at 0 for each new block. Sorting on those columns therefore
+    # interleaves instructions from different blocks. Insertion order on a
+    # single ``writeInstructionsInFunction`` walk preserves the natural
+    # block-by-block order.
+    return con.execute(
+        f"SELECT i.basicblock, i.inst_seq, i.opcode, i.inst_text, "
+        f"f.path AS file_path, i.line, i.col "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
+        f"WHERE i.function = ? AND p.seq = ? "
+        f"ORDER BY i.id",
+        (function, seq),
+    ).fetchall()
+
+
+def _history(
+    con: sqlite3.Connection, function: str
+) -> Dict[str, List[Dict[str, object]]]:
+    rows = con.execute(
+        f"SELECT f.path, i.line, i.col, p.seq, p.pass_class, p.ir_unit, "
+        f"i.basicblock, i.inst_seq, i.inst_text "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"JOIN {irtrackdb.T_FILES} f ON i.file_id = f.id "
+        f"WHERE i.function = ? "
+        f"ORDER BY i.line, i.col, p.seq, i.basicblock, i.inst_seq",
+        (function,),
+    ).fetchall()
+
+    # Maximum seq for which this function has any recorded rows, used to
+    # decide whether a location reached the end of the pipeline or vanished.
+    func_max_row = con.execute(
+        f"SELECT MAX(p.seq) AS s "
+        f"FROM {irtrackdb.T_INSTR} i "
+        f"JOIN {irtrackdb.T_PASSES} p ON i.pass_id = p.id "
+        f"WHERE i.function = ?",
+        (function,),
+    ).fetchone()
+    func_max_seq = (
+        -1 if func_max_row is None or func_max_row["s"] is None else int(func_max_row["s"])
+    )
+
+    # Group rows by location key, then by seq within each location.
+    by_loc: Dict[str, Dict[int, List[Dict[str, str]]]] = {}
+    pass_meta: Dict[int, Tuple[str, str]] = {}
+    for r in rows:
+        key = f"{r['path']}|{int(r['line'])}|{int(r['col'])}"
+        by_loc.setdefault(key, {}).setdefault(int(r["seq"]), []).append(
+            {"block": r["basicblock"] or "", "text": r["inst_text"] or ""}
         )
-        cur_func = ""
-        cur_bb = ""
-        for r in group:
-            if r.function != cur_func or r.basicblock != cur_bb:
-                parts.append(
-                    '<div class="func">function {f}, block {b}:</div>'.format(
-                        f=_html_escape(r.function), b=_html_escape(r.basicblock)
-                    )
+        pass_meta[int(r["seq"])] = (r["pass_class"] or "", r["ir_unit"] or "")
+
+    out: Dict[str, List[Dict[str, object]]] = {}
+    for key, by_seq in by_loc.items():
+        seqs = sorted(by_seq)
+        loc_max_seq = seqs[-1]
+
+        groups: List[Dict[str, object]] = []
+        last_fp = None
+        for seq in seqs:
+            insts = by_seq[seq]
+            fp = "\n".join(it["text"] for it in insts)
+            is_last = seq == loc_max_seq
+            if fp == last_fp and not is_last:
+                continue
+            pass_name, ir_unit = pass_meta[seq]
+            entry: Dict[str, object] = {
+                "seq": seq,
+                "pass": pass_name,
+                "ir_unit": ir_unit,
+                "insts": insts,
+            }
+            if is_last:
+                # Tag the final recorded snapshot so the UI can highlight
+                # whether the location survived to the end of the pipeline
+                # or was dropped by a later pass.
+                entry["final"] = True
+                entry["alive_at_end"] = loc_max_seq == func_max_seq
+            groups.append(entry)
+            last_fp = fp
+
+        # If the location vanished before the function's last pass, append a
+        # synthetic record naming the first pass after it that was recorded
+        # (best estimate of the pass that removed it).
+        if loc_max_seq < func_max_seq:
+            after = None
+            for s in sorted(pass_meta):
+                if s > loc_max_seq:
+                    after = s
+                    break
+            if after is not None:
+                pass_name, ir_unit = pass_meta[after]
+                groups.append(
+                    {
+                        "seq": after,
+                        "pass": pass_name,
+                        "ir_unit": ir_unit,
+                        "insts": [],
+                        "vanished": True,
+                    }
                 )
-                cur_func, cur_bb = r.function, r.basicblock
+
+        out[key] = groups
+    return out
+
+
+def _render_func_list(
+    funcs: Sequence[Tuple[str, str, int, int, str]], current: str
+) -> str:
+    parts: List[str] = []
+    parts.append(
+        '<input id="filter" type="text" placeholder="Filter functions..." '
+        'oninput="filterFuncs()">'
+    )
+    cur_file = None
+    parts.append("<ul>")
+    for fn, fpath, n_i, n_p, page in funcs:
+        if fpath != cur_file:
+            if cur_file is not None:
+                parts.append("</ul>")
             parts.append(
-                '<div class="inst">{t}</div>'.format(t=_html_escape(r.inst_text))
+                '<div class="file">' + _esc(os.path.basename(fpath) or fpath) + "</div>"
             )
+            parts.append("<ul>")
+            cur_file = fpath
+        klass = ' class="current"' if fn == current else ""
+        parts.append(
+            f'<li><a href="{page}"{klass}>{_esc(fn)}</a> '
+            f'<span class="loc">{n_i}r {n_p}p</span></li>'
+        )
+    parts.append("</ul>")
     return "".join(parts)
 
 
-def _render_file_html(
-    file_path: str,
-    by_line: Dict[int, List[irtrackdb.ShowInstRow]],
-    source_text: Optional[str],
-    all_passes: bool,
-    no_highlight: bool,
+def _render_initial_ir(rows: Sequence[sqlite3.Row], seq: int) -> str:
+    return _render_ir_panel(rows, f"initial snapshot: seq={seq}")
+
+
+_DEFINE_RE = re.compile(r"^\s*define\b[^@]*@([A-Za-z0-9_.$]+)\s*\(")
+_DILOC_RE = re.compile(
+    r"^!(\d+)\s*=\s*!DILocation\(\s*line:\s*(\d+)(?:,\s*column:\s*(\d+))?"
+)
+_DBG_REF_RE = re.compile(r"!dbg !(\d+)")
+
+
+def _render_ir_panel(
+    rows: Sequence[sqlite3.Row], header: str
 ) -> str:
-    lines: List[str] = []
-    if source_text is None:
-        max_line = max(by_line) if by_line else 0
-        lines = [""] * max_line
-    else:
-        if no_highlight:
-            highlighted = None
-        else:
-            highlighted = _pygments_highlight_lines(file_path, source_text)
-        if highlighted is not None:
-            lines = highlighted
-        else:
-            lines = source_text.splitlines()
-
-    body: List[str] = ['<table class="source">']
-    src_only_note = (
-        ""
-        if source_text is not None
-        else '<p class="muted">Source file not found; showing recorded lines only.</p>'
-    )
-
-    for idx in range(1, len(lines) + 1):
-        rows = by_line.get(idx)
-        if rows:
-            groups = _dedup_groups(rows, all_passes)
-            badge = (
-                '<a class="badge-link" href="#" '
-                'onclick="return trackerToggle(\'p{n}\')">{c} pass{plural}</a>'
-            ).format(
-                n=idx,
-                c=len(groups),
-                plural="es" if len(groups) != 1 else "",
-            )
-        else:
-            badge = ""
-        src = lines[idx - 1] if idx - 1 < len(lines) else ""
-        body.append(
-            "<tr><td class='lineno'>{n}</td><td class='badge'>{b}</td>"
-            "<td class='src'>{s}</td></tr>".format(n=idx, b=badge, s=src)
+    """Shared renderer for a single-pass IR snapshot (used by both the
+    Initial and Final panels). Groups into pseudo-blocks by ``inst_seq``
+    resetting to zero, since the compact printer often emits ``<unnamed>``
+    instead of a real block name."""
+    if not rows:
+        return '<div class="empty">No IR recorded.</div>'
+    parts: List[str] = [f'<div class="loc">{_esc(header)}</div>']
+    bb_index = 0
+    last_seq = -1
+    last_bb_name: Optional[str] = None
+    for idx, r in enumerate(rows):
+        bb_name = r["basicblock"] or ""
+        is_real_name = bool(bb_name) and bb_name != "<unnamed>"
+        seq_resets = int(r["inst_seq"]) == 0 and last_seq >= 0
+        starts_new_block = (
+            idx == 0
+            or seq_resets
+            or (is_real_name and bb_name != last_bb_name)
         )
-        if rows:
-            body.append(
-                "<tr><td></td><td></td><td>"
-                "<div class='passes' id='p{n}'>{block}</div>"
-                "</td></tr>".format(
-                    n=idx,
-                    block=_render_passes_block(groups),
-                )
-            )
-    body.append("</table>")
+        if starts_new_block:
+            label = bb_name if is_real_name else f"bb{bb_index}"
+            parts.append('<div class="bb">' + _esc(label) + ":</div>")
+            bb_index += 1
+            last_bb_name = bb_name
+        last_seq = int(r["inst_seq"])
 
+        loc = f'{r["file_path"]}|{int(r["line"])}|{int(r["col"])}'
+        has_loc = int(r["line"]) > 0
+        klass = "inst" + ("" if has_loc else " no-loc")
+        attrs = (
+            f' data-loc="{_esc(loc)}" onclick="selectInst(this)"'
+            f' onmouseenter="hoverInst(this,true)"'
+            f' onmouseleave="hoverInst(this,false)"'
+            if has_loc
+            else ""
+        )
+        loc_str = (
+            f'<span class="loc">{int(r["line"])}:{int(r["col"])}</span>'
+            if has_loc
+            else '<span class="loc">no loc</span>'
+        )
+        parts.append(
+            f'<div class="{klass}"{attrs}>'
+            f'<span class="opc">{_esc(r["opcode"] or "")}</span>  '
+            f'{_esc(r["inst_text"] or "")}{loc_str}</div>'
+        )
+    return "".join(parts)
+
+
+def parse_ll_functions(path: str) -> Tuple[Dict[str, str], Dict[int, Tuple[int, int]]]:
+    """Return ``({function_name: body_text}, {metadata_id: (line, col)})`` from
+    an LLVM textual IR file. Debug-location mapping only includes direct
+    ``!DILocation`` nodes (not ``DILexicalBlock``-scoped chains); that is
+    enough for ``--add-ir-tracker-locs``-produced IR which emits one
+    ``!DILocation`` per synthetic line."""
+    funcs: Dict[str, str] = {}
+    dilocs: Dict[int, Tuple[int, int]] = {}
+    cur: Optional[str] = None
+    buf: List[str] = []
+    depth = 0
+    with open(path, "r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            if cur is None:
+                m = _DILOC_RE.match(line)
+                if m:
+                    line_n = int(m.group(2))
+                    col_n = int(m.group(3)) if m.group(3) is not None else 0
+                    dilocs[int(m.group(1))] = (line_n, col_n)
+                    continue
+                dm = _DEFINE_RE.match(line)
+                if not dm:
+                    continue
+                cur = dm.group(1)
+                buf = [line.rstrip("\n")]
+                depth = line.count("{") - line.count("}")
+                if depth <= 0:
+                    funcs[cur] = "\n".join(buf)
+                    cur = None
+                    buf = []
+                continue
+            buf.append(line.rstrip("\n"))
+            depth += line.count("{") - line.count("}")
+            if depth <= 0:
+                funcs[cur] = "\n".join(buf)
+                cur = None
+                buf = []
+    return funcs, dilocs
+
+
+def _render_final_ir(rows: Sequence[sqlite3.Row], seq: int) -> str:
+    if not rows or seq < 0:
+        return (
+            '<div class="empty">No final snapshot for this function. '
+            "Ensure the tracker DB was produced by a recorder that emits a "
+            "<code>phase='final'</code> pass at teardown.</div>"
+        )
+    return _render_ir_panel(rows, f"final snapshot: seq={seq}")
+
+
+def _render_function_page(
+    function: str,
+    file_path: str,
+    funcs: Sequence[Tuple[str, str, int, int, str]],
+    initial_rows: Sequence[sqlite3.Row],
+    initial_seq: int,
+    final_rows: Sequence[sqlite3.Row],
+    final_seq: int,
+    history: Dict[str, List[Dict[str, object]]],
+) -> str:
+    func_list = _render_func_list(funcs, function)
+    initial = _render_initial_ir(initial_rows, initial_seq)
+    final = _render_final_ir(final_rows, final_seq)
+    hist_json = json.dumps(history, separators=(",", ":"))
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
-        "<title>{title}</title>"
+        f"<title>{_esc(function)}</title>"
         "<link rel='stylesheet' href='style.css'>"
-        "<script>{js}</script>"
+        f"<script>{_SCRIPT_JS}</script>"
         "</head><body>"
-        "<p><a href='index.html'>&larr; index</a></p>"
-        "<h1>{title}</h1>{note}{body}</body></html>"
-    ).format(
-        title=_html_escape(file_path),
-        js=_SCRIPT_JS,
-        note=src_only_note,
-        body="".join(body),
+        f"<header><a href='index.html'>&larr; index</a> &nbsp; "
+        f"<b>{_esc(function)}</b> "
+        f"<span class='loc'>{_esc(file_path)}</span></header>"
+        "<div class='layout'>"
+        f"<div id='funcs' class='panel'>{func_list}</div>"
+        f"<div id='initial' class='panel'><h3>Initial IR</h3>{initial}</div>"
+        f"<div id='final' class='panel'><h3>Final IR</h3>{final}</div>"
+        "<div id='history' class='panel'>"
+        "<h3>Pass history</h3>"
+        "<div class='empty'>Click an instruction in either IR panel to "
+        "see its pass history.</div>"
+        "</div>"
+        "</div>"
+        f"<script>window.HIST={hist_json};</script>"
+        "</body></html>"
     )
 
 
-def _render_index_html(
-    files: Sequence[Tuple[str, str, int, int]],
+def _render_index(
+    funcs: Sequence[Tuple[str, str, int, int, str]],
     pass_count: int,
     inst_count: int,
 ) -> str:
     rows = []
-    for path, link, n_lines, n_rows in files:
-        rows.append(
-            "<tr><td><a href='{l}'>{p}</a></td>"
-            "<td>{nl}</td><td>{nr}</td></tr>".format(
-                l=link, p=_html_escape(path), nl=n_lines, nr=n_rows
+    cur_file = None
+    for fn, fpath, n_i, n_p, page in funcs:
+        if fpath != cur_file:
+            cur_file = fpath
+            rows.append(
+                f"<tr><th colspan='4'>{_esc(fpath)}</th></tr>"
+                "<tr><th>Function</th><th>Inst rows</th>"
+                "<th>Passes touched</th><th></th></tr>"
             )
+        rows.append(
+            f"<tr><td><a href='{page}'>{_esc(fn)}</a></td>"
+            f"<td>{n_i}</td><td>{n_p}</td><td></td></tr>"
         )
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
         "<title>ir-tracker report</title>"
         "<link rel='stylesheet' href='style.css'></head><body>"
-        "<h1>ir-tracker report</h1>"
-        "<p>{p} pass snapshots, {i} instruction rows.</p>"
-        "<table class='index'><thead><tr>"
-        "<th>Source file</th><th>Lines tracked</th><th>Instruction rows</th>"
-        "</tr></thead><tbody>{rows}</tbody></table></body></html>"
-    ).format(p=pass_count, i=inst_count, rows="".join(rows))
+        "<header>ir-tracker report &mdash; "
+        f"{pass_count} pass snapshots, {inst_count} instruction rows, "
+        f"{len(funcs)} functions</header>"
+        "<div style='padding:10px'>"
+        f"<table class='idx'>{''.join(rows)}</table>"
+        "</div></body></html>"
+    )
 
 
 def generate_html(
@@ -304,18 +569,23 @@ def generate_html(
     no_highlight: bool,
     file_filter: str = "",
 ) -> int:
+    # ``source_dirs``, ``all_passes`` and ``no_highlight`` are accepted for CLI
+    # compatibility but unused in the function-centric layout (no source view,
+    # always emits per-location dedup, no syntax highlighting).
+    del source_dirs, all_passes, no_highlight
+
     if irtrackdb.get_schema_version(con) < 1:
         print("ir-tracker: unsupported schema version", file=sys.stderr)
         return 1
 
     os.makedirs(output_dir, exist_ok=True)
 
-    files = _files_in_db(con)
+    funcs = _functions(con)
     if file_filter:
         needle = file_filter.lower()
-        files = [(fid, p) for fid, p in files if needle in p.lower()]
-    if not files:
-        print("ir-tracker: no source files with instructions in DB", file=sys.stderr)
+        funcs = [t for t in funcs if needle in t[1].lower()]
+    if not funcs:
+        print("ir-tracker: no functions with instructions in DB", file=sys.stderr)
         return 1
 
     pass_count = int(
@@ -328,26 +598,22 @@ def generate_html(
     with open(os.path.join(output_dir, "style.css"), "w", encoding="utf-8") as f:
         f.write(_STYLE_CSS)
 
-    index_entries: List[Tuple[str, str, int, int]] = []
-    for file_id, file_path in files:
-        by_line = _instrs_for_file(con, file_id)
-        n_rows = sum(len(v) for v in by_line.values())
-        link = _safe_filename(file_path) + ".html"
-        resolved = _resolve_source(file_path, source_dirs)
-        src_text = _read_source(resolved) if resolved else None
-        page = _render_file_html(
-            file_path, by_line, src_text, all_passes, no_highlight
+    for function, file_path, _ni, _np, page in funcs:
+        iseq = _initial_seq(con, function)
+        initial = _initial_ir(con, function, iseq) if iseq >= 0 else []
+        fseq = _final_seq(con, function)
+        final = _final_ir_rows(con, function, fseq) if fseq >= 0 else []
+        hist = _history(con, function)
+        html_text = _render_function_page(
+            function, file_path, funcs, initial, iseq, final, fseq, hist,
         )
-        with open(os.path.join(output_dir, link), "w", encoding="utf-8") as f:
-            f.write(page)
-        index_entries.append((file_path, link, len(by_line), n_rows))
+        with open(os.path.join(output_dir, page), "w", encoding="utf-8") as f:
+            f.write(html_text)
 
     with open(os.path.join(output_dir, "index.html"), "w", encoding="utf-8") as f:
-        f.write(_render_index_html(index_entries, pass_count, inst_count))
+        f.write(_render_index(funcs, pass_count, inst_count))
 
     print(
-        "ir-tracker: wrote {n} file page(s) + index to {d}".format(
-            n=len(index_entries), d=output_dir
-        )
+        f"ir-tracker: wrote {len(funcs)} function page(s) + index to {output_dir}"
     )
     return 0
