@@ -565,6 +565,31 @@ class IRTrackerJSONState {
     DenseMap<const Value *, unsigned> LocalValueNames;
     unsigned NextLocalValueName = 0;
 
+    // Emit a synthetic "<sig>" row at the top of each per-function dump so
+    // viewers can render a textual-IR-style header. ``BB="<sig>"`` and
+    // ``inst_seq=0`` make it easy to distinguish from real instruction rows.
+    {
+      SmallString<256> SigBuf;
+      raw_svector_ostream SOS(SigBuf);
+      SOS << "define ";
+      F.getReturnType()->print(SOS);
+      SOS << " @" << FunctionName << "(";
+      for (unsigned i = 0; i < F.arg_size(); ++i) {
+        if (i)
+          SOS << ", ";
+        const Argument *A = F.getArg(i);
+        A->getType()->print(SOS);
+        SOS << ' ';
+        if (A->hasName())
+          SOS << '%' << A->getName();
+        else
+          SOS << '%' << i;
+      }
+      SOS << ")";
+      *OS << "I\t" << FunctionName << "\t<sig>\t0\t<sig>\t0\t" << SigBuf
+          << '\n';
+    }
+
     auto getValueName = [&](const Value *V) -> std::string {
       if (auto *GV = dyn_cast<GlobalValue>(V)) {
         if (GV->hasName())
@@ -573,6 +598,13 @@ class IRTrackerJSONState {
       if (auto *BB = dyn_cast<BasicBlock>(V)) {
         if (BB->hasName())
           return (Twine("%") + BB->getName()).str();
+      }
+      // Render unnamed function arguments using the textual-IR convention
+      // (``%0``, ``%1``, ...) instead of the per-emission ``%u<N>`` fallback,
+      // since the argument index is stable across passes.
+      if (auto *Arg = dyn_cast<Argument>(V)) {
+        if (!Arg->hasName())
+          return (Twine("%") + Twine(Arg->getArgNo())).str();
       }
       if (V->hasName())
         return (Twine("%") + V->getName()).str();

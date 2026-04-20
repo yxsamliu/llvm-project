@@ -57,6 +57,9 @@ header a { color: #cdf; text-decoration: none; }
 .inst.no-loc:hover { background: transparent; }
 .inst.dead { color: #999; text-decoration: line-through; }
 .final-text { white-space: pre; margin: 0; font-size: 12px; color: #111; }
+.signature { white-space: pre-wrap; word-break: break-all; padding: 4px 6px;
+             margin-bottom: 6px; background: #f3f3f9; border-left: 3px solid #557;
+             color: #225; font-weight: 500; }
 .loc { color: #888; font-size: 10px; margin-left: 8px; }
 .opc { color: #058; }
 .empty { color: #888; padding: 12px; }
@@ -399,10 +402,24 @@ def _render_ir_panel(
     if not rows:
         return '<div class="empty">No IR recorded.</div>'
     parts: List[str] = [f'<div class="loc">{_esc(header)}</div>']
+
+    # Pull the synthetic signature row (basicblock=='<sig>') to the top so
+    # the panel opens with the textual-IR-style ``define ... @name(...)``.
+    sig_row = next(
+        (r for r in rows if (r["basicblock"] or "") == "<sig>"), None
+    )
+    body_rows = [r for r in rows if (r["basicblock"] or "") != "<sig>"]
+    if sig_row is not None:
+        parts.append(
+            '<div class="signature">'
+            f'{_esc(sig_row["inst_text"] or "")}'
+            "</div>"
+        )
+
     bb_index = 0
     last_seq = -1
     last_bb_name: Optional[str] = None
-    for idx, r in enumerate(rows):
+    for idx, r in enumerate(body_rows):
         bb_name = r["basicblock"] or ""
         is_real_name = bool(bb_name) and bb_name != "<unnamed>"
         seq_resets = int(r["inst_seq"]) == 0 and last_seq >= 0
