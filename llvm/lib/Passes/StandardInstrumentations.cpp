@@ -14,7 +14,9 @@
 
 #include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/ADT/Any.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -45,6 +47,7 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/xxhash.h"
+#include <limits>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
@@ -407,7 +410,7 @@ static stable_hash hashInstruction(const Instruction &I) {
     H = stable_hash_combine(H, V->getType()->getTypeID(),
                             isa<Constant>(V) ? 1 : 0, isa<Argument>(V) ? 1 : 0);
     if (auto *C = dyn_cast<ConstantInt>(V))
-      H = stable_hash_combine(H, C->getZExtValue());
+      H = stable_hash_combine(H, static_cast<stable_hash>(hash_value(C->getValue())));
   }
   if (I.isCommutative())
     H = stable_hash_combine(H, 1);
@@ -416,14 +419,48 @@ static stable_hash hashInstruction(const Instruction &I) {
   return H;
 }
 
+static stable_hash hashBlockFingerprint(const BasicBlock &BB) {
+  if (BB.empty())
+    return 0;
+  const Instruction &First = BB.front();
+  const Instruction &Last = BB.back();
+  return stable_hash_combine(static_cast<stable_hash>(BB.size()),
+                             hashInstruction(First), hashInstruction(Last));
+}
+
+static stable_hash hashTrackerIdentity(const DILocation *Loc) {
+  if (!Loc)
+    return 0;
+  unsigned ScopeLine = 0;
+  if (DISubprogram *SP = Loc->getScope()->getSubprogram())
+    ScopeLine = SP->getLine();
+  return stable_hash_combine(Loc->getLine(), Loc->getColumn(), ScopeLine);
+}
+
+static void printAPIntValue(raw_ostream &OS, const APInt &V) {
+  SmallString<32> Tmp;
+  if (V.isNegative())
+    V.toStringSigned(Tmp, 10);
+  else
+    V.toStringUnsigned(Tmp, 10);
+  OS << Tmp;
+}
+
 class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
+  unsigned NextTrackerID = 1;
   DenseMap<const Function *, stable_hash> FunctionHashes;
+  DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
+  DenseMap<const Function *, SmallVector<bool>> BlockHasZeroIDs;
   DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
       BlockInstHashes;
+  DenseMap<const Function *, SmallVector<SmallVector<unsigned>>> BlockTempIDs;
+  DenseMap<stable_hash, unsigned> LocKeyToTrackerID;
+  DenseMap<unsigned, stable_hash> TrackerIDToPrevHash;
+  DenseSet<unsigned> EmittedTrackerMetadata;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
@@ -431,28 +468,67 @@ class IRTrackerJSONState {
         << '\n';
   }
 
+  void writeTrackerRecord(unsigned ID, const DILocation *Loc) {
+    if (!Loc || ID == 0 || !EmittedTrackerMetadata.insert(ID).second)
+      return;
+    std::string FilePath = getIRTrackerFilePath(Loc);
+    *OS << "T\t" << ID << '\t' << FilePath << '\t' << Loc->getLine() << '\t'
+        << Loc->getColumn() << '\n';
+  }
+
+  unsigned getOrCreateTrackerID(const DILocation *Loc) {
+    stable_hash Key = hashTrackerIdentity(Loc);
+    if (Key == 0)
+      return 0;
+    auto It = LocKeyToTrackerID.find(Key);
+    if (It != LocKeyToTrackerID.end())
+      return It->second;
+    unsigned ID = NextTrackerID++;
+    LocKeyToTrackerID[Key] = ID;
+    return ID;
+  }
+
   void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
 
     auto &PrevBlkH = BlockHashes[&F];
+    auto &PrevBlkFP = BlockFingerprints[&F];
+    auto &PrevBlkHasZeroIDs = BlockHasZeroIDs[&F];
     auto &PrevInstH = BlockInstHashes[&F];
+    auto &PrevTempIDs = BlockTempIDs[&F];
     SmallVector<stable_hash> NewBlkH;
-    SmallVector<SmallVector<stable_hash>> NewInstH;
+    SmallVector<stable_hash> NewBlkFP;
+    SmallVector<bool> NewBlkHasZeroIDs;
+    SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
+      stable_hash BlkFP = hashBlockFingerprint(BB);
+      NewBlkFP.push_back(BlkFP);
       stable_hash BlkH = 0;
-      SmallVector<stable_hash> InstH;
-      for (const Instruction &I : BB) {
-        stable_hash H = hashInstruction(I);
-        InstH.push_back(H);
-        BlkH = stable_hash_combine(BlkH, H);
+      bool HasZeroID = false;
+      bool FingerprintUnchanged = SkipUnchanged && BlkIdx < PrevBlkFP.size() &&
+                                  PrevBlkFP[BlkIdx] == BlkFP;
+      if (FingerprintUnchanged && BlkIdx < PrevBlkH.size()) {
+        BlkH = PrevBlkH[BlkIdx];
+        if (BlkIdx < PrevBlkHasZeroIDs.size())
+          HasZeroID = PrevBlkHasZeroIDs[BlkIdx];
+      } else {
+        for (const Instruction &I : BB) {
+          stable_hash H = hashInstruction(I);
+          BlkH = stable_hash_combine(BlkH, H);
+          if (!I.getDebugLoc())
+            HasZeroID = true;
+        }
       }
+      NewBlkHasZeroIDs.push_back(HasZeroID);
       NewBlkH.push_back(BlkH);
-      NewInstH.push_back(std::move(InstH));
       FuncH = stable_hash_combine(FuncH, BlkH);
+      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+          PrevBlkH[BlkIdx] != BlkH)
+        ChangedBlocks.push_back(BlkIdx);
       ++BlkIdx;
     }
 
@@ -466,76 +542,287 @@ class IRTrackerJSONState {
       FunctionHashes[&F] = FuncH;
     }
 
-    bool AnyBlockChanged = false;
-    BlkIdx = 0;
-    for (const BasicBlock &BB : F) {
-      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx]) {
-        AnyBlockChanged = true;
-        break;
-      }
-      ++BlkIdx;
-    }
-
-    if (!AnyBlockChanged) {
+    if (ChangedBlocks.empty()) {
+      PrevBlkFP = std::move(NewBlkFP);
+      PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
       PrevBlkH = std::move(NewBlkH);
-      PrevInstH = std::move(NewInstH);
       return;
     }
 
     StringRef FunctionName = F.getName();
-    ModuleSlotTracker MST(F.getParent());
-    MST.incorporateFunction(F);
     SmallString<256> InstBuf;
+    DenseMap<const Value *, unsigned> LocalValueNames;
+    unsigned NextLocalValueName = 0;
+
+    auto getValueName = [&](const Value *V) -> std::string {
+      if (auto *GV = dyn_cast<GlobalValue>(V)) {
+        if (GV->hasName())
+          return (Twine("@") + GV->getName()).str();
+      }
+      if (auto *BB = dyn_cast<BasicBlock>(V)) {
+        if (BB->hasName())
+          return (Twine("%") + BB->getName()).str();
+      }
+      if (V->hasName())
+        return (Twine("%") + V->getName()).str();
+      if (auto *I = dyn_cast<Instruction>(V)) {
+        if (const DILocation *Loc =
+                I->getDebugLoc() ? I->getDebugLoc().get() : nullptr) {
+          unsigned ID = getOrCreateTrackerID(Loc);
+          if (ID != 0)
+            return (Twine("%t") + Twine(ID)).str();
+        }
+      }
+      if (auto It = LocalValueNames.find(V); It != LocalValueNames.end())
+        return (Twine("%u") + Twine(It->second)).str();
+      unsigned ID = NextLocalValueName++;
+      LocalValueNames[V] = ID;
+      return (Twine("%u") + Twine(ID)).str();
+    };
+
+    std::function<void(raw_ostream &, const Value *)> writeValueRef =
+        [&](raw_ostream &OS, const Value *V) {
+          if (auto *CI = dyn_cast<ConstantInt>(V)) {
+            printAPIntValue(OS, CI->getValue());
+            return;
+          }
+          if (auto *CF = dyn_cast<ConstantFP>(V)) {
+            SmallString<32> Tmp;
+            CF->getValueAPF().toString(Tmp);
+            OS << Tmp;
+            return;
+          }
+          if (isa<ConstantPointerNull>(V)) {
+            OS << "null";
+            return;
+          }
+          if (isa<UndefValue>(V)) {
+            OS << "undef";
+            return;
+          }
+          if (isa<PoisonValue>(V)) {
+            OS << "poison";
+            return;
+          }
+          if (isa<ConstantAggregateZero>(V)) {
+            OS << "zeroinitializer";
+            return;
+          }
+          if (auto *CA = dyn_cast<ConstantDataArray>(V)) {
+            if (CA->isString()) {
+              OS << "c\"";
+              printEscapedString(CA->getAsString(), OS);
+              OS << "\"";
+              return;
+            }
+          }
+          OS << getValueName(V);
+        };
+
+    auto printInstructionText = [&](raw_ostream &OS, const Instruction &I,
+                                    unsigned CurID) {
+      if (!I.getType()->isVoidTy()) {
+        if (I.hasName())
+          OS << "%" << I.getName();
+        else if (CurID != 0)
+          OS << "%t" << CurID;
+        else
+          OS << getValueName(&I);
+        OS << " = ";
+      }
+
+      OS << I.getOpcodeName();
+      if (const auto *CI = dyn_cast<CmpInst>(&I))
+        OS << ' ' << CI->getPredicate();
+
+      if (const auto *RI = dyn_cast<ReturnInst>(&I)) {
+        if (RI->getNumOperands() == 0) {
+          OS << " void";
+          return;
+        }
+        OS << ' ';
+        RI->getReturnValue()->getType()->print(OS);
+        OS << ' ';
+        writeValueRef(OS, RI->getReturnValue());
+        return;
+      }
+
+      if (const auto *BI = dyn_cast<BranchInst>(&I)) {
+        if (BI->isUnconditional()) {
+          OS << ' ';
+          writeValueRef(OS, BI->getSuccessor(0));
+        } else {
+          OS << ' ';
+          writeValueRef(OS, BI->getCondition());
+          OS << ", ";
+          writeValueRef(OS, BI->getSuccessor(0));
+          OS << ", ";
+          writeValueRef(OS, BI->getSuccessor(1));
+        }
+        return;
+      }
+
+      if (const auto *PN = dyn_cast<PHINode>(&I)) {
+        OS << ' ';
+        I.getType()->print(OS);
+        bool First = true;
+        for (unsigned Idx = 0; Idx < PN->getNumIncomingValues(); ++Idx) {
+          OS << (First ? ' ' : ',');
+          if (!First)
+            OS << ' ';
+          First = false;
+          OS << "[ ";
+          writeValueRef(OS, PN->getIncomingValue(Idx));
+          OS << ", ";
+          writeValueRef(OS, PN->getIncomingBlock(Idx));
+          OS << " ]";
+        }
+        return;
+      }
+
+      if (const auto *CB = dyn_cast<CallBase>(&I)) {
+        if (!CB->getType()->isVoidTy()) {
+          OS << ' ';
+          CB->getType()->print(OS);
+        }
+        OS << ' ';
+        writeValueRef(OS, CB->getCalledOperand());
+        OS << '(';
+        for (unsigned Idx = 0; Idx < CB->arg_size(); ++Idx) {
+          if (Idx)
+            OS << ", ";
+          writeValueRef(OS, CB->getArgOperand(Idx));
+        }
+        OS << ')';
+        return;
+      }
+
+      if (I.getNumOperands()) {
+        if (!I.getType()->isVoidTy()) {
+          OS << ' ';
+          I.getType()->print(OS);
+        }
+        OS << ' ';
+        for (unsigned Idx = 0; Idx < I.getNumOperands(); ++Idx) {
+          if (Idx)
+            OS << ", ";
+          writeValueRef(OS, I.getOperand(Idx));
+        }
+      }
+    };
     BlkIdx = 0;
+    unsigned ChangedBlockPos = 0;
 
     for (const BasicBlock &BB : F) {
-      bool BlockChanged = !SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
-                          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx];
+      bool BlockChanged = ChangedBlockPos < ChangedBlocks.size() &&
+                          ChangedBlocks[ChangedBlockPos] == BlkIdx;
 
       if (BlockChanged) {
+        ++ChangedBlockPos;
         StringRef BBLabel =
             BB.hasName() ? BB.getName() : StringRef("<unnamed>");
-        auto &CurInstH = NewInstH[BlkIdx];
+        bool NeedFallback = NewBlkHasZeroIDs[BlkIdx];
+        SmallVector<stable_hash> CurInstH;
+        SmallVector<unsigned> CurTempIDs;
         auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
                              ? &PrevInstH[BlkIdx]
                              : nullptr;
+        auto *OldTempIDs = (SkipUnchanged && BlkIdx < PrevTempIDs.size())
+                               ? &PrevTempIDs[BlkIdx]
+                               : nullptr;
+        SmallVector<bool> UsedOldTempIDs;
+        if (OldTempIDs)
+          UsedOldTempIDs.assign(OldTempIDs->size(), false);
         unsigned InstSeq = 0;
         unsigned InstIdx = 0;
-        for (const Instruction &I : BB) {
-          bool InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
-                             (*OldInstH)[InstIdx] != CurInstH[InstIdx];
+        for (Instruction &I : const_cast<BasicBlock &>(BB)) {
+          stable_hash CurH = hashInstruction(I);
+          if (NeedFallback)
+            CurInstH.push_back(CurH);
+          const DILocation *Loc =
+              I.getDebugLoc() ? I.getDebugLoc().get() : nullptr;
+          unsigned CurID = getOrCreateTrackerID(Loc);
+          if (CurID == 0) {
+            int MatchedIdx = -1;
+            if (OldTempIDs && OldInstH) {
+              if (InstIdx < OldTempIDs->size() && InstIdx < OldInstH->size() &&
+                  (*OldTempIDs)[InstIdx] != 0 && !UsedOldTempIDs[InstIdx] &&
+                  (*OldInstH)[InstIdx] == CurH) {
+                MatchedIdx = InstIdx;
+              } else {
+                int BestIdx = -1;
+                int BestDist = std::numeric_limits<int>::max();
+                bool AmbiguousBest = false;
+                for (size_t J = 0,
+                            E = std::min(OldTempIDs->size(), OldInstH->size());
+                     J != E; ++J) {
+                  if ((*OldTempIDs)[J] == 0 || UsedOldTempIDs[J] ||
+                      (*OldInstH)[J] != CurH)
+                    continue;
+                  int Dist =
+                      std::abs(static_cast<int>(J) - static_cast<int>(InstIdx));
+                  if (Dist < BestDist) {
+                    BestDist = Dist;
+                    BestIdx = static_cast<int>(J);
+                    AmbiguousBest = false;
+                  } else if (Dist == BestDist) {
+                    AmbiguousBest = true;
+                  }
+                }
+                if (BestIdx >= 0 && !AmbiguousBest)
+                  MatchedIdx = BestIdx;
+              }
+            }
+            if (MatchedIdx >= 0) {
+              CurID = (*OldTempIDs)[MatchedIdx];
+              UsedOldTempIDs[MatchedIdx] = true;
+            } else {
+              CurID = NextTrackerID++;
+            }
+            CurTempIDs.push_back(CurID);
+          } else if (NeedFallback) {
+            CurTempIDs.push_back(0);
+          }
+          bool InstChanged = true;
+          if (CurID != 0) {
+            auto It = TrackerIDToPrevHash.find(CurID);
+            InstChanged = It == TrackerIDToPrevHash.end() || It->second != CurH;
+          } else {
+            InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
+                          (*OldInstH)[InstIdx] != CurH;
+          }
 
           if (InstChanged) {
-            const DebugLoc &DL = I.getDebugLoc();
-            const DILocation *Loc = DL ? DL.get() : nullptr;
-
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
-            I.print(IOS, MST);
+            printInstructionText(IOS, I, CurID);
+
+            if (CurID != 0)
+              writeTrackerRecord(CurID, Loc);
 
             *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
-                << '\t' << I.getOpcodeName() << '\t';
-            if (Loc && Loc->getLine() != 0) {
-              std::string FilePath = getIRTrackerFilePath(Loc);
-              if (!FilePath.empty())
-                *OS << FilePath << '\t' << Loc->getLine() << '\t'
-                    << Loc->getColumn();
-              else
-                *OS << "\t\t";
-            } else {
-              *OS << "\t\t";
-            }
-            *OS << '\t' << InstBuf << '\n';
+                << '\t' << I.getOpcodeName() << '\t' << CurID << '\t' << InstBuf
+                << '\n';
           }
+          if (CurID != 0)
+            TrackerIDToPrevHash[CurID] = CurH;
           ++InstSeq;
           ++InstIdx;
+        }
+        if (NeedFallback) {
+          if (BlkIdx >= PrevInstH.size())
+            PrevInstH.resize(BlkIdx + 1);
+          PrevInstH[BlkIdx] = std::move(CurInstH);
+          if (BlkIdx >= PrevTempIDs.size())
+            PrevTempIDs.resize(BlkIdx + 1);
+          PrevTempIDs[BlkIdx] = std::move(CurTempIDs);
         }
       }
       ++BlkIdx;
     }
+    PrevBlkFP = std::move(NewBlkFP);
+    PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
     PrevBlkH = std::move(NewBlkH);
-    PrevInstH = std::move(NewInstH);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
