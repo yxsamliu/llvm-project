@@ -402,6 +402,91 @@ static std::string getIRTrackerInstructionText(const Instruction &I,
   return Text;
 }
 
+// FNV-1a 64-bit hash of a string into a stable_hash for the recorder's
+// change detector. Intra-run-consistent and ABI-free; stable_hash itself
+// is just uint64_t.
+static stable_hash hashString(StringRef S) {
+  stable_hash H = 0xcbf29ce484222325ULL;
+  for (unsigned char C : S.bytes()) {
+    H ^= C;
+    H *= 0x100000001b3ULL;
+  }
+  return H;
+}
+
+// Replace any character that would corrupt a newline-terminated TSV row
+// (newline, carriage return, tab) with a space so digests are safe to
+// embed in the I/<sig> row text.
+static std::string sanitizeForRow(StringRef S) {
+  std::string Out;
+  Out.reserve(S.size());
+  for (char C : S)
+    Out.push_back((C == '\n' || C == '\r' || C == '\t') ? ' ' : C);
+  return Out;
+}
+
+// Build a compact, change-detecting digest of an instruction's non-debug
+// metadata. Each entry is ``|<kind>:<8 hex of MDNode*>``. Pointer
+// identity is a sound change signal because LLVM interns/uniquifies
+// MDNodes; printing the full graph (e.g. printAsOperand) would recurse
+// through arbitrarily large !tbaa trees and is far too expensive at
+// scale (medium.ll: 200x slowdown).
+static std::string nonDebugMDDigest(const Instruction &I) {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  I.getAllMetadata(MDs);
+  if (MDs.empty())
+    return {};
+  llvm::stable_sort(MDs, [](const auto &A, const auto &B) {
+    return A.first < B.first;
+  });
+  std::string Out;
+  raw_string_ostream OS(Out);
+  for (auto &P : MDs) {
+    if (P.first == LLVMContext::MD_dbg)
+      continue;
+    OS << '|' << P.first << ':';
+    if (P.second)
+      OS << format_hex_no_prefix(
+          static_cast<uintptr_t>(reinterpret_cast<uintptr_t>(P.second)) &
+              0xFFFFFFFFu,
+          8);
+  }
+  return sanitizeForRow(Out);
+}
+
+static std::string functionAttrDigest(const Function &F) {
+  std::string Out;
+  raw_string_ostream OS(Out);
+  AttributeList AL = F.getAttributes();
+  AL.print(OS);
+  return sanitizeForRow(Out);
+}
+
+static std::string functionMDDigest(const Function &F) {
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  F.getAllMetadata(MDs);
+  if (MDs.empty())
+    return {};
+  llvm::stable_sort(MDs, [](const auto &A, const auto &B) {
+    return A.first < B.first;
+  });
+  std::string Out;
+  raw_string_ostream OS(Out);
+  for (auto &P : MDs) {
+    // !dbg on a Function points at a DISubprogram which is debug info; skip
+    // it so this option is orthogonal to debug-info tracking.
+    if (P.first == LLVMContext::MD_dbg)
+      continue;
+    OS << '|' << P.first << ':';
+    if (P.second)
+      OS << format_hex_no_prefix(
+          static_cast<uintptr_t>(reinterpret_cast<uintptr_t>(P.second)) &
+              0xFFFFFFFFu,
+          8);
+  }
+  return sanitizeForRow(Out);
+}
+
 static stable_hash hashInstruction(const Instruction &I) {
   stable_hash H = stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
                                       I.getNumOperands());
@@ -416,6 +501,11 @@ static stable_hash hashInstruction(const Instruction &I) {
     H = stable_hash_combine(H, 1);
   if (auto *CI = dyn_cast<CmpInst>(&I))
     H = stable_hash_combine(H, CI->getPredicate());
+  if (isIRTrackerTrackInstMD()) {
+    std::string MD = nonDebugMDDigest(I);
+    if (!MD.empty())
+      H = stable_hash_combine(H, hashString(MD));
+  }
   return H;
 }
 
@@ -514,6 +604,15 @@ class IRTrackerJSONState {
     SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
+    // Mix in optional function-level signals so the change-detector picks
+    // up attribute or metadata edits that don't modify any instruction.
+    if (isIRTrackerTrackFnAttrs())
+      FuncH = stable_hash_combine(
+          FuncH, hashString(functionAttrDigest(F)));
+    if (isIRTrackerTrackFnMD())
+      FuncH = stable_hash_combine(
+          FuncH, hashString(functionMDDigest(F)));
+
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
       stable_hash BlkFP = hashBlockFingerprint(BB);
@@ -586,6 +685,18 @@ class IRTrackerJSONState {
           SOS << '%' << i;
       }
       SOS << ")";
+      if (isIRTrackerTrackFnAttrs()) {
+        std::string AttrText = functionAttrDigest(F);
+        // Trim leading whitespace from the AttributeList::print output.
+        StringRef AttrTrim = StringRef(AttrText).trim();
+        if (!AttrTrim.empty())
+          SOS << " attrs=[" << AttrTrim << "]";
+      }
+      if (isIRTrackerTrackFnMD()) {
+        std::string MDText = functionMDDigest(F);
+        if (!MDText.empty())
+          SOS << " fnmd=[" << MDText << "]";
+      }
       *OS << "I\t" << FunctionName << "\t<sig>\t0\t<sig>\t0\t" << SigBuf
           << '\n';
     }
@@ -839,6 +950,15 @@ class IRTrackerJSONState {
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
             printInstructionText(IOS, I, CurID);
+            // When instruction-MD tracking is on, surface the non-debug
+            // metadata digest at the end of the printed text so the user
+            // can see which `!tbaa`/`!range`/`!prof`/etc. attached values
+            // changed across passes.
+            if (isIRTrackerTrackInstMD()) {
+              std::string MDText = nonDebugMDDigest(I);
+              if (!MDText.empty())
+                IOS << " md=[" << MDText << "]";
+            }
 
             if (CurID != 0)
               writeTrackerRecord(CurID, Loc);
