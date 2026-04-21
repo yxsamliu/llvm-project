@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLSourceDebugLoc.h"
 #include "NewPMDriver.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/CallGraphSCCPass.h"
@@ -148,6 +149,23 @@ static cl::opt<bool>
 static cl::opt<bool>
     StripDebug("strip-debug",
                cl::desc("Strip debugger symbol info from translation unit"));
+
+static cl::opt<bool>
+    AddIRTrackerLocs(
+        "add-ir-tracker-locs",
+        cl::desc("IR tracker: synthesize !dbg locations for inputs without "
+                 "debug info: use .ll source line numbers for textual IR, or "
+                 "synthetic ordinal IDs for bitcode. No-op if the module "
+                 "already has debug info (use --add-ir-tracker-locs-force to "
+                 "overwrite)."),
+        cl::init(false));
+
+static cl::opt<bool>
+    AddIRTrackerLocsForce(
+        "add-ir-tracker-locs-force",
+        cl::desc("Like --add-ir-tracker-locs but also overwrites existing "
+                 "!dbg locations and strips any pre-existing DICompileUnit."),
+        cl::init(false));
 
 static cl::opt<bool>
     StripNamedMetadata("strip-named-metadata",
@@ -602,6 +620,14 @@ optMain(int argc, char **argv,
   // Strip debug info before running the verifier.
   if (StripDebug)
     StripDebugInfo(*M);
+
+  // Synthesize !dbg locations from the input source file (IR tracker).
+  if (AddIRTrackerLocs || AddIRTrackerLocsForce) {
+    if (AddIRTrackerLocsForce)
+      StripDebugInfo(*M);
+    applyLLSourceDebugLoc(*M, InputFilename,
+                          /*ForceOverwrite=*/AddIRTrackerLocsForce);
+  }
 
   // Erase module-level named metadata, if requested.
   if (StripNamedMetadata) {
