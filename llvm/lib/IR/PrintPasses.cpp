@@ -116,6 +116,23 @@ static cl::opt<std::string> IRTrackerJSONOutput(
         "locations after each pass"),
     cl::value_desc("file"), cl::init(""), cl::Hidden);
 
+static cl::opt<bool> IRTrackerTrackFnAttrs(
+    "ir-tracker-track-fn-attrs", cl::init(false), cl::Hidden,
+    cl::desc("IR tracker: include function attributes in change detection "
+             "and in the printed signature row"));
+
+static cl::opt<bool> IRTrackerTrackFnMD(
+    "ir-tracker-track-fn-md", cl::init(false), cl::Hidden,
+    cl::desc("IR tracker: include function-level metadata (excluding "
+             "DICompileUnit/!llvm.module.flags) in change detection and "
+             "in the printed signature row"));
+
+static cl::opt<bool> IRTrackerTrackInstMD(
+    "ir-tracker-track-inst-md", cl::init(false), cl::Hidden,
+    cl::desc("IR tracker: include non-debug instruction metadata "
+             "(!tbaa, !range, !prof, etc.) in change detection and in the "
+             "printed instruction text"));
+
 /// This is a helper to determine whether to print IR before or
 /// after a pass.
 
@@ -172,6 +189,10 @@ bool llvm::isFunctionInPrintList(StringRef FunctionName) {
 }
 
 StringRef llvm::getIRTrackerJSONOutputPath() { return IRTrackerJSONOutput; }
+
+bool llvm::isIRTrackerTrackFnAttrs() { return IRTrackerTrackFnAttrs; }
+bool llvm::isIRTrackerTrackFnMD() { return IRTrackerTrackFnMD; }
+bool llvm::isIRTrackerTrackInstMD() { return IRTrackerTrackInstMD; }
 
 std::error_code cleanUpTempFilesImpl(ArrayRef<std::string> FileName,
                                      unsigned N) {

@@ -84,6 +84,13 @@ std::string doSystemDiff(StringRef Before, StringRef After,
 /// Non-empty when \c -ir-tracker-json-output is set.
 StringRef getIRTrackerJSONOutputPath();
 
+/// Tracker option getters (see PrintPasses.cpp for the cl::opt definitions).
+/// All default to false; when true, the IR tracker hashes and prints the
+/// corresponding category so changes are detected and shown in the output.
+bool isIRTrackerTrackFnAttrs();
+bool isIRTrackerTrackFnMD();
+bool isIRTrackerTrackInstMD();
+
 } // namespace llvm
 
 #endif // LLVM_IR_PRINTPASSES_H
