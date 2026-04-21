@@ -26,9 +26,22 @@ import os
 import re
 import sqlite3
 import sys
-from typing import Dict, List, Optional, Sequence, Tuple
+import zlib
+from typing import Dict, FrozenSet, List, Optional, Sequence, Tuple
 
 import irtrackdb
+
+
+def _loc_color(loc: str) -> str:
+    """Map a ``data-loc`` string to a stable pastel ``hsl(...)`` color.
+
+    Hue is derived from a CRC32 of the loc so the same source location
+    always paints to the same color across both panels and across runs.
+    Saturation/lightness are kept low so the color sits visually behind
+    the text and does not fight the ``selected`` / ``linked`` highlight.
+    """
+    h = zlib.crc32(loc.encode("utf-8")) % 360
+    return f"hsl({h}, 70%, 90%)"
 
 
 _STYLE_CSS = """\
@@ -50,9 +63,9 @@ header a { color: #cdf; text-decoration: none; }
 #history { width: 28%; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
 .bb { color: #553; font-weight: bold; margin: 8px 0 2px 0; }
 .inst { white-space: pre; padding: 1px 4px; cursor: pointer; border-radius: 3px; }
-.inst:hover { background: #eef; }
-.inst.linked { background: #fff1c4; }
-.inst.selected { background: #ffe080; outline: 1px solid #caa040; }
+.inst:hover { background: #eef !important; }
+.inst.linked { background: #fff1c4 !important; }
+.inst.selected { background: #ffe080 !important; outline: 1px solid #caa040; }
 .inst.no-loc { cursor: default; color: #888; }
 .inst.no-loc:hover { background: transparent; }
 .inst.dead { color: #999; text-decoration: line-through; }
@@ -130,13 +143,34 @@ function clearClass(cls) {
   var prev = document.getElementsByClassName(cls);
   while (prev.length) prev[0].classList.remove(cls);
 }
+function panelOf(el) {
+  while (el && !(el.classList && el.classList.contains('panel')))
+    el = el.parentElement;
+  return el;
+}
+function alignPeerToClicked(clicked, peer) {
+  var cp = panelOf(clicked), pp = panelOf(peer);
+  if (!cp || !pp || cp === pp) return;
+  // Vertical offset of the clicked line within its own panel's viewport.
+  var anchor = clicked.getBoundingClientRect().top
+             - cp.getBoundingClientRect().top;
+  // Where the peer currently sits within its panel's viewport.
+  var peerTop = peer.getBoundingClientRect().top
+              - pp.getBoundingClientRect().top;
+  // Scroll the peer's panel so the peer ends up at the same vertical
+  // position as the clicked line. Clamped automatically by the browser.
+  pp.scrollTop += peerTop - anchor;
+}
 function selectInst(el) {
   clearClass('selected');
   clearClass('linked');
   var loc = el.getAttribute('data-loc');
   if (!loc) return;
   var peers = instsWithLoc(loc);
-  for (var i = 0; i < peers.length; i++) peers[i].classList.add('selected');
+  for (var i = 0; i < peers.length; i++) {
+    peers[i].classList.add('selected');
+    if (peers[i] !== el) alignPeerToClicked(el, peers[i]);
+  }
   renderHistory(loc);
 }
 function hoverInst(el, enter) {
@@ -381,8 +415,11 @@ def _render_func_list(
     return "".join(parts)
 
 
-def _render_initial_ir(rows: Sequence[sqlite3.Row], seq: int) -> str:
-    return _render_ir_panel(rows, f"initial snapshot: seq={seq}")
+def _render_initial_ir(
+    rows: Sequence[sqlite3.Row], seq: int,
+    color_locs: Optional[FrozenSet[str]] = None,
+) -> str:
+    return _render_ir_panel(rows, f"initial snapshot: seq={seq}", color_locs)
 
 
 _DEFINE_RE = re.compile(r"^\s*define\b[^@]*@([A-Za-z0-9_.$]+)\s*\(")
@@ -392,8 +429,16 @@ _DILOC_RE = re.compile(
 _DBG_REF_RE = re.compile(r"!dbg !(\d+)")
 
 
+def _row_loc(r: sqlite3.Row) -> Optional[str]:
+    line = int(r["line"])
+    if line <= 0:
+        return None
+    return f'{r["file_path"]}|{line}|{int(r["col"])}'
+
+
 def _render_ir_panel(
-    rows: Sequence[sqlite3.Row], header: str
+    rows: Sequence[sqlite3.Row], header: str,
+    color_locs: Optional[FrozenSet[str]] = None,
 ) -> str:
     """Shared renderer for a single-pass IR snapshot (used by both the
     Initial and Final panels). Groups into pseudo-blocks by ``inst_seq``
@@ -445,13 +490,20 @@ def _render_ir_panel(
             if has_loc
             else ""
         )
+        # Inline a stable per-loc background only for locations that show
+        # up in both the Initial and Final panels — that is the cross-panel
+        # mapping the user wants to see at a glance. Lone-side locations
+        # stay the default color so the noise stays manageable.
+        style = ""
+        if has_loc and color_locs is not None and loc in color_locs:
+            style = f' style="background:{_loc_color(loc)}"'
         loc_str = (
             f'<span class="loc">{int(r["line"])}:{int(r["col"])}</span>'
             if has_loc
             else '<span class="loc">no loc</span>'
         )
         parts.append(
-            f'<div class="{klass}"{attrs}>'
+            f'<div class="{klass}"{attrs}{style}>'
             f'<span class="opc">{_esc(r["opcode"] or "")}</span>  '
             f'{_esc(r["inst_text"] or "")}{loc_str}</div>'
         )
@@ -498,14 +550,17 @@ def parse_ll_functions(path: str) -> Tuple[Dict[str, str], Dict[int, Tuple[int, 
     return funcs, dilocs
 
 
-def _render_final_ir(rows: Sequence[sqlite3.Row], seq: int) -> str:
+def _render_final_ir(
+    rows: Sequence[sqlite3.Row], seq: int,
+    color_locs: Optional[FrozenSet[str]] = None,
+) -> str:
     if not rows or seq < 0:
         return (
             '<div class="empty">No final snapshot for this function. '
             "Ensure the tracker DB was produced by a recorder that emits a "
             "<code>phase='final'</code> pass at teardown.</div>"
         )
-    return _render_ir_panel(rows, f"final snapshot: seq={seq}")
+    return _render_ir_panel(rows, f"final snapshot: seq={seq}", color_locs)
 
 
 def _render_function_page(
@@ -518,9 +573,14 @@ def _render_function_page(
     final_seq: int,
     history: Dict[str, List[Dict[str, object]]],
 ) -> str:
+    # Locations shared by Initial and Final get a stable per-loc background
+    # color so the cross-panel mapping is visible at a glance.
+    initial_locs = {l for l in (_row_loc(r) for r in initial_rows) if l}
+    final_locs = {l for l in (_row_loc(r) for r in final_rows) if l}
+    shared_locs: FrozenSet[str] = frozenset(initial_locs & final_locs)
     func_list = _render_func_list(funcs, function)
-    initial = _render_initial_ir(initial_rows, initial_seq)
-    final = _render_final_ir(final_rows, final_seq)
+    initial = _render_initial_ir(initial_rows, initial_seq, shared_locs)
+    final = _render_final_ir(final_rows, final_seq, shared_locs)
     hist_json = json.dumps(history, separators=(",", ":"))
     return (
         "<!doctype html><html><head><meta charset='utf-8'>"
