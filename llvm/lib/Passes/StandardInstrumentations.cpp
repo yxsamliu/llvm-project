@@ -399,79 +399,184 @@ static std::string getIRTrackerInstructionText(const Instruction &I,
   return Text;
 }
 
+static stable_hash hashInstruction(const Instruction &I) {
+  stable_hash H = stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
+                                      I.getNumOperands());
+  for (const Use &U : I.operands()) {
+    Value *V = U.get();
+    H = stable_hash_combine(H, V->getType()->getTypeID(),
+                            isa<Constant>(V) ? 1 : 0, isa<Argument>(V) ? 1 : 0);
+    if (auto *C = dyn_cast<ConstantInt>(V))
+      H = stable_hash_combine(H, C->getZExtValue());
+  }
+  if (I.isCommutative())
+    H = stable_hash_combine(H, 1);
+  if (auto *CI = dyn_cast<CmpInst>(&I))
+    H = stable_hash_combine(H, CI->getPredicate());
+  return H;
+}
+
 class IRTrackerJSONState {
   std::unique_ptr<raw_fd_ostream> OS;
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
+  DenseMap<const Function *, stable_hash> FunctionHashes;
+  DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
+  DenseMap<const Function *, SmallVector<SmallVector<stable_hash>>>
+      BlockInstHashes;
 
   void writePassRecord(unsigned Seq, StringRef Phase, StringRef PassName,
                        StringRef IRUnit) {
-    json::Object Obj;
-    Obj["kind"] = "pass";
-    Obj["seq"] = Seq;
-    Obj["phase"] = Phase.str();
-    Obj["pass"] = PassName.str();
-    Obj["ir_unit"] = IRUnit.str();
-    *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+    *OS << "P\t" << Seq << '\t' << Phase << '\t' << PassName << '\t' << IRUnit
+        << '\n';
   }
 
-  void writeInstructionsInFunction(const Function &F) {
+  void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
 
-    std::string FunctionName = F.getName().str();
+    auto &PrevBlkH = BlockHashes[&F];
+    auto &PrevInstH = BlockInstHashes[&F];
+    SmallVector<stable_hash> NewBlkH;
+    SmallVector<SmallVector<stable_hash>> NewInstH;
+    stable_hash FuncH = 0;
+
+    unsigned BlkIdx = 0;
+    for (const BasicBlock &BB : F) {
+      stable_hash BlkH = 0;
+      SmallVector<stable_hash> InstH;
+      for (const Instruction &I : BB) {
+        stable_hash H = hashInstruction(I);
+        InstH.push_back(H);
+        BlkH = stable_hash_combine(BlkH, H);
+      }
+      NewBlkH.push_back(BlkH);
+      NewInstH.push_back(std::move(InstH));
+      FuncH = stable_hash_combine(FuncH, BlkH);
+      ++BlkIdx;
+    }
+
+    if (SkipUnchanged) {
+      auto It = FunctionHashes.find(&F);
+      if (It != FunctionHashes.end() && It->second == FuncH) {
+        return;
+      }
+      FunctionHashes[&F] = FuncH;
+    } else {
+      FunctionHashes[&F] = FuncH;
+    }
+
+    bool AnyBlockChanged = false;
+    BlkIdx = 0;
+    for (const BasicBlock &BB : F) {
+      if (!SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx]) {
+        AnyBlockChanged = true;
+        break;
+      }
+      ++BlkIdx;
+    }
+
+    if (!AnyBlockChanged) {
+      PrevBlkH = std::move(NewBlkH);
+      PrevInstH = std::move(NewInstH);
+      return;
+    }
+
+    StringRef FunctionName = F.getName();
     ModuleSlotTracker MST(F.getParent());
     MST.incorporateFunction(F);
+    SmallString<256> InstBuf;
+    BlkIdx = 0;
+
     for (const BasicBlock &BB : F) {
-      std::string BBLabel =
-          BB.hasName() ? BB.getName().str() : std::string("<unnamed>");
-      unsigned InstSeq = 0;
-      for (const Instruction &I : BB) {
-        const DebugLoc &DL = I.getDebugLoc();
-        if (!DL)
-          continue;
-        const DILocation *Loc = DL.get();
-        if (!Loc || Loc->getLine() == 0)
-          continue;
+      bool BlockChanged = !SkipUnchanged || BlkIdx >= PrevBlkH.size() ||
+                          PrevBlkH[BlkIdx] != NewBlkH[BlkIdx];
 
-        std::string FilePath = getIRTrackerFilePath(Loc);
-        if (FilePath.empty())
-          continue;
+      if (BlockChanged) {
+        StringRef BBLabel =
+            BB.hasName() ? BB.getName() : StringRef("<unnamed>");
+        auto &CurInstH = NewInstH[BlkIdx];
+        auto *OldInstH = (SkipUnchanged && BlkIdx < PrevInstH.size())
+                             ? &PrevInstH[BlkIdx]
+                             : nullptr;
+        unsigned InstSeq = 0;
+        unsigned InstIdx = 0;
+        for (const Instruction &I : BB) {
+          bool InstChanged = !OldInstH || InstIdx >= OldInstH->size() ||
+                             (*OldInstH)[InstIdx] != CurInstH[InstIdx];
 
-        json::Object Obj;
-        Obj["kind"] = "inst";
-        Obj["file"] = FilePath;
-        Obj["line"] = Loc->getLine();
-        Obj["col"] = Loc->getColumn();
-        Obj["function"] = FunctionName;
-        Obj["block"] = BBLabel;
-        Obj["inst_seq"] = InstSeq++;
-        Obj["opcode"] = std::string(I.getOpcodeName());
-        Obj["text"] = getIRTrackerInstructionText(I, MST);
-        *OS << formatv("{0}\n", json::Value(std::move(Obj)));
+          if (InstChanged) {
+            const DebugLoc &DL = I.getDebugLoc();
+            const DILocation *Loc = DL ? DL.get() : nullptr;
+
+            InstBuf.clear();
+            raw_svector_ostream IOS(InstBuf);
+            I.print(IOS, MST);
+
+            *OS << "I\t" << FunctionName << '\t' << BBLabel << '\t' << InstSeq
+                << '\t' << I.getOpcodeName() << '\t';
+            if (Loc && Loc->getLine() != 0) {
+              std::string FilePath = getIRTrackerFilePath(Loc);
+              if (!FilePath.empty())
+                *OS << FilePath << '\t' << Loc->getLine() << '\t'
+                    << Loc->getColumn();
+              else
+                *OS << "\t\t";
+            } else {
+              *OS << "\t\t";
+            }
+            *OS << '\t' << InstBuf << '\n';
+          }
+          ++InstSeq;
+          ++InstIdx;
+        }
       }
+      ++BlkIdx;
     }
+    PrevBlkH = std::move(NewBlkH);
+    PrevInstH = std::move(NewInstH);
   }
 
   void writeIR(Any IR, unsigned Seq, StringRef Phase, StringRef PassName,
-               StringRef IRUnit) {
+               StringRef IRUnit, bool SkipUnchanged) {
     writePassRecord(Seq, Phase, PassName, IRUnit);
     if (const auto *M = unwrapIR<Module>(IR)) {
       for (const Function &F : *M)
-        writeInstructionsInFunction(F);
+        writeInstructionsInFunction(F, SkipUnchanged);
       return;
     }
     if (const auto *F = unwrapIR<Function>(IR)) {
-      writeInstructionsInFunction(*F);
+      writeInstructionsInFunction(*F, SkipUnchanged);
       return;
     }
     if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
       for (const LazyCallGraph::Node &N : *C)
-        writeInstructionsInFunction(N.getFunction());
+        writeInstructionsInFunction(N.getFunction(), SkipUnchanged);
       return;
     }
     if (const auto *L = unwrapIR<Loop>(IR))
-      writeInstructionsInFunction(*L->getHeader()->getParent());
+      writeInstructionsInFunction(*L->getHeader()->getParent(), SkipUnchanged);
+  }
+
+  bool allFunctionsKnown(Any IR) {
+    if (const auto *M = unwrapIR<Module>(IR)) {
+      for (const Function &F : *M)
+        if (!F.isDeclaration() && !FunctionHashes.count(&F))
+          return false;
+      return true;
+    }
+    if (const auto *F = unwrapIR<Function>(IR))
+      return F->isDeclaration() || FunctionHashes.count(F);
+    if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      for (const LazyCallGraph::Node &N : *C)
+        if (!FunctionHashes.count(&N.getFunction()))
+          return false;
+      return true;
+    }
+    if (const auto *L = unwrapIR<Loop>(IR))
+      return FunctionHashes.count(L->getHeader()->getParent());
+    return false;
   }
 
 public:
@@ -486,17 +591,26 @@ public:
     if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
       return;
     InitialCaptured = true;
-    writeIR(IR, 0, "initial", "<initial>", getIRName(IR));
+    writeIR(IR, 0, "initial", "<initial>", getIRName(IR),
+            /*SkipUnchanged=*/false);
   }
 
-  void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC) {
+  void afterPass(StringRef PassID, Any IR, PassInstrumentationCallbacks &PIC,
+                 const PreservedAnalyses &PA) {
     if (isIgnored(PassID) || !shouldPrintIR(IR))
       return;
 
     StringRef PassName = PIC.getPassNameForClassName(PassID);
     if (PassName.empty())
       PassName = PassID;
-    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR));
+
+    if (PA.areAllPreserved() && allFunctionsKnown(IR)) {
+      writePassRecord(NextSeq++, "after", PassName, getIRName(IR));
+      return;
+    }
+
+    writeIR(IR, NextSeq++, "after", PassName, getIRName(IR),
+            /*SkipUnchanged=*/true);
   }
 };
 
@@ -2648,8 +2762,8 @@ void IRTrackerInstrumentation::registerCallbacks(
   PIC.registerBeforeNonSkippedPassCallback(
       [State](StringRef PassID, Any IR) { State->beforePass(PassID, IR); });
   PIC.registerAfterPassCallback(
-      [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &) {
-        State->afterPass(PassID, IR, PIC);
+      [State, &PIC](StringRef PassID, Any IR, const PreservedAnalyses &PA) {
+        State->afterPass(PassID, IR, PIC, PA);
       });
 }
 
