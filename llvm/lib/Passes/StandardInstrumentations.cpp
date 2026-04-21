@@ -16,7 +16,6 @@
 #include "llvm/ADT/Any.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -437,13 +436,13 @@ static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   return stable_hash_combine(Loc->getLine(), Loc->getColumn(), ScopeLine);
 }
 
-static void printAPIntValue(raw_ostream &OS, const APInt &V) {
-  SmallString<32> Tmp;
-  if (V.isNegative())
-    V.toStringSigned(Tmp, 10);
-  else
-    V.toStringUnsigned(Tmp, 10);
-  OS << Tmp;
+static void stripIRTrackerDebugMetadata(SmallVectorImpl<char> &Text) {
+  StringRef S(Text.data(), Text.size());
+  size_t Pos = S.find(", !dbg !");
+  if (Pos == StringRef::npos)
+    Pos = S.find(" !dbg !");
+  if (Pos != StringRef::npos)
+    Text.resize(Pos);
 }
 
 class IRTrackerJSONState {
@@ -550,166 +549,9 @@ class IRTrackerJSONState {
     }
 
     StringRef FunctionName = F.getName();
+    ModuleSlotTracker MST(F.getParent());
+    MST.incorporateFunction(F);
     SmallString<256> InstBuf;
-    DenseMap<const Value *, unsigned> LocalValueNames;
-    unsigned NextLocalValueName = 0;
-
-    auto getValueName = [&](const Value *V) -> std::string {
-      if (auto *GV = dyn_cast<GlobalValue>(V)) {
-        if (GV->hasName())
-          return (Twine("@") + GV->getName()).str();
-      }
-      if (auto *BB = dyn_cast<BasicBlock>(V)) {
-        if (BB->hasName())
-          return (Twine("%") + BB->getName()).str();
-      }
-      if (V->hasName())
-        return (Twine("%") + V->getName()).str();
-      if (auto *I = dyn_cast<Instruction>(V)) {
-        if (const DILocation *Loc =
-                I->getDebugLoc() ? I->getDebugLoc().get() : nullptr) {
-          unsigned ID = getOrCreateTrackerID(Loc);
-          if (ID != 0)
-            return (Twine("%t") + Twine(ID)).str();
-        }
-      }
-      if (auto It = LocalValueNames.find(V); It != LocalValueNames.end())
-        return (Twine("%u") + Twine(It->second)).str();
-      unsigned ID = NextLocalValueName++;
-      LocalValueNames[V] = ID;
-      return (Twine("%u") + Twine(ID)).str();
-    };
-
-    std::function<void(raw_ostream &, const Value *)> writeValueRef =
-        [&](raw_ostream &OS, const Value *V) {
-          if (auto *CI = dyn_cast<ConstantInt>(V)) {
-            printAPIntValue(OS, CI->getValue());
-            return;
-          }
-          if (auto *CF = dyn_cast<ConstantFP>(V)) {
-            SmallString<32> Tmp;
-            CF->getValueAPF().toString(Tmp);
-            OS << Tmp;
-            return;
-          }
-          if (isa<ConstantPointerNull>(V)) {
-            OS << "null";
-            return;
-          }
-          if (isa<UndefValue>(V)) {
-            OS << "undef";
-            return;
-          }
-          if (isa<PoisonValue>(V)) {
-            OS << "poison";
-            return;
-          }
-          if (isa<ConstantAggregateZero>(V)) {
-            OS << "zeroinitializer";
-            return;
-          }
-          if (auto *CA = dyn_cast<ConstantDataArray>(V)) {
-            if (CA->isString()) {
-              OS << "c\"";
-              printEscapedString(CA->getAsString(), OS);
-              OS << "\"";
-              return;
-            }
-          }
-          OS << getValueName(V);
-        };
-
-    auto printInstructionText = [&](raw_ostream &OS, const Instruction &I,
-                                    unsigned CurID) {
-      if (!I.getType()->isVoidTy()) {
-        if (I.hasName())
-          OS << "%" << I.getName();
-        else if (CurID != 0)
-          OS << "%t" << CurID;
-        else
-          OS << getValueName(&I);
-        OS << " = ";
-      }
-
-      OS << I.getOpcodeName();
-      if (const auto *CI = dyn_cast<CmpInst>(&I))
-        OS << ' ' << CI->getPredicate();
-
-      if (const auto *RI = dyn_cast<ReturnInst>(&I)) {
-        if (RI->getNumOperands() == 0) {
-          OS << " void";
-          return;
-        }
-        OS << ' ';
-        RI->getReturnValue()->getType()->print(OS);
-        OS << ' ';
-        writeValueRef(OS, RI->getReturnValue());
-        return;
-      }
-
-      if (const auto *BI = dyn_cast<BranchInst>(&I)) {
-        if (BI->isUnconditional()) {
-          OS << ' ';
-          writeValueRef(OS, BI->getSuccessor(0));
-        } else {
-          OS << ' ';
-          writeValueRef(OS, BI->getCondition());
-          OS << ", ";
-          writeValueRef(OS, BI->getSuccessor(0));
-          OS << ", ";
-          writeValueRef(OS, BI->getSuccessor(1));
-        }
-        return;
-      }
-
-      if (const auto *PN = dyn_cast<PHINode>(&I)) {
-        OS << ' ';
-        I.getType()->print(OS);
-        bool First = true;
-        for (unsigned Idx = 0; Idx < PN->getNumIncomingValues(); ++Idx) {
-          OS << (First ? ' ' : ',');
-          if (!First)
-            OS << ' ';
-          First = false;
-          OS << "[ ";
-          writeValueRef(OS, PN->getIncomingValue(Idx));
-          OS << ", ";
-          writeValueRef(OS, PN->getIncomingBlock(Idx));
-          OS << " ]";
-        }
-        return;
-      }
-
-      if (const auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->getType()->isVoidTy()) {
-          OS << ' ';
-          CB->getType()->print(OS);
-        }
-        OS << ' ';
-        writeValueRef(OS, CB->getCalledOperand());
-        OS << '(';
-        for (unsigned Idx = 0; Idx < CB->arg_size(); ++Idx) {
-          if (Idx)
-            OS << ", ";
-          writeValueRef(OS, CB->getArgOperand(Idx));
-        }
-        OS << ')';
-        return;
-      }
-
-      if (I.getNumOperands()) {
-        if (!I.getType()->isVoidTy()) {
-          OS << ' ';
-          I.getType()->print(OS);
-        }
-        OS << ' ';
-        for (unsigned Idx = 0; Idx < I.getNumOperands(); ++Idx) {
-          if (Idx)
-            OS << ", ";
-          writeValueRef(OS, I.getOperand(Idx));
-        }
-      }
-    };
     BlkIdx = 0;
     unsigned ChangedBlockPos = 0;
 
@@ -795,7 +637,8 @@ class IRTrackerJSONState {
           if (InstChanged) {
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
-            printInstructionText(IOS, I, CurID);
+            I.print(IOS, MST);
+            stripIRTrackerDebugMetadata(InstBuf);
 
             if (CurID != 0)
               writeTrackerRecord(CurID, Loc);
