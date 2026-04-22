@@ -191,6 +191,10 @@ class IRTrackerJSONState {
   unsigned NextSeq = 1;
   bool InitialCaptured = false;
   unsigned NextTrackerID = 1;
+  // Cached pointer to the last module observed by afterPass, used by the
+  // destructor to emit a final full-instruction snapshot so downstream
+  // tooling can reconstruct the post-optimization IR from the DB alone.
+  const Module *LastModule = nullptr;
   DenseMap<const Function *, stable_hash> FunctionHashes;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
@@ -621,6 +625,31 @@ public:
       report_fatal_error(Twine("ir-tracker json output open: ") + EC.message());
   }
 
+  // Emit one synthetic "final" pass record on teardown covering every
+  // function of the last-seen module with ``SkipUnchanged=false`` so the
+  // post-optimization IR is fully materialized in the DB. The pass
+  // manager's ``PassInstrumentationCallbacks`` (which owns the shared_ptr
+  // holding this object) is destroyed before the module in the standard
+  // opt/clang flow, so ``LastModule`` is still live at this point. The
+  // cache reset is required because writeInstructionsInFunction also
+  // short-circuits per-instruction on matching ``TrackerIDToPrevHash``
+  // even when ``SkipUnchanged`` is false; without the reset the final
+  // record would only contain whatever changed since the last pass.
+  ~IRTrackerJSONState() {
+    if (!LastModule)
+      return;
+    FunctionHashes.clear();
+    BlockHashes.clear();
+    BlockFingerprints.clear();
+    BlockHasZeroIDs.clear();
+    BlockInstHashes.clear();
+    BlockTempIDs.clear();
+    TrackerIDToPrevHash.clear();
+    writePassRecord(NextSeq++, "final", "<final>", "[module]");
+    for (const Function &F : *LastModule)
+      writeInstructionsInFunction(F, /*SkipUnchanged=*/false);
+  }
+
   void beforePass(StringRef PassID, Any IR) {
     if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
       return;
@@ -633,6 +662,19 @@ public:
                  const PreservedAnalyses &PA) {
     if (isIgnored(PassID) || !shouldPrintIR(IR))
       return;
+
+    // Track the enclosing module so the destructor can dump a final
+    // full-instruction snapshot regardless of the IR unit type this pass
+    // saw.
+    if (const auto *M = unwrapIR<Module>(IR))
+      LastModule = M;
+    else if (const auto *F = unwrapIR<Function>(IR))
+      LastModule = F->getParent();
+    else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      if (C->begin() != C->end())
+        LastModule = C->begin()->getFunction().getParent();
+    } else if (const auto *L = unwrapIR<Loop>(IR))
+      LastModule = L->getHeader()->getParent()->getParent();
 
     StringRef PassName = PIC.getPassNameForClassName(PassID);
     if (PassName.empty())
