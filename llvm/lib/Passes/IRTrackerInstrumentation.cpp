@@ -314,6 +314,13 @@ class IRTrackerJSONState {
         if (BB->hasName())
           return (Twine("%") + BB->getName()).str();
       }
+      // Render unnamed function arguments using the textual-IR convention
+      // (``%0``, ``%1``, ...) instead of the per-emission ``%u<N>`` fallback,
+      // since the argument index is stable across passes.
+      if (auto *Arg = dyn_cast<Argument>(V)) {
+        if (!Arg->hasName())
+          return (Twine("%") + Twine(Arg->getArgNo())).str();
+      }
       if (V->hasName())
         return (Twine("%") + V->getName()).str();
       if (auto *I = dyn_cast<Instruction>(V)) {
