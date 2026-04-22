@@ -1,7 +1,7 @@
-; RUN: opt -disable-output -passes=instcombine -ir-tracker-json-output=%t.jsonl %s
-; RUN: FileCheck %s --input-file=%t.jsonl --check-prefix=ALL
-; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-json-output=%t-filter.jsonl %s
-; RUN: FileCheck %s --input-file=%t-filter.jsonl --check-prefix=FILTER
+; RUN: opt -disable-output -passes=instcombine -ir-tracker-json-output=%t.tsv %s
+; RUN: FileCheck %s --input-file=%t.tsv --check-prefix=ALL
+; RUN: opt -disable-output -passes=instcombine -filter-print-funcs=f -ir-tracker-json-output=%t-filter.tsv %s
+; RUN: FileCheck %s --input-file=%t-filter.tsv --check-prefix=FILTER
 
 define i32 @f(i32 %x) !dbg !6 {
 entry:
@@ -31,21 +31,23 @@ entry:
 !10 = !DILocation(line: 14, column: 3, scope: !7)
 !11 = !DILocation(line: 15, column: 3, scope: !7)
 
-; ALL: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; ALL: {"ir_unit":"g","kind":"pass","pass":"instcombine","phase":"after","seq":2}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":0,"kind":"inst","line":14,"opcode":"shl","text":"  %mul = shl i32 %x, 1, !dbg !{{[0-9]+}}"}
-; ALL-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"g","inst_seq":1,"kind":"inst","line":15,"opcode":"ret","text":"  ret i32 %mul, !dbg !{{[0-9]+}}"}
+; Output is the cost-improvement TSV form: P/T/I rows. T rows carry source
+; locations once per tracker ID; I rows reference tracker IDs.
 
-; FILTER: {"ir_unit":"f","kind":"pass","pass":"<initial>","phase":"initial","seq":0}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; FILTER: {"ir_unit":"f","kind":"pass","pass":"instcombine","phase":"after","seq":1}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":0,"kind":"inst","line":8,"opcode":"add","text":"  %add = add i32 %x, 1, !dbg !{{[0-9]+}}"}
-; FILTER-NEXT: {"block":"entry","col":3,"file":"/tmp{{[/\\\\]}}ir-tracker.c","function":"f","inst_seq":1,"kind":"inst","line":9,"opcode":"ret","text":"  ret i32 %add, !dbg !{{[0-9]+}}"}
-; FILTER-NOT: "function":"g"
-; FILTER-NOT: "ir_unit":"g"
+; ALL: P{{	}}0{{	}}initial{{	}}<initial>{{	}}f
+; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}8{{	}}3
+; ALL-NEXT: I{{	}}f{{	}}entry{{	}}0{{	}}add{{	}}{{[0-9]+}}{{	}}%add = add i32 %x, 1
+; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}9{{	}}3
+; ALL-NEXT: I{{	}}f{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %add
+; ALL: P{{	}}1{{	}}after{{	}}instcombine{{	}}f
+; ALL: P{{	}}2{{	}}after{{	}}instcombine{{	}}g
+; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}14{{	}}3
+; ALL-NEXT: I{{	}}g{{	}}entry{{	}}0{{	}}shl{{	}}{{[0-9]+}}{{	}}%mul = shl i32 %x, 1
+; ALL-NEXT: T{{	}}{{[0-9]+}}{{	}}/tmp{{[/\\]}}ir-tracker.c{{	}}15{{	}}3
+; ALL-NEXT: I{{	}}g{{	}}entry{{	}}1{{	}}ret{{	}}{{[0-9]+}}{{	}}ret i32 %mul
+
+; FILTER: P{{	}}0{{	}}initial{{	}}<initial>{{	}}f
+; FILTER: I{{	}}f{{	}}entry{{	}}0{{	}}add
+; FILTER: I{{	}}f{{	}}entry{{	}}1{{	}}ret
+; FILTER-NOT: I{{	}}g{{	}}
+; FILTER-NOT: ir_unit{{[" :]+}}g
