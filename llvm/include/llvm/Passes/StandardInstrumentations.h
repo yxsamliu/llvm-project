@@ -26,6 +26,7 @@
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Passes/IRTrackerInstrumentation.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -143,13 +144,6 @@ private:
   bool Enabled;
   PrintPassOptions Opts;
   int Indent = 0;
-};
-
-/// IR tracker instrumentation that records instructions with debug locations
-/// after each pass into JSON Lines when \c -ir-tracker-json-output is set.
-class IRTrackerInstrumentation {
-public:
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
 class PreservedCFGCheckerInstrumentation {
