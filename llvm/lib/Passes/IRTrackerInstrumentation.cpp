@@ -17,6 +17,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
@@ -112,6 +113,71 @@ static bool isIgnored(StringRef PassID) {
 }
 
 //===----------------------------------------------------------------------===//
+// Auto-synthesis of missing DILocations.
+//
+// The recorder identifies instructions across passes by their DILocation.
+// On inputs without ``-g`` (clang JIT, lld embedding, opt on a bitcode
+// without debug info, etc.) most instructions have no DILocation and the
+// recorder cannot stitch their identity across passes. To make the recorder
+// usable on those inputs without forcing every embedder to schedule a
+// "synthesize debug info" pass first, we synthesize ordinal-id DILocations
+// on first sight per module here.
+//
+// The synthesis is a no-op when the module already has a DICompileUnit, so
+// inputs built with ``-g`` are unaffected.
+//===----------------------------------------------------------------------===//
+
+static void synthesizeMissingInstructionLocs(Module &M) {
+  // Skip if the module already has real debug info; we never want to
+  // override real DI.
+  if (M.getNamedMetadata("llvm.dbg.cu"))
+    return;
+  // Skip empty modules (no functions to attach locs to).
+  if (M.empty())
+    return;
+
+  if (!M.getModuleFlag("Debug Info Version"))
+    M.addModuleFlag(Module::Warning, "Debug Info Version",
+                    DEBUG_METADATA_VERSION);
+
+  DIBuilder DIB(M);
+  LLVMContext &Ctx = M.getContext();
+  DIFile *File = DIB.createFile("<ir-tracker-synthetic>", ".");
+  DICompileUnit *CU = DIB.createCompileUnit(
+      dwarf::DW_LANG_C, File, "ir-tracker",
+      /*isOptimized=*/true, "", /*RV=*/0, /*SplitName=*/"",
+      DICompileUnit::FullDebug);
+  auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
+  unsigned NextOrdinal = 1;
+
+  for (Function &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (F.getSubprogram())
+      continue;
+    unsigned FuncLine = NextOrdinal;
+    DISubprogram::DISPFlags SPFlags =
+        DISubprogram::SPFlagDefinition | DISubprogram::SPFlagOptimized;
+    if (F.hasPrivateLinkage() || F.hasInternalLinkage())
+      SPFlags |= DISubprogram::SPFlagLocalToUnit;
+    DISubprogram *SP =
+        DIB.createFunction(CU, F.getName(), F.getName(), File, FuncLine,
+                           SPType, FuncLine, DINode::FlagZero, SPFlags);
+    F.setSubprogram(SP);
+
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (I.getDebugLoc())
+          continue;
+        I.setDebugLoc(DILocation::get(Ctx, NextOrdinal, 0, SP));
+        ++NextOrdinal;
+      }
+    }
+  }
+  DIB.finalize();
+}
+
+//===----------------------------------------------------------------------===//
 // Recorder implementation (cost-improvement port: hash-skip C1..C5, loc
 // identity, lightweight printer, see scripts_shared .cursor/skills/
 // ir-tracker SKILL.md for the design + measurement story).
@@ -131,15 +197,6 @@ static std::string getIRTrackerFilePath(const DILocation *Loc) {
   SmallString<256> Path(Dir);
   sys::path::append(Path, File);
   return std::string(Path);
-}
-
-static std::string getIRTrackerInstructionText(const Instruction &I,
-                                               ModuleSlotTracker &MST) {
-  std::string Text;
-  raw_string_ostream OS(Text);
-  I.print(OS, MST);
-  OS.flush();
-  return Text;
 }
 
 static stable_hash hashInstruction(const Instruction &I) {
@@ -195,6 +252,9 @@ class IRTrackerJSONState {
   // destructor to emit a final full-instruction snapshot so downstream
   // tooling can reconstruct the post-optimization IR from the DB alone.
   const Module *LastModule = nullptr;
+  // Modules whose missing DILocations have already been synthesized.
+  // Visited once per module per recorder lifetime.
+  DenseSet<const Module *> ModulesWithSynthesizedLocs;
   DenseMap<const Function *, stable_hash> FunctionHashes;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
@@ -657,8 +717,34 @@ public:
       writeInstructionsInFunction(F, /*SkipUnchanged=*/false);
   }
 
+  // Before any other beforePass work runs, ensure the module containing
+  // this IR unit has DILocations on every instruction. No-op if the
+  // module already has real debug info or if we have already synthesized
+  // for this module.
+  void ensureSyntheticLocs(Any IR) {
+    Module *M = nullptr;
+    if (const auto *MM = unwrapIR<Module>(IR))
+      M = const_cast<Module *>(MM);
+    else if (const auto *F = unwrapIR<Function>(IR))
+      M = const_cast<Module *>(F->getParent());
+    else if (const auto *C = unwrapIR<LazyCallGraph::SCC>(IR)) {
+      if (C->begin() != C->end())
+        M = const_cast<Module *>(C->begin()->getFunction().getParent());
+    } else if (const auto *L = unwrapIR<Loop>(IR))
+      M = const_cast<Module *>(
+          L->getHeader()->getParent()->getParent());
+    if (!M)
+      return;
+    if (!ModulesWithSynthesizedLocs.insert(M).second)
+      return;
+    synthesizeMissingInstructionLocs(*M);
+  }
+
   void beforePass(StringRef PassID, Any IR) {
-    if (InitialCaptured || isIgnored(PassID) || !shouldPrintIR(IR))
+    if (isIgnored(PassID) || !shouldPrintIR(IR))
+      return;
+    ensureSyntheticLocs(IR);
+    if (InitialCaptured)
       return;
     InitialCaptured = true;
     writeIR(IR, 0, "initial", "<initial>", getIRName(IR),
