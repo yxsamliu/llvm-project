@@ -2947,6 +2947,10 @@ public:
   void printBasicBlock(const BasicBlock *BB);
   void printInstructionLine(const Instruction &I);
   void printInstruction(const Instruction &I);
+  /// SPIKE: structural-form-only print. Opcode + result type + operand refs,
+  /// no align/attrs/metadata/operand bundles/sync scope. Designed for hot
+  /// callers that record IR for change detection (IR tracker).
+  void printInstructionConcise(const Instruction &I);
   void printDbgMarker(const DbgMarker &DPI);
   void printDbgVariableRecord(const DbgVariableRecord &DVR);
   void printDbgLabelRecord(const DbgLabelRecord &DLR);
@@ -4883,6 +4887,96 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
   printInfoComment(I);
 }
 
+// SPIKE: concise-mode printer. Writes one instruction's structural form
+// (opcode + result-type + operand refs). Skips alignment, attribute
+// lists, metadata attachments, operand bundles, sync-scope, atomic
+// ordering, inrange GEP markers, fast-math flags, and `tail` markers.
+// Reuses writeOperand / TypePrinter / SlotTracker, so the textual form
+// is consistent with the canonical AsmWriter output minus decorations.
+void AssemblyWriter::printInstructionConcise(const Instruction &I) {
+  // "%name = " for instructions with a result.
+  if (!I.getType()->isVoidTy()) {
+    if (I.hasName())
+      printLLVMName(Out, &I);
+    else
+      Out << '%' << Machine.getLocalSlot(&I);
+    Out << " = ";
+  }
+
+  // Opcode.
+  Out << I.getOpcodeName();
+
+  // Predicate for cmp.
+  if (const auto *CI = dyn_cast<CmpInst>(&I))
+    Out << ' ' << CmpInst::getPredicateName(CI->getPredicate());
+
+  // For phi: type then incoming pairs.
+  if (const auto *PN = dyn_cast<PHINode>(&I)) {
+    Out << ' ';
+    TypePrinter.print(I.getType(), Out);
+    bool First = true;
+    for (unsigned Idx = 0, E = PN->getNumIncomingValues(); Idx != E; ++Idx) {
+      Out << (First ? ' ' : ',');
+      if (!First)
+        Out << ' ';
+      First = false;
+      Out << "[ ";
+      writeOperand(PN->getIncomingValue(Idx), /*PrintType=*/false);
+      Out << ", ";
+      writeOperand(PN->getIncomingBlock(Idx), /*PrintType=*/false);
+      Out << " ]";
+    }
+    return;
+  }
+
+  // For br / switch / ret: operands directly without a leading type.
+  if (isa<BranchInst>(I) || isa<SwitchInst>(I) || isa<ReturnInst>(I) ||
+      isa<UnreachableInst>(I) || isa<ResumeInst>(I)) {
+    if (I.getNumOperands()) {
+      Out << ' ';
+      for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
+        if (Idx)
+          Out << ", ";
+        writeOperand(I.getOperand(Idx), /*PrintType=*/false);
+      }
+    }
+    return;
+  }
+
+  // For alloca: print allocated type then optional array-size operand.
+  if (const auto *AI = dyn_cast<AllocaInst>(&I)) {
+    Out << ' ';
+    TypePrinter.print(AI->getAllocatedType(), Out);
+    if (!AI->isArrayAllocation()) {
+      // pass
+    } else {
+      Out << ", ";
+      writeOperand(AI->getArraySize(), /*PrintType=*/true);
+    }
+    return;
+  }
+
+  // Default: <type> <op0>, <op1>, ...
+  if (!I.getType()->isVoidTy()) {
+    Out << ' ';
+    TypePrinter.print(I.getType(), Out);
+  }
+  if (I.getNumOperands()) {
+    Out << ' ';
+    for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
+      if (Idx)
+        Out << ", ";
+      // For call/invoke, the called value's type is needed.
+      bool PrintType =
+          (isa<CallBase>(I) && Idx == I.getNumOperands() - 1) ||
+          isa<GetElementPtrInst>(I) ||
+          isa<StoreInst>(I) ||
+          isa<LoadInst>(I);
+      writeOperand(I.getOperand(Idx), PrintType);
+    }
+  }
+}
+
 void AssemblyWriter::printDbgMarker(const DbgMarker &Marker) {
   // There's no formal representation of a DbgMarker -- print purely as a
   // debugging aid.
@@ -5344,10 +5438,7 @@ FunctionInstructionPrinter::~FunctionInstructionPrinter() = default;
 void FunctionInstructionPrinter::printInstruction(raw_ostream &OS,
                                                   const Instruction &I) {
   P->Buf.clear();
-  bool Saved = IRTrackerSkipInstMetadata;
-  IRTrackerSkipInstMetadata = true;
-  P->W->printInstruction(I);
-  IRTrackerSkipInstMetadata = Saved;
+  P->W->printInstructionConcise(I);
   P->FOS.flush();
   OS.write(P->Buf.data(), P->Buf.size());
 }
