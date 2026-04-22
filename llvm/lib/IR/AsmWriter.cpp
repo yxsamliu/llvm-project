@@ -57,6 +57,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
@@ -2875,6 +2876,11 @@ static void writeAsOperandInternal(raw_ostream &Out, const Metadata *MD,
   writeAsOperandInternal(Out, V->getValue(), WriterCtx, /*PrintType=*/true);
 }
 
+// SPIKE forward decl: defined after the AssemblyWriter / Value::print block.
+namespace llvm {
+bool isIRTrackerSkippingInstMetadata();
+} // namespace llvm
+
 namespace {
 
 class AssemblyWriter {
@@ -4864,10 +4870,14 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     printShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
   }
 
-  // Print Metadata info.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
-  I.getAllMetadata(InstMD);
-  printMetadataAttachments(InstMD, ", ");
+  // SPIKE: external thread-local set by FunctionInstructionPrinter during
+  // its calls. When true, skip both the metadata enumeration walk and
+  // printing.
+  if (!llvm::isIRTrackerSkippingInstMetadata()) {
+    SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
+    I.getAllMetadata(InstMD);
+    printMetadataAttachments(InstMD, ", ");
+  }
 
   // Print a nice comment.
   printInfoComment(I);
@@ -5294,6 +5304,52 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   } else {
     llvm_unreachable("Unknown value to print out!");
   }
+}
+
+//===----------------------------------------------------------------------===//
+// FunctionInstructionPrinter — SPIKE for measurement.
+//===----------------------------------------------------------------------===//
+
+// Thread-local guard inspected by AssemblyWriter::printInstruction (in the
+// anonymous namespace above). The accessor is in namespace llvm so the
+// anonymous-namespace code can name it.
+namespace llvm {
+static thread_local bool IRTrackerSkipInstMetadata = false;
+bool isIRTrackerSkippingInstMetadata() { return IRTrackerSkipInstMetadata; }
+} // namespace llvm
+
+struct FunctionInstructionPrinter::Impl {
+  SmallString<256> Buf;
+  raw_svector_ostream RawOS;
+  formatted_raw_ostream FOS;
+  std::unique_ptr<AssemblyWriter> W;
+  Impl() : RawOS(Buf), FOS(RawOS) {}
+};
+
+FunctionInstructionPrinter::FunctionInstructionPrinter(ModuleSlotTracker &MST,
+                                                       const Function &F)
+    : P(std::make_unique<Impl>()) {
+  MST.incorporateFunction(F);
+  SlotTracker *SlotTable = MST.getMachine();
+  static SlotTracker EmptySlotTable(static_cast<const Module *>(nullptr));
+  if (!SlotTable)
+    SlotTable = &EmptySlotTable;
+  P->W = std::make_unique<AssemblyWriter>(P->FOS, *SlotTable, F.getParent(),
+                                          /*AAW=*/nullptr,
+                                          /*IsForDebug=*/false);
+}
+
+FunctionInstructionPrinter::~FunctionInstructionPrinter() = default;
+
+void FunctionInstructionPrinter::printInstruction(raw_ostream &OS,
+                                                  const Instruction &I) {
+  P->Buf.clear();
+  bool Saved = IRTrackerSkipInstMetadata;
+  IRTrackerSkipInstMetadata = true;
+  P->W->printInstruction(I);
+  IRTrackerSkipInstMetadata = Saved;
+  P->FOS.flush();
+  OS.write(P->Buf.data(), P->Buf.size());
 }
 
 /// Print without a type, skipping the TypePrinting object.

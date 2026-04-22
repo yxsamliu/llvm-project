@@ -27,6 +27,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/IR/PassManager.h"
@@ -550,7 +551,7 @@ class IRTrackerJSONState {
 
     StringRef FunctionName = F.getName();
     ModuleSlotTracker MST(F.getParent());
-    MST.incorporateFunction(F);
+    FunctionInstructionPrinter FIP(MST, F);
     SmallString<256> InstBuf;
     BlkIdx = 0;
     unsigned ChangedBlockPos = 0;
@@ -637,7 +638,7 @@ class IRTrackerJSONState {
           if (InstChanged) {
             InstBuf.clear();
             raw_svector_ostream IOS(InstBuf);
-            I.print(IOS, MST);
+            FIP.printInstruction(IOS, I);
             stripIRTrackerDebugMetadata(InstBuf);
 
             if (CurID != 0)
