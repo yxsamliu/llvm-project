@@ -81,8 +81,8 @@ std::string doSystemDiff(StringRef Before, StringRef After,
                          StringRef OldLineFormat, StringRef NewLineFormat,
                          StringRef UnchangedLineFormat);
 
-/// Non-empty when \c -ir-tracker-json-output is set.
-StringRef getIRTrackerJSONOutputPath();
+// getIRTrackerJSONOutputPath moved to lib/Passes/IRTrackerInstrumentation.cpp;
+// the option is no longer reachable from outside that TU.
 
 } // namespace llvm
 

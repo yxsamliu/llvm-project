@@ -25,6 +25,7 @@
 #include "llvm/IR/DroppedVariableStatsIR.h"
 #include "llvm/IR/OptBisect.h"
 #include "llvm/IR/PassTimingInfo.h"
+#include "llvm/Passes/IRTrackerInstrumentation.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
@@ -145,12 +146,7 @@ private:
   int Indent = 0;
 };
 
-/// IR tracker instrumentation that records instructions with debug locations
-/// after each pass into JSON Lines when \c -ir-tracker-json-output is set.
-class IRTrackerInstrumentation {
-public:
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
-};
+// IRTrackerInstrumentation moved to llvm/Passes/IRTrackerInstrumentation.h.
 
 class PreservedCFGCheckerInstrumentation {
 public:
