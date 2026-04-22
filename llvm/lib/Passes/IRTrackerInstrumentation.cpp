@@ -209,11 +209,18 @@ class IRTrackerJSONState {
   }
 
   void writeTrackerRecord(unsigned ID, const DILocation *Loc) {
-    if (!Loc || ID == 0 || !EmittedTrackerMetadata.insert(ID).second)
+    if (ID == 0 || !EmittedTrackerMetadata.insert(ID).second)
       return;
-    std::string FilePath = getIRTrackerFilePath(Loc);
-    *OS << "T\t" << ID << '\t' << FilePath << '\t' << Loc->getLine() << '\t'
-        << Loc->getColumn() << '\n';
+    // Always emit a T record for every tracker ID, including synthesized
+    // temp IDs for zero-location instructions (phi, many LCSSA-inserted
+    // ops, etc.). Placeholder ``<synthetic>`` / line 0 / col 0 keeps the
+    // DB row count aligned with the I rows so downstream tooling does not
+    // silently drop those instructions.
+    std::string FilePath = Loc ? getIRTrackerFilePath(Loc) : "<synthetic>";
+    unsigned LineN = Loc ? Loc->getLine() : 0;
+    unsigned ColN = Loc ? Loc->getColumn() : 0;
+    *OS << "T\t" << ID << '\t' << FilePath << '\t' << LineN << '\t'
+        << ColN << '\n';
   }
 
   unsigned getOrCreateTrackerID(const DILocation *Loc) {
