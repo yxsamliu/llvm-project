@@ -211,9 +211,7 @@ static void synthesizeMissingInstructionLocs(Module &M) {
 }
 
 //===----------------------------------------------------------------------===//
-// Recorder implementation (cost-improvement port: hash-skip C1..C5, loc
-// identity, lightweight printer, see scripts_shared .cursor/skills/
-// ir-tracker SKILL.md for the design + measurement story).
+// Recorder implementation.
 //===----------------------------------------------------------------------===//
 
 static std::string getIRTrackerFilePath(const DILocation *Loc) {
@@ -232,6 +230,35 @@ static std::string getIRTrackerFilePath(const DILocation *Loc) {
   return std::string(Path);
 }
 
+static stable_hash hashTrackerIdentity(const DILocation *Loc);
+
+static stable_hash hashValueIdentity(const Value &V) {
+  if (const auto *Arg = dyn_cast<Argument>(&V))
+    return stable_hash_combine(static_cast<stable_hash>(1), Arg->getArgNo());
+  if (const auto *GV = dyn_cast<GlobalValue>(&V))
+    return stable_hash_combine(static_cast<stable_hash>(2),
+                               static_cast<stable_hash>(hash_value(GV->getName())));
+  if (const auto *BB = dyn_cast<BasicBlock>(&V)) {
+    if (BB->hasName())
+      return stable_hash_combine(static_cast<stable_hash>(3),
+                                 static_cast<stable_hash>(hash_value(BB->getName())));
+    return 0;
+  }
+  if (const auto *I = dyn_cast<Instruction>(&V)) {
+    if (const DILocation *Loc = I->getDebugLoc() ? I->getDebugLoc().get() : nullptr)
+      return stable_hash_combine(static_cast<stable_hash>(4),
+                                 hashTrackerIdentity(Loc));
+    if (I->hasName())
+      return stable_hash_combine(static_cast<stable_hash>(5),
+                                 static_cast<stable_hash>(hash_value(I->getName())));
+    return 0;
+  }
+  if (V.hasName())
+    return stable_hash_combine(static_cast<stable_hash>(6),
+                               static_cast<stable_hash>(hash_value(V.getName())));
+  return 0;
+}
+
 /// Compute a stable structural fingerprint of an instruction.
 ///
 /// Used by the per-instruction change-detection step: at each pass, the
@@ -240,99 +267,46 @@ static std::string getIRTrackerFilePath(const DILocation *Loc) {
 /// not change" → skip emission.
 ///
 /// Captures: opcode, result type, operand count, per-operand type, the
-/// per-operand kind bits (is-Constant, is-Argument), the commutative flag,
+/// per-operand kind bits (is-Constant, is-Argument), a stable identity for
+/// non-constant operands when one is available (argument number, global name,
+/// basic-block name, instruction source-point identity), the commutative flag,
 /// the CmpInst predicate, and the value of any ConstantInt operand.
 ///
-/// Deliberately does NOT capture SSA value identity. Two instructions
-/// whose only difference is which non-constant SSA value they reference
-/// will hash equally:
+/// The important property is that operand rewrites which change the rendered
+/// instruction text should usually perturb the hash as well:
 ///
 ///   %a = add i32 %x, %y         hash X
-///   %b = add i32 %x, %z         hash X      (same -- only operand name)
+///   %b = add i32 %x, %z         hash Y      (different source-point identity)
 ///   %c = add i32 %x, 1          hash Y      (kind bit changed)
 ///   %d = add i32 %x, 2          hash Z      (ConstantInt value changed)
 ///   %e = sub i32 %x, %y         hash W      (opcode changed)
 ///   %f = icmp eq i32 %x, %y     hash V
 ///   %g = icmp ne i32 %x, %y     hash U      (predicate changed)
 ///
-/// The ignored cases are intentional. Real LLVM passes rename SSA values
-/// constantly (SROA splitting allocas, JumpThreading cloning blocks,
-/// inliner inlining callees). Treating SSA renames as "changes" would
-/// flood the recorder with rename-only churn and balloon output 10-100x.
-/// The trade-off: a pass that swaps an operand for a different
-/// same-typed SSA value (e.g. GVN replacing a redundant computation
-/// with its CSE-equivalent) is reported as "unchanged" and the recorded
-/// text becomes stale relative to live IR. TODO: optionally fold each
-/// operand's tracker ID into the hash so GVN-style rewrites are caught.
-///
-/// Also missed: ConstantFP value changes, ConstantExpr changes,
-/// attached metadata changes. The first two are seldom relevant in
-/// optimized IR; metadata tracking is opt-in via separate flags
+/// Still missed: zero-loc unnamed instruction operands that have no stable
+/// identity source, ConstantFP value changes, ConstantExpr changes, and
+/// attached metadata changes. Metadata tracking is opt-in via separate flags
 /// (deferred to a follow-up PR).
 static stable_hash hashInstruction(const Instruction &I) {
   stable_hash H = stable_hash_combine(I.getOpcode(), I.getType()->getTypeID(),
                                       I.getNumOperands());
   for (const Use &U : I.operands()) {
     Value *V = U.get();
-    H = stable_hash_combine(H, V->getType()->getTypeID(),
-                            isa<Constant>(V) ? 1 : 0, isa<Argument>(V) ? 1 : 0);
+    H = stable_hash_combine(
+        H, stable_hash_combine(
+               static_cast<stable_hash>(V->getType()->getTypeID()),
+               static_cast<stable_hash>(isa<Constant>(V) ? 1 : 0),
+               static_cast<stable_hash>(isa<Argument>(V) ? 1 : 0),
+               hashValueIdentity(*V)));
     if (auto *C = dyn_cast<ConstantInt>(V))
-      H = stable_hash_combine(H, static_cast<stable_hash>(hash_value(C->getValue())));
+      H = stable_hash_combine(H,
+                              static_cast<stable_hash>(hash_value(C->getValue())));
   }
   if (I.isCommutative())
     H = stable_hash_combine(H, 1);
   if (auto *CI = dyn_cast<CmpInst>(&I))
     H = stable_hash_combine(H, CI->getPredicate());
   return H;
-}
-
-/// Compute a cheap fingerprint of a basic block.
-///
-/// Used as the first stage of a two-stage change-detection skip for
-/// each block. If the fingerprint matches the previous pass's, the
-/// block is treated as unchanged and the per-instruction hash walk is
-/// skipped entirely (no rows emitted for the block). If the fingerprint
-/// differs, we fall back to a full per-instruction hash to find which
-/// instructions actually changed.
-///
-/// Combines: instruction count, hash of the first instruction, hash of
-/// the terminator. Three numbers vs walking every instruction.
-///
-/// Example. A block starts as:
-///
-///   entry:
-///     %a = add i32 %x, 1
-///     %b = mul i32 %a, 2
-///     ret i32 %b
-///
-/// Fingerprint = combine(3, hash(%a = add ...), hash(ret ...)).
-///
-/// What survives a fingerprint match (i.e. is missed by the filter):
-///
-///   * Reordering middle instructions while keeping count, first, and
-///     terminator the same.
-///   * Rewriting a middle instruction without changing count or the
-///     first/last (e.g., InstCombine turning %b = mul i32 %a, 4 into
-///     %b = shl i32 %a, 2).
-///   * Renaming an SSA value used by middle instructions (already
-///     filtered by hashInstruction; the block fingerprint just inherits
-///     that).
-///
-/// The miss class is narrow in practice on default<O3>: most passes
-/// either touch a terminator or change the instruction count. Pure
-/// middle-only structural rewrites that preserve count/first/last
-/// happen but are rare, and when they do happen the recorder
-/// under-reports rather than over-reports. The trade-off keeps the
-/// per-block check at constant cost regardless of block size.
-///
-/// Empty blocks return 0 by convention.
-static stable_hash hashBlockFingerprint(const BasicBlock &BB) {
-  if (BB.empty())
-    return 0;
-  const Instruction &First = BB.front();
-  const Instruction &Last = BB.back();
-  return stable_hash_combine(static_cast<stable_hash>(BB.size()),
-                             hashInstruction(First), hashInstruction(Last));
 }
 
 /// Compute the hash that identifies "this source point" for tracker-ID
@@ -344,22 +318,29 @@ static stable_hash hashBlockFingerprint(const BasicBlock &BB) {
 /// instruction row. Two DILocations should map to the same ID iff
 /// they refer to the same source point.
 ///
-/// Combines: line, column, and the declared line of the enclosing
-/// DISubprogram. The subprogram's declared line disambiguates
-/// instructions at the same (line, col) coming from different
-/// functions in the same file:
+/// Combines: source file, line, column, and the declared line of the
+/// enclosing DISubprogram. The file participates in the key because
+/// mixed-file modules can legitimately contain the same (line, col,
+/// scope-line) tuple in multiple translation units; without file
+/// identity those instructions alias to the same tracker ID and share
+/// change-detection state incorrectly. The subprogram's declared line
+/// still disambiguates instructions at the same (line, col) coming
+/// from different functions in the same file:
 ///
 ///   file.c:1 in function foo (foo is declared at line 1)
-///     hash = combine(1, 0, 1)
+///     hash = combine("file.c", 1, 0, 1)
 ///   file.c:1 in function bar (bar is declared at line 3)
-///     hash = combine(1, 0, 3)        // distinct
+///     hash = combine("file.c", 1, 0, 3)        // distinct
+///   other.c:1 in function foo (foo is declared at line 1)
+///     hash = combine("other.c", 1, 0, 1)       // distinct
 ///
 /// Without the scope-line component, inlined or template-instantiated
 /// instructions at the same (line, col) would alias and be treated as
 /// the same source point. Including the DISubprogram pointer directly
 /// would make the hash run-unstable (pointer addresses are not stable
-/// across LLVM invocations); using the subprogram's declared line
-/// gives us the disambiguation while keeping the hash deterministic.
+/// across LLVM invocations); using the file path plus the subprogram's
+/// declared line gives us the needed disambiguation while keeping the
+/// hash deterministic.
 ///
 /// Returns 0 for a null DILocation. The recorder uses 0 as a sentinel
 /// "no real source point" and routes such instructions through a
@@ -367,10 +348,14 @@ static stable_hash hashBlockFingerprint(const BasicBlock &BB) {
 static stable_hash hashTrackerIdentity(const DILocation *Loc) {
   if (!Loc)
     return 0;
+  stable_hash FileKey =
+      stable_hash_combine(static_cast<stable_hash>(hash_value(Loc->getDirectory())),
+                          static_cast<stable_hash>(hash_value(Loc->getFilename())));
   unsigned ScopeLine = 0;
   if (DISubprogram *SP = Loc->getScope()->getSubprogram())
     ScopeLine = SP->getLine();
-  return stable_hash_combine(Loc->getLine(), Loc->getColumn(), ScopeLine);
+  return stable_hash_combine(FileKey, Loc->getLine(), Loc->getColumn(),
+                             ScopeLine);
 }
 
 static void printAPIntValue(raw_ostream &OS, const APInt &V) {
@@ -412,20 +397,14 @@ class IRTrackerRecorder {
   /// walk at most once per recorder lifetime.
   DenseSet<const Module *> ModulesWithSynthesizedLocs;
 
-  /// Per-function combined structural hash, used as the C1 cheap skip:
-  /// "did anything in this function change at all?" Equal value across
-  /// passes means we can skip the per-block walk for the function.
+  /// Per-function combined structural hash. Equal value across passes
+  /// means the function produced the same per-block instruction hashes,
+  /// so the detailed emission walk can be skipped.
   DenseMap<const Function *, stable_hash> FunctionHashes;
 
-  /// Per-function vector of cheap per-block fingerprints (chunk 6(d)).
-  /// Indexed positionally by the function's basic-block iteration order.
-  /// Used as the C5 first-stage skip: equal fingerprint means the block
-  /// almost certainly did not change.
-  DenseMap<const Function *, SmallVector<stable_hash>> BlockFingerprints;
-
   /// Per-function vector of full per-block hashes. Indexed positionally
-  /// by basic-block order. Computed only for blocks whose fingerprint
-  /// changed; used as the C5 second-stage check.
+  /// by basic-block order. Recomputed every pass so function-level
+  /// equality has no false negatives at block granularity.
   DenseMap<const Function *, SmallVector<stable_hash>> BlockHashes;
 
   /// Per-function, per-block bool flag: "does this block contain any
@@ -560,27 +539,19 @@ class IRTrackerRecorder {
   ///   instructions whose structural hash changed since the last
   ///   recorded pass.
   ///
-  /// The implementation is staged for cost. Each stage filters out work
-  /// the next stage would otherwise do:
+  /// The implementation is staged so that cheap equality checks can skip
+  /// the more expensive detailed emission work:
   ///
-  ///   1. Per-block fingerprint (hashBlockFingerprint). For blocks whose
-  ///      fingerprint matches the previous pass, reuse the previously-
-  ///      computed full block hash; do not iterate the block's
-  ///      instructions at all.
-  ///   2. Function-level hash skip (C1). If the combined function hash
+  ///   1. Recompute one structural hash per block from the current IR.
+  ///      This is the conservative step that guarantees no false
+  ///      negatives at block granularity.
+  ///   2. Function-level hash skip. If the combined function hash
   ///      matches the previous pass's, return without emitting anything.
-  ///   3. Per-block changed-or-not list (ChangedBlocks). Blocks whose
-  ///      fingerprint matched are added if their full hash also matched
-  ///      and no zero-loc instructions exist; otherwise they enter the
-  ///      detailed emission loop.
-  ///   4. Per-instruction hash skip (C2/C3, in chunk 6(f-iii) below). For
+  ///   3. Per-block changed-or-not list (ChangedBlocks). Only blocks whose
+  ///      full hash changed enter the detailed emission loop.
+  ///   4. Per-instruction hash skip. For
   ///      each changed block, emit an I row only for instructions whose
   ///      structural hash differs from TrackerIDToPrevHash.
-  ///
-  /// On medium.ll under default<O3>, stages 1+2 filter out roughly 95%
-  /// of per-(pass, block) work; stage 4 filters out roughly 95% of the
-  /// remaining instructions; net emission is about 3% of all (pass,
-  /// instruction) pairs.
   ///
   /// Example. Pipeline with three passes A, B, C on a function with two
   /// blocks bb0, bb1, where pass B rewrites only bb1:
@@ -588,45 +559,33 @@ class IRTrackerRecorder {
   ///   pass A (initial, SkipUnchanged=false):
   ///     emits I rows for every instruction in bb0 and bb1.
   ///   pass B (after, SkipUnchanged=true):
-  ///     bb0 fingerprint match -> skipped.
-  ///     bb1 fingerprint differs -> walked, changed instructions emitted.
+  ///     bb0 full block hash matches -> skipped.
+  ///     bb1 full block hash differs -> walked, changed instructions emitted.
   ///   pass C (after, SkipUnchanged=true):
-  ///     both fingerprints match -> function-level FuncH matches ->
+  ///     both block hashes match -> function-level FuncH matches ->
   ///     return immediately. Zero rows.
   void writeInstructionsInFunction(const Function &F, bool SkipUnchanged) {
     if (F.isDeclaration() || !isFunctionInPrintList(F.getName()))
       return;
 
     auto &PrevBlkH = BlockHashes[&F];
-    auto &PrevBlkFP = BlockFingerprints[&F];
     auto &PrevBlkHasZeroIDs = BlockHasZeroIDs[&F];
     auto &PrevInstH = BlockInstHashes[&F];
     auto &PrevTempIDs = BlockTempIDs[&F];
     SmallVector<stable_hash> NewBlkH;
-    SmallVector<stable_hash> NewBlkFP;
     SmallVector<bool> NewBlkHasZeroIDs;
     SmallVector<unsigned> ChangedBlocks;
     stable_hash FuncH = 0;
 
     unsigned BlkIdx = 0;
     for (const BasicBlock &BB : F) {
-      stable_hash BlkFP = hashBlockFingerprint(BB);
-      NewBlkFP.push_back(BlkFP);
       stable_hash BlkH = 0;
       bool HasZeroID = false;
-      bool FingerprintUnchanged = SkipUnchanged && BlkIdx < PrevBlkFP.size() &&
-                                  PrevBlkFP[BlkIdx] == BlkFP;
-      if (FingerprintUnchanged && BlkIdx < PrevBlkH.size()) {
-        BlkH = PrevBlkH[BlkIdx];
-        if (BlkIdx < PrevBlkHasZeroIDs.size())
-          HasZeroID = PrevBlkHasZeroIDs[BlkIdx];
-      } else {
-        for (const Instruction &I : BB) {
-          stable_hash H = hashInstruction(I);
-          BlkH = stable_hash_combine(BlkH, H);
-          if (!I.getDebugLoc())
-            HasZeroID = true;
-        }
+      for (const Instruction &I : BB) {
+        stable_hash H = hashInstruction(I);
+        BlkH = stable_hash_combine(BlkH, H);
+        if (!I.getDebugLoc())
+          HasZeroID = true;
       }
       NewBlkHasZeroIDs.push_back(HasZeroID);
       NewBlkH.push_back(BlkH);
@@ -648,7 +607,6 @@ class IRTrackerRecorder {
     }
 
     if (ChangedBlocks.empty()) {
-      PrevBlkFP = std::move(NewBlkFP);
       PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
       PrevBlkH = std::move(NewBlkH);
       return;
@@ -714,8 +672,7 @@ class IRTrackerRecorder {
     ///
     /// Stored as ``std::function`` rather than ``auto`` so
     /// ``printInstructionText`` below can name its type when it
-    /// captures it. The per-call indirection cost is negligible
-    /// (~5 ns) given the recorder emits ~3% of instructions.
+    /// captures it.
     std::function<void(raw_ostream &, const Value *)> writeValueRef =
         [&](raw_ostream &OS, const Value *V) {
           if (auto *CI = dyn_cast<ConstantInt>(V)) {
@@ -765,8 +722,7 @@ class IRTrackerRecorder {
     /// attached metadata, sync scope, atomic ordering, GEP inrange
     /// markers, fast-math flags, and ``tail`` markers -- the recorder
     /// records structural shape, not full LLVM IR text. The omissions
-    /// are what make the lightweight printer ~30x faster per call than
-    /// Instruction::print on this workload.
+    /// are what keep the emitted text compact and inexpensive to produce.
     ///
     /// CurID is the current instruction's tracker ID; passed in so
     /// printInstructionText can put ``%t<CurID>`` as the result name
@@ -1006,12 +962,11 @@ class IRTrackerRecorder {
       }
       ++BlkIdx;
     }
-    // Per-function writeback. PrevBlkFP / PrevBlkH / PrevBlkHasZeroIDs
+    // Per-function writeback. PrevBlkH / PrevBlkHasZeroIDs
     // are references into the per-function DenseMaps grabbed at the top
-    // of writeInstructionsInFunction (chunk 6(f-i)); moving into them
+    // of writeInstructionsInFunction; moving into them
     // mutates the maps directly, so the next pass on this function sees
     // the fresh state.
-    PrevBlkFP = std::move(NewBlkFP);
     PrevBlkHasZeroIDs = std::move(NewBlkHasZeroIDs);
     PrevBlkH = std::move(NewBlkH);
   }
@@ -1025,9 +980,8 @@ class IRTrackerRecorder {
   /// We unwrap to whichever one applies and walk it accordingly.
   ///
   /// Loops are recorded at function granularity rather than at loop
-  /// granularity because writeInstructionsInFunction's per-block change-
-  /// detection state is keyed on the function. The function-level skip
-  /// (C1) means non-loop blocks contribute almost nothing to wall time.
+  /// granularity because writeInstructionsInFunction's change-detection
+  /// state is keyed on the function.
   ///
   /// Example. Suppose the pipeline contains a Module pass MP and a
   /// Function pass FP, and the module has functions foo, bar, baz:
@@ -1120,7 +1074,6 @@ public:
       return;
     FunctionHashes.clear();
     BlockHashes.clear();
-    BlockFingerprints.clear();
     BlockHasZeroIDs.clear();
     BlockInstHashes.clear();
     BlockTempIDs.clear();
