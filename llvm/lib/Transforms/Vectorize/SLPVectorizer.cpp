@@ -26434,6 +26434,71 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
   Stores.clear();
   GEPs.clear();
 
+  SmallVector<StoreInst *> StoresToErase;
+  auto CollectBuildVector = [](Value *V, SmallVectorImpl<Value *> &Elts) {
+    auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
+    if (!VecTy)
+      return false;
+    Elts.assign(VecTy->getNumElements(), nullptr);
+    Value *Cur = V;
+    while (auto *IE = dyn_cast<InsertElementInst>(Cur)) {
+      auto *Idx = dyn_cast<ConstantInt>(IE->getOperand(2));
+      if (!Idx || Idx->getValue().uge(Elts.size()))
+        return false;
+      Elts[Idx->getZExtValue()] = IE->getOperand(1);
+      Cur = IE->getOperand(0);
+    }
+    if (!isa<PoisonValue, UndefValue>(Cur))
+      return false;
+    return all_of(Elts, [](Value *Elt) { return Elt != nullptr; });
+  };
+
+  for (Instruction &I : make_early_inc_range(*BB)) {
+    auto *SI = dyn_cast<StoreInst>(&I);
+    if (!SI || !SI->isSimple())
+      continue;
+
+    SmallVector<Value *, 16> BuildVectorOpds;
+    if (!CollectBuildVector(SI->getValueOperand(), BuildVectorOpds))
+      continue;
+
+    Type *EltTy = BuildVectorOpds.front()->getType();
+    Value *UnderlyingObject = getUnderlyingObject(SI->getPointerOperand());
+    bool HasScalarBefore = false;
+    bool HasScalarAfter = false;
+    for (Instruction &J : *BB) {
+      auto *OtherSI = dyn_cast<StoreInst>(&J);
+      if (!OtherSI || OtherSI == SI || !OtherSI->isSimple() ||
+          OtherSI->getValueOperand()->getType() != EltTy ||
+          getUnderlyingObject(OtherSI->getPointerOperand()) != UnderlyingObject)
+        continue;
+
+      std::optional<int64_t> Diff =
+          getPointersDiff(EltTy, SI->getPointerOperand(), EltTy,
+                          OtherSI->getPointerOperand(), *DL, *SE,
+                          /*StrictCheck=*/true);
+      if (!Diff)
+        continue;
+      HasScalarBefore |= *Diff < 0;
+      HasScalarAfter |= *Diff >= static_cast<int64_t>(BuildVectorOpds.size());
+    }
+    if (!HasScalarBefore || !HasScalarAfter)
+      continue;
+
+    IRBuilder<> Builder(SI);
+    uint64_t EltSize = DL->getTypeStoreSize(EltTy).getFixedValue();
+    Type *I8Ty = Type::getInt8Ty(SI->getContext());
+    for (auto [Idx, V] : enumerate(BuildVectorOpds)) {
+      Value *Ptr = Builder.CreateConstGEP1_64(I8Ty, SI->getPointerOperand(),
+                                              Idx * EltSize);
+      Builder.CreateAlignedStore(
+          V, Ptr, commonAlignment(SI->getAlign(), Idx * EltSize));
+    }
+    StoresToErase.push_back(SI);
+  }
+  for (StoreInst *SI : StoresToErase)
+    SI->eraseFromParent();
+
   // Visit the store and getelementptr instructions in BB and organize them in
   // Stores and GEPs according to the underlying objects of their pointer
   // operands.
