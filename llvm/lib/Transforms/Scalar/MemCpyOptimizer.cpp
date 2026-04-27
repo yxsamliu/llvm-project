@@ -782,6 +782,11 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // byte at a time like "0" or "-1" or any width, as well as things like
   // 0xA0A0A0A0 and 0.0.
   Value *V = SI->getOperand(0);
+  // Be conservative with partially undef/poison aggregates. They are
+  // bytewise-compatible in the abstract, but promoting them to memset can
+  // widen the write beyond the bytes that are explicitly initialized.
+  if (auto *C = dyn_cast<Constant>(V); C && C->containsUndefOrPoisonElement())
+    return false;
   Value *ByteVal = isBytewiseValue(V, DL);
   if (!ByteVal)
     return false;
