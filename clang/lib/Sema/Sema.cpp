@@ -1941,8 +1941,11 @@ public:
   // are known when producing call chain notes.
   llvm::SetVector<CanonicalDeclPtr<const FunctionDecl>> FnsToEmit;
 
-  // Emission state of the root node of the current use graph.
-  bool ShouldEmitRootNode;
+  // Whether to walk the root function and whether to emit deferred diagnostics
+  // from the root itself. Some roots are useful for discovering the call graph
+  // but are not themselves emitted on the current compilation side.
+  bool ShouldWalkRootFunction;
+  bool ShouldEmitRootDiags;
 
   // Current OpenMP device context level. It is initialized to 0 and each
   // entering of device context increases it by 1 and each exit decreases
@@ -1950,7 +1953,8 @@ public:
   unsigned InOMPDeviceContext;
 
   DeferredDiagnosticsEmitter(Sema &S)
-      : Inherited(S), ShouldEmitRootNode(false), InOMPDeviceContext(0) {}
+      : Inherited(S), ShouldWalkRootFunction(false), ShouldEmitRootDiags(false),
+        InOMPDeviceContext(0) {}
 
   bool shouldVisitDiscardedStmt() const { return false; }
 
@@ -2028,12 +2032,12 @@ public:
   void checkFunc(SourceLocation Loc, FunctionDecl *FD) {
     auto &Done = DoneMap[InOMPDeviceContext > 0 ? 1 : 0];
     FunctionDecl *Caller = UsePath.empty() ? nullptr : UsePath.back();
-    if ((!ShouldEmitRootNode && !S.getLangOpts().OpenMP && !Caller) ||
+    if ((!ShouldWalkRootFunction && !S.getLangOpts().OpenMP && !Caller) ||
         S.shouldIgnoreInHostDeviceCheck(FD) || InUsePath.count(FD))
       return;
     // Finalize analysis of OpenMP-specific constructs.
     if (Caller && S.LangOpts.OpenMP && UsePath.size() == 1 &&
-        (ShouldEmitRootNode || InOMPDeviceContext))
+        (ShouldWalkRootFunction || InOMPDeviceContext))
       S.OpenMP().finalizeOpenMPDelayedAnalysis(Caller, FD, Loc);
     if (Caller) {
       auto &Callers = S.CUDA().DeviceKnownEmittedFns[FD];
@@ -2043,7 +2047,7 @@ public:
           }))
         Callers.push_back({Caller, Loc});
     }
-    if (ShouldEmitRootNode || InOMPDeviceContext)
+    if (ShouldEmitRootDiags || InOMPDeviceContext)
       FnsToEmit.insert(FD);
     // Do not revisit a function if the function body has been completely
     // visited before.
@@ -2062,8 +2066,13 @@ public:
 
   void checkRecordedDecl(Decl *D) {
     if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-      ShouldEmitRootNode = S.getEmissionStatus(FD, /*Final=*/true) ==
-                           Sema::FunctionEmissionStatus::Emitted;
+      Sema::FunctionEmissionStatus ES = S.getEmissionStatus(FD, /*Final=*/true);
+      ShouldEmitRootDiags = ES == Sema::FunctionEmissionStatus::Emitted;
+      ShouldWalkRootFunction = ShouldEmitRootDiags;
+      if (!ShouldWalkRootFunction && S.getLangOpts().CUDAIsDevice &&
+          SemaCUDA::isImplicitHostDeviceFunction(FD) &&
+          !S.Context.CUDAImplicitHostDeviceFunUsedByDevice.count(FD))
+        ShouldWalkRootFunction = true;
       checkFunc(SourceLocation(), FD);
     } else
       checkVar(cast<VarDecl>(D));
