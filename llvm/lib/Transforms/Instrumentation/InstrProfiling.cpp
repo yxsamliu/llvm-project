@@ -2630,6 +2630,8 @@ void InstrLowerer::createProfileSectionSymbols() {
 void InstrLowerer::createHIPDeviceVariableRegistration() {
   if (isGPUProfTarget(M))
     return;
+  if (!M.getModuleFlag("hip"))
+    return;
 
   std::string CUID = getCUIDFromModule(M);
   if (CUID.empty())

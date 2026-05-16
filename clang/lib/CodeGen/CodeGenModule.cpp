@@ -1097,6 +1097,9 @@ void CodeGenModule::Release() {
     addCompilerUsedGlobal(GV);
   }
   if (LangOpts.HIP) {
+    // Mark the module as HIP so middle-end passes can branch on language
+    // without sniffing HIP-specific symbol names.
+    getModule().addModuleFlag(llvm::Module::Error, "hip", 1);
     // Emit a unique ID so that host and device binaries from the same
     // compilation unit can be associated.
     auto *GV = new llvm::GlobalVariable(
