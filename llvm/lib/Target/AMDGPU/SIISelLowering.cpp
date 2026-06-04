@@ -6320,10 +6320,21 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       ActiveBits.addReg(NewActiveBitsReg).addMBB(ComputeLoop);
 
       // Creating branching
-      unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
-      BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
-          .addReg(NewActiveBitsReg)
-          .addImm(0);
+      if (IsWave32) {
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+            .addReg(NewActiveBitsReg)
+            .addImm(0);
+      } else if (ST.hasScalarCompareEq64() &&
+                 TII->pseudoToMCOpcode(AMDGPU::S_CMP_LG_U64) != -1) {
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CMP_LG_U64))
+            .addReg(NewActiveBitsReg)
+            .addImm(0);
+      } else {
+        Register Tmp = MRI.createVirtualRegister(WaveMaskRegClass);
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_OR_B64), Tmp)
+            .addReg(NewActiveBitsReg)
+            .addReg(NewActiveBitsReg);
+      }
       BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
           .addMBB(ComputeLoop);
 
