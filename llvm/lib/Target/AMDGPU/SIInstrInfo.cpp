@@ -9985,6 +9985,9 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 }
 
 unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
+  if (MI.isMetaInstruction())
+    return 0;
+
   unsigned Opc = MI.getOpcode();
   const MCInstrDesc &Desc = getMCOpcodeFromPseudo(Opc);
   unsigned DescSize = Desc.getSize();
@@ -10061,9 +10064,6 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return getInlineAsmLength(AsmStr, MF->getTarget().getMCAsmInfo(), &ST);
   }
   default:
-    if (MI.isMetaInstruction())
-      return 0;
-
     // If D16 Pseudo inst, get correct MC code size
     const auto *D16Info = AMDGPU::getT16D16Helper(Opc);
     if (D16Info) {
