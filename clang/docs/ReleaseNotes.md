@@ -111,6 +111,10 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 ### Non-comprehensive list of changes in this release
 
+- Added `__builtin_pointee_address_space`, which returns the target address
+  space number for the pointee type of a pointer expression, the element type
+  of an array expression, or a known CUDA/HIP device object.
+
 ### New Compiler Flags
 
 ### Deprecated Compiler Flags

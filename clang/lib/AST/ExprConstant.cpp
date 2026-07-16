@@ -15926,6 +15926,79 @@ bool ArrayExprEvaluator::VisitDesignatedInitUpdateExpr(
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+static QualType getPointeeAddressSpaceType(ASTContext &Ctx, QualType ArgTy) {
+  return ArgTy->isArrayType() ? Ctx.getAsArrayType(ArgTy)->getElementType()
+                              : ArgTy->getPointeeType();
+}
+
+static bool isCUDADeviceAddressSpace(LangAS AS) {
+  return AS == LangAS::cuda_device || AS == LangAS::cuda_constant ||
+         AS == LangAS::cuda_shared;
+}
+
+static unsigned getTargetAddressSpaceForPointeeAddressSpace(ASTContext &Ctx,
+                                                            LangAS AS) {
+  if (Ctx.getLangOpts().CUDA && !Ctx.getLangOpts().CUDAIsDevice &&
+      isCUDADeviceAddressSpace(AS)) {
+    if (const TargetInfo *AuxTarget = Ctx.getAuxTargetInfo())
+      return AuxTarget->getTargetAddressSpace(AS);
+    return Ctx.getTargetAddressSpace(LangAS::Default);
+  }
+  return Ctx.getTargetAddressSpace(AS);
+}
+
+static std::optional<LangAS>
+getCUDAPointeeDeclAddressSpace(ASTContext &Ctx, const Expr *Arg,
+                               const CallStackFrame *Frame) {
+  if (!Ctx.getLangOpts().CUDA)
+    return std::nullopt;
+
+  Arg = Arg->IgnoreParens();
+  if (isa<ExplicitCastExpr>(Arg))
+    return std::nullopt;
+
+  const VarDecl *VD = nullptr;
+  const Expr *NoImpCasts = Arg->IgnoreImpCasts()->IgnoreParens();
+  if (const auto *UO = dyn_cast<UnaryOperator>(NoImpCasts);
+      UO && UO->getOpcode() == UO_AddrOf) {
+    if (const auto *DRE =
+            dyn_cast<DeclRefExpr>(UO->getSubExpr()->IgnoreParenImpCasts()))
+      VD = dyn_cast<VarDecl>(DRE->getDecl());
+  } else if (const auto *DRE = dyn_cast<DeclRefExpr>(NoImpCasts)) {
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl())) {
+      if (Frame && Frame->CallExpr && Frame->Caller) {
+        if (const auto *CE = dyn_cast<CallExpr>(Frame->CallExpr)) {
+          unsigned Index = PVD->getFunctionScopeIndex();
+          if (Index < CE->getNumArgs())
+            return getCUDAPointeeDeclAddressSpace(Ctx, CE->getArg(Index),
+                                                  Frame->Caller);
+        }
+      }
+    } else {
+      if (NoImpCasts->getType()->isArrayType())
+        VD = dyn_cast<VarDecl>(DRE->getDecl());
+    }
+  }
+
+  if (!VD)
+    return std::nullopt;
+  if (VD->hasAttr<CUDAConstantAttr>())
+    return LangAS::cuda_constant;
+  if (VD->hasAttr<CUDASharedAttr>())
+    return LangAS::cuda_shared;
+  // Host compilation does not attach the implicit CUDAConstantAttr that
+  // SemaCUDA adds in device compilation, but the device-side storage is still
+  // constant memory.
+  if (!Ctx.getLangOpts().CUDAIsDevice && VD->hasAttr<CUDADeviceAttr>() &&
+      (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
+      (VD->isConstexpr() || VD->getType().isConstQualified()))
+    return LangAS::cuda_constant;
+  if (VD->hasAttr<CUDADeviceAttr>())
+    return LangAS::cuda_device;
+  return std::nullopt;
+}
+
 class IntExprEvaluator
         : public ExprEvaluatorBase<IntExprEvaluator> {
   APValue &Result;
@@ -16992,6 +17065,16 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
 
     llvm_unreachable("unexpected EvalMode");
+  }
+
+  case Builtin::BI__builtin_pointee_address_space: {
+    QualType ArgTy = E->getArg(0)->getType();
+    LangAS AS =
+        getCUDAPointeeDeclAddressSpace(Info.Ctx, E->getArg(0), Info.CurrentCall)
+            .value_or(
+                getPointeeAddressSpaceType(Info.Ctx, ArgTy).getAddressSpace());
+    return Success(getTargetAddressSpaceForPointeeAddressSpace(Info.Ctx, AS),
+                   E);
   }
 
   case Builtin::BI__builtin_os_log_format_buffer_size: {

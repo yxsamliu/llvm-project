@@ -3202,6 +3202,43 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (BuiltinComplex(TheCall))
       return ExprError();
     break;
+  case Builtin::BI__builtin_pointee_address_space: {
+    if (checkArgCount(TheCall, 1))
+      return true;
+    Expr *Arg = TheCall->getArg(0);
+    if (!Arg->isTypeDependent() && !Arg->getType()->isPointerType() &&
+        !Arg->getType()->isArrayType()) {
+      Diag(Arg->getBeginLoc(),
+           diag::err_builtin_pointee_address_space_arg_not_pointer)
+          << Arg->getSourceRange();
+      return ExprError();
+    }
+    if (Context.getLangOpts().CUDA && !Context.getLangOpts().CUDAIsDevice &&
+        !Context.getAuxTargetInfo()) {
+      const Expr *PointeeArg = Arg->IgnoreParens();
+      if (!isa<ExplicitCastExpr>(PointeeArg)) {
+        const VarDecl *VD = nullptr;
+        const Expr *NoImpCasts = PointeeArg->IgnoreImpCasts()->IgnoreParens();
+        if (const auto *UO = dyn_cast<UnaryOperator>(NoImpCasts);
+            UO && UO->getOpcode() == UO_AddrOf) {
+          if (const auto *DRE = dyn_cast<DeclRefExpr>(
+                  UO->getSubExpr()->IgnoreParenImpCasts()))
+            VD = dyn_cast<VarDecl>(DRE->getDecl());
+        } else if (const auto *DRE = dyn_cast<DeclRefExpr>(NoImpCasts)) {
+          if (NoImpCasts->getType()->isArrayType())
+            VD = dyn_cast<VarDecl>(DRE->getDecl());
+        }
+        if (VD &&
+            (VD->hasAttr<CUDAConstantAttr>() || VD->hasAttr<CUDASharedAttr>() ||
+             VD->hasAttr<CUDADeviceAttr>()))
+          Diag(Arg->getBeginLoc(),
+               diag::warn_builtin_pointee_address_space_no_aux_target)
+              << Arg->getSourceRange();
+      }
+    }
+    TheCall->setType(Context.IntTy);
+    break;
+  }
   case Builtin::BI__builtin_classify_type:
   case Builtin::BI__builtin_constant_p: {
     if (checkArgCount(TheCall, 1))

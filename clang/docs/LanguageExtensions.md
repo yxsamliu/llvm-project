@@ -3983,6 +3983,82 @@ template<typename T> constexpr T *addressof(T &value) {
 }
 ```
 
+### `__builtin_pointee_address_space`
+
+`__builtin_pointee_address_space` returns the target address space number
+of the pointee type of a pointer expression, or the element type of an
+array expression.
+
+**Syntax**:
+
+```c++
+int __builtin_pointee_address_space(pointer-or-array)
+```
+
+The argument must have pointer or array type. For an array expression, the
+result is computed from the array element type. The argument is not evaluated
+and is not converted to `void *` before its type is inspected.
+
+The result is an integer constant expression. It is based on the address space
+that Clang can determine from the expression in the frontend. It does not use
+optimizer or interprocedural analysis to infer a more precise address space.
+
+For a pointer expression, the builtin normally returns the address space of the
+pointee type of the expression as written. This makes the result stable for
+ordinary pointers and for explicitly address-spaced pointer types. In CUDA/HIP
+compilation, Clang can also determine the address space of known `__device__`,
+`__shared__`, and `__constant__` objects. In host compilation, this requires
+auxiliary target information for the device target. If auxiliary target
+information is not available, Clang returns the default address space and emits
+a warning. This is useful because CUDA/HIP pointer types are source-level
+generic, so this information is not otherwise visible from a plain `T *` type.
+An explicit `__device__` `const` global or static data member that is promoted
+to constant memory is reported as the constant address space.
+
+Explicit user-written casts are respected. If a cast changes the pointer type
+seen by the builtin, the builtin reports the pointee address space of the cast
+type rather than looking through the cast to recover the original object.
+
+When the builtin is evaluated in a constant expression, Clang may look through a
+constexpr function parameter to the argument passed by the caller, as long as
+doing so does not look through an explicit user-written cast. This allows simple
+constexpr wrappers to preserve the address space of a known object.
+
+The builtin is a static query. It does not classify an arbitrary runtime pointer
+value. For a parameter such as `int *p`, if the pointee type is generic/default,
+the result is the target address space for the generic/default pointee type even
+if the runtime value of `p` later points into a more specific memory region.
+Runtime pointer-value classification should use target-specific runtime
+interfaces instead.
+
+**Example use**:
+
+```c++
+int *p;
+int __attribute__((address_space(3))) *p3;
+
+static_assert(__builtin_pointee_address_space(p) == 0);
+static_assert(__builtin_pointee_address_space(p3) == 3);
+```
+
+**CUDA/HIP example use**:
+
+```c++
+__device__ int dev;
+__constant__ int cst;
+__device__ const int dev_cst = 1;
+
+constexpr int pointee_as(int *p) {
+  return __builtin_pointee_address_space(p);
+}
+
+static_assert(__builtin_pointee_address_space(&dev) == 1);
+static_assert(__builtin_pointee_address_space(&cst) == 4);
+static_assert(__builtin_pointee_address_space(&dev_cst) == 4);
+static_assert(pointee_as(&cst) == 4);
+static_assert(pointee_as((int *)&cst) == 0);
+```
+
 ### `__builtin_function_start`
 
 `__builtin_function_start` returns the address of a function body.
