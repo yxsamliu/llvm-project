@@ -26,6 +26,7 @@
 #include "comgr-unpackage-command.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
+#include "clang/Basic/Diagnostic.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/DriverDiagnostic.h"
@@ -1198,6 +1199,114 @@ amd_comgr_status_t AMDGPUCompiler::removeTmpDirs() {
 #endif
 }
 
+// Clang's driver builds C++ standard library include paths under an
+// `include/c++` component for the normal libc++ and libstdc++ layouts.
+// Examples are `.../include/c++/v1` for libc++ and
+// `.../include/c++/<gcc-version>` for libstdc++. Clang's own resource
+// include directory uses a different layout, such as `.../lib/clang/N/include`,
+// so this is enough to distinguish C++ standard library include paths from
+// Clang builtin header paths.
+static bool isCxxStdlibIncludePath(StringRef Path) {
+  return Path.contains("/include/c++/") || Path.contains("\\include\\c++\\");
+}
+
+static bool isIncludePathFlag(StringRef Arg) {
+  return Arg == "-internal-isystem" || Arg == "-isystem" ||
+         Arg == "-idirafter" || Arg == "-cxx-isystem";
+}
+
+static bool getJoinedIncludePath(StringRef Arg, StringRef Prefix,
+                                 StringRef &Path) {
+  if (!Arg.starts_with(Prefix) || Arg.size() == Prefix.size())
+    return false;
+  Path = Arg.drop_front(Prefix.size());
+  return true;
+}
+
+bool AMDGPUCompiler::driverAddsCxxStdlibInclude(ArrayRef<const char *> Argv,
+                                                std::string *FoundPath) {
+  std::unique_ptr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs);
+  DiagnosticsEngine Diags(DiagID, *DiagOpts, new IgnoringDiagConsumer);
+  ProcessWarningOptions(Diags, *DiagOpts, *OverlayFS, /*ReportDiags=*/false);
+
+  Driver TheDriver((Twine(env::getLLVMPath()) + "/bin/clang").str(),
+                   llvm::sys::getDefaultTargetTriple(), Diags,
+                   "AMDGPU Code Object Manager", OverlayFS);
+  TheDriver.setCheckInputsExist(false);
+  TheDriver.setProbePrecompiled(false);
+
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Argv));
+  if (!C || C->containsError())
+    return false;
+
+  for (auto &Job : C->getJobs()) {
+    const llvm::opt::ArgStringList &Arguments = Job.getArguments();
+    for (size_t I = 0; I < Arguments.size(); ++I) {
+      StringRef Arg(Arguments[I] ? Arguments[I] : "");
+      StringRef Path;
+      if (isIncludePathFlag(Arg)) {
+        if (I + 1 >= Arguments.size())
+          continue;
+        Path = StringRef(Arguments[++I] ? Arguments[I] : "");
+      } else if (!getJoinedIncludePath(Arg, "-isystem", Path) &&
+                 !getJoinedIncludePath(Arg, "-idirafter", Path) &&
+                 !getJoinedIncludePath(Arg, "-cxx-isystem", Path) &&
+                 !getJoinedIncludePath(Arg, "-internal-isystem", Path)) {
+        continue;
+      }
+
+      if (isCxxStdlibIncludePath(Path)) {
+        if (FoundPath)
+          *FoundPath = Path.str();
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+bool AMDGPUCompiler::shouldSkipEmbeddedHeaders(ArrayRef<const char *> Argv) {
+  if (SkipEmbeddedHeadersCache)
+    return *SkipEmbeddedHeadersCache;
+
+  bool Verbose = env::shouldEmitVerboseLogs();
+  auto Decide = [&](bool Skip, const Twine &Reason) {
+    SkipEmbeddedHeadersCache = Skip;
+    if (Verbose)
+      LogS << "\t Embedded libc++ headers: " << (Skip ? "skipped" : "active")
+           << " (" << Reason << ")\n";
+    return Skip;
+  };
+
+  // Env override takes precedence.
+  switch (env::getEmbeddedLibcxxMode()) {
+  case env::EmbeddedLibcxxMode::Force:
+    return Decide(false, "AMD_COMGR_USE_EMBEDDED_LIBCXX=force");
+  case env::EmbeddedLibcxxMode::Disable:
+    return Decide(true, "AMD_COMGR_USE_EMBEDDED_LIBCXX=disable");
+  case env::EmbeddedLibcxxMode::Auto:
+    break;
+  }
+
+  // User explicitly took control of C++ include search; don't second-guess.
+  for (const char *A : Argv) {
+    if (!A)
+      continue;
+    StringRef S(A);
+    if (S == "-nostdinc++" || S == "-nostdinc" || S == "-nostdlibinc")
+      return Decide(true, Twine("user passed ") + S);
+  }
+
+  // System C++ headers found by the driver: skip embedded to avoid the
+  // partial-overlay mixing bug (ROCm-issue-2445).
+  std::string FoundPath;
+  if (driverAddsCxxStdlibInclude(Argv, &FoundPath))
+    return Decide(true,
+                  Twine("clang driver found C++ headers at ") + FoundPath);
+  return Decide(false, "no system C++ headers found, falling back to embedded");
+}
+
 amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
                                                const char *InputFilePath,
                                                const char *OutputFilePath) {
@@ -1216,14 +1325,28 @@ amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
     Argv.push_back("-nogpulib");
   }
 
-  // Auto-inject embedded libc++ headers as a fallback include path.
-  // Using -idirafter places them AFTER all other include paths, so:
-  //   - System libstdc++ or libc++ headers take priority when available
-  //   - User-provided -I paths take priority
-  //   - Embedded headers only kick in when no other C++ headers are found
-  // This ensures backward compatibility while providing headers on systems
-  // without C++ development headers (e.g., driver-only installs).
-  if (HasEmbeddedHeaders && getLanguage() == AMD_COMGR_LANGUAGE_HIP) {
+  // Parse these before embedded-header detection so --sysroot,
+  // --gcc-toolchain, and -nostdinc++ affect the decision. They are appended to
+  // the actual driver invocation later to preserve the existing option order.
+  SmallVector<const char *, 8> EnvArgv;
+  StringRef EnvOptions = env::getDriverOptionsAppend();
+  if (!EnvOptions.empty()) {
+    SmallVector<StringRef, 8> Options;
+    EnvOptions.split(Options, ' ', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+    for (StringRef Opt : Options)
+      EnvArgv.push_back(Saver.save(Opt).data());
+  }
+
+  SmallVector<const char *, 128> DetectionArgv = Argv;
+  DetectionArgv.append(EnvArgv.begin(), EnvArgv.end());
+  DetectionArgv.push_back(InputFilePath);
+  DetectionArgv.push_back("-o");
+  DetectionArgv.push_back(OutputFilePath);
+
+  // Inject embedded libc++ only when system C++ headers are unavailable; the
+  // embedded set is partial and must not be mixed with host libstdc++/libc++.
+  if (HasEmbeddedHeaders && getLanguage() == AMD_COMGR_LANGUAGE_HIP &&
+      !shouldSkipEmbeddedHeaders(DetectionArgv)) {
     SmallString<256> LibcxxPath(env::getLLVMPath());
     sys::path::append(LibcxxPath, "include", "c++", "v1");
     Argv.push_back("-idirafter");
@@ -1247,13 +1370,7 @@ amd_comgr_status_t AMDGPUCompiler::processFile(DataObject *Input,
 
   // Append options from AMD_COMGR_DRIVER_OPTIONS_APPEND environment variable.
   // Options are space-separated and appended after all other options.
-  StringRef EnvOptions = env::getDriverOptionsAppend();
-  if (!EnvOptions.empty()) {
-    SmallVector<StringRef, 8> Options;
-    EnvOptions.split(Options, ' ', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
-    for (StringRef Opt : Options)
-      Argv.push_back(Saver.save(Opt).data());
-  }
+  Argv.append(EnvArgv.begin(), EnvArgv.end());
 
   Argv.push_back(InputFilePath);
 
