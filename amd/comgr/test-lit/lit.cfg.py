@@ -1,3 +1,4 @@
+import glob
 import os
 import platform
 import subprocess
@@ -22,6 +23,24 @@ if config.comgr_spirv_translator_available:
     config.available_features.add("comgr-has-spirv-translator")
 if config.comgr_amdgpu_target_available:
     config.available_features.add("comgr-has-amdgpu-target")
+
+# The AMDGPU device AddressSanitizer runtime (libclang_rt.asan.a for
+# amdgcn-amd-amdhsa) is a separately built artifact. The asan tests link it,
+# so guard them behind its presence in the clang resource dir; builds without
+# it (e.g. reduced builds that omit compiler-rt) skip rather than fail.
+if glob.glob(
+    os.path.join(
+        config.llvm_tools_dir,
+        os.pardir,
+        "lib",
+        "clang",
+        "*",
+        "lib",
+        "amdgcn-amd-amdhsa",
+        "libclang_rt.asan.a",
+    )
+):
+    config.available_features.add("comgr-has-amdgpu-asan-runtime")
 
 
 # spirv-to-reloc-debuginfo checks that comgr forwards
