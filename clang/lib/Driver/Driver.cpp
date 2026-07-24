@@ -1699,6 +1699,14 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   const ToolChain &TC =
       getToolChain(*UArgs, computeTargetTriple(*this, TargetTriple, *UArgs));
 
+  if (Arg *A = UArgs->getLastArgNoClaim(options::OPT_hip_link_profile_runtime);
+      A && !TC.getTriple().isOSLinux() &&
+      !TC.getTriple().isWindowsMSVCEnvironment()) {
+    A->claim();
+    Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << TC.getTriple().str();
+  }
+
   {
     SmallVector<std::string> MultilibMacroDefinesStr =
         TC.getMultilibMacroDefinesStr(*UArgs);

@@ -874,17 +874,42 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
 
 void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                              ArgStringList &CmdArgs) const {
+  bool LinkExplicitProfileRT =
+      Args.hasArg(options::OPT_hip_link_profile_runtime) &&
+      !Args.hasArg(options::OPT_noprofilelib);
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_nostdlib) ||
       Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
     return;
 
+  if (LinkExplicitProfileRT && !RocmInstallation->hasHIPRuntime()) {
+    getDriver().Diag(diag::err_drv_no_hip_runtime_for_profile);
+    return;
+  }
+
+  if (LinkExplicitProfileRT) {
+    std::string ROCmProfileRT = getCompilerRT(Args, "profile_rocm", FT_Static);
+    if (!getVFS().exists(ROCmProfileRT)) {
+      getDriver().Diag(diag::err_drv_no_rocm_profile_runtime) << ROCmProfileRT;
+      return;
+    }
+
+    if (!needsProfileRT(Args))
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-u", llvm::getInstrProfRuntimeHookVarName())));
+    CmdArgs.push_back(Args.MakeArgString(ROCmProfileRT));
+    CmdArgs.push_back("-u");
+    CmdArgs.push_back("__llvm_profile_offload_register_dynamic_module");
+  }
+
+  bool LinkHIPRuntime =
+      (ActiveKinds & Action::OFK_HIP) || LinkExplicitProfileRT;
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
-  if (ActiveKinds & Action::OFK_HIP)
+  if (LinkHIPRuntime)
     Libraries.emplace_back(RocmInstallation->getLibPath(), "libamdhip64.so");
-  else if ((ActiveKinds & Action::OFK_SYCL) &&
-           !Args.hasArg(options::OPT_nolibsycl))
+  if (!(ActiveKinds & Action::OFK_HIP) && (ActiveKinds & Action::OFK_SYCL) &&
+      !Args.hasArg(options::OPT_nolibsycl))
     Libraries.emplace_back(SYCLInstallation->getSYCLRTLibPath(),
                            "libLLVMSYCL.so");
 
@@ -902,14 +927,15 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
   }
 
   // FIXME: The ROCm builds implicitly depends on this being present.
-  if (ActiveKinds & Action::OFK_HIP)
+  if (LinkHIPRuntime)
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
   // self-contained superset of clang_rt.profile, emitted first so the base
   // archive stays inert.
-  if ((ActiveKinds & Action::OFK_HIP) && needsProfileRT(Args) &&
+  if (!LinkExplicitProfileRT && (ActiveKinds & Action::OFK_HIP) &&
+      needsProfileRT(Args) &&
       getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
     CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
     // Force-retain the constructor-only hipModuleLoad* interceptor object; its

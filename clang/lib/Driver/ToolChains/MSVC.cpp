@@ -627,12 +627,35 @@ void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
 
 void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
+  bool LinkExplicitProfileRT =
+      Args.hasArg(options::OPT_hip_link_profile_runtime) &&
+      !Args.hasArg(options::OPT_noprofilelib);
   if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
                     true) ||
       Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
     return;
 
-  if (ActiveKinds & Action::OFK_HIP) {
+  if (LinkExplicitProfileRT && !RocmInstallation->hasHIPRuntime()) {
+    getDriver().Diag(diag::err_drv_no_hip_runtime_for_profile);
+    return;
+  }
+
+  if (LinkExplicitProfileRT) {
+    std::string ROCmProfileRT = getCompilerRT(Args, "profile_rocm", FT_Static);
+    if (!getVFS().exists(ROCmProfileRT)) {
+      getDriver().Diag(diag::err_drv_no_rocm_profile_runtime) << ROCmProfileRT;
+      return;
+    }
+
+    CmdArgs.push_back("-include:__llvm_profile_runtime");
+    CmdArgs.push_back(Args.MakeArgString(ROCmProfileRT));
+    CmdArgs.push_back(
+        "-include:__llvm_profile_offload_register_dynamic_module");
+  }
+
+  bool LinkHIPRuntime =
+      (ActiveKinds & Action::OFK_HIP) || LinkExplicitProfileRT;
+  if (LinkHIPRuntime) {
     CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
                                        RocmInstallation->getLibPath()),
                     "amdhip64.lib"});
@@ -640,7 +663,7 @@ void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
     // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
     // self-contained superset of clang_rt.profile, emitted first so the base
     // archive stays inert (avoiding a /MD-vs-/MT CRT mix in the host image).
-    if (needsProfileRT(Args) &&
+    if (!LinkExplicitProfileRT && needsProfileRT(Args) &&
         getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
       CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
       // Force the linker to retain the constructor-only hipModuleLoad*

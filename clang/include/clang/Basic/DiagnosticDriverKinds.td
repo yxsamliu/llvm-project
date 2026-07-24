@@ -76,6 +76,12 @@ def err_drv_no_rocm_device_lib : Error<
 def err_drv_no_hip_runtime : Error<
   "cannot find HIP runtime; provide its path via '--rocm-path', or pass "
   "'-nogpuinc' to build without HIP runtime">;
+def err_drv_no_hip_runtime_for_profile : Error<
+  "cannot find HIP runtime required by '--hip-link-profile-runtime'; provide "
+  "its path via '--rocm-path'">;
+def err_drv_no_rocm_profile_runtime : Error<
+  "cannot find ROCm profile runtime required by "
+  "'--hip-link-profile-runtime': '%0'">;
 def err_drv_no_hipstdpar_lib : Error<
   "cannot find HIP Standard Parallelism Acceleration library; provide it via "
   "'--hipstdpar-path'">;

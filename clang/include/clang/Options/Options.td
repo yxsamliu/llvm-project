@@ -1441,6 +1441,9 @@ def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
 let Group = hip_Group in {
 def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,
   HelpText<"Link clang-offload-bundler bundles for HIP">;
+def hip_link_profile_runtime : Flag<["--"], "hip-link-profile-runtime">,
+  Group<hip_Group>,
+  HelpText<"Link the HIP and ROCm profile runtimes for HIP module profiling">;
 def no_hip_rt: Flag<["-"], "no-hip-rt">, Group<hip_Group>,
   HelpText<"Do not link against HIP runtime libraries">;
 def rocm_path_EQ : Joined<["--"], "rocm-path=">,
