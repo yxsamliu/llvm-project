@@ -639,11 +639,10 @@ public:
   void Post(const parser::OpenMPFlushConstruct &) { PopContext(); }
 
   bool Pre(const parser::OmpRequiresDirective &x) {
-    using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    OmpClauseSet reqs;
+    llvm::omp::ClauseSet reqs;
     std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
@@ -651,7 +650,7 @@ public:
           common::visitors{
               [&](const OmpClause::AtomicDefaultMemOrder &admo) {
                 memOrder = admo.v.v;
-                return OmpClauseSet{clause.Id()};
+                return llvm::omp::ClauseSet{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -663,10 +662,10 @@ public:
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
                   if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
-                    return OmpClauseSet{clause.Id()};
+                    return llvm::omp::ClauseSet{clause.Id()};
                   }
                 }
-                return OmpClauseSet{};
+                return llvm::omp::ClauseSet{};
               },
           },
           clause.u);
@@ -1039,7 +1038,7 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &, const WithOmpDeclarative::OmpClauseSet &,
+  void AddOmpRequiresToScope(Scope &, const llvm::omp::ClauseSet &,
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
@@ -2265,8 +2264,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
   }
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  WithOmpDeclarative::OmpClauseSet clauses;
-  clauses.set(llvm::omp::Clause::OMPC_device_type);
+  llvm::omp::ClauseSet clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
       if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
@@ -2320,7 +2318,6 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
   std::map<const Symbol *, WithOmpDeclarative> details;
   std::optional<common::OmpDeviceType> device;
 
@@ -2329,13 +2326,14 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
   }
 
-  auto addClause{[&](const parser::OmpObject &object,
-                     llvm::omp::Clause clauseId) {
-    if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
-      auto &clauseSet{const_cast<OmpClauseSet &>(details[sym].ompDeclTarget())};
-      clauseSet.set(clauseId);
-    }
-  }};
+  auto addClause{
+      [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
+        if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
+          auto &clauseSet{
+              const_cast<llvm::omp::ClauseSet &>(details[sym].ompDeclTarget())};
+          clauseSet.set(clauseId);
+        }
+      }};
 
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (auto *object{parser::omp::GetArgumentObject(arg)}) {
@@ -2361,7 +2359,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
       proc->flags().set(Symbol::Flag::OmpDeclareTarget);
       auto &clauseSet{
-          const_cast<OmpClauseSet &>(details[proc].ompDeclTarget())};
+          const_cast<llvm::omp::ClauseSet &>(details[proc].ompDeclTarget())};
       clauseSet.set(llvm::omp::Clause::OMPC_enter);
     }
   }
@@ -2374,7 +2372,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
           using TypeD = llvm::remove_cvref_t<decltype(d)>;
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
             d.set_version(version);
-            auto &clauseSet{const_cast<OmpClauseSet &>(d.ompDeclTarget())};
+            auto &clauseSet{
+                const_cast<llvm::omp::ClauseSet &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
@@ -3413,7 +3412,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const WithOmpDeclarative::OmpClauseSet &reqs,
+    const llvm::omp::ClauseSet &reqs,
     const std::optional<common::OmpMemoryOrderType> &memOrder) {
   unsigned version{context_.langOptions().OpenMPVersion};
   const Scope &programUnit{omp::GetProgramUnit(scope)};
