@@ -46,10 +46,10 @@ void foo(S2 *arr) {
 #endif
 //.
 // CHECK: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 32, i64 8]
-// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x4000]]]
+// CHECK: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x8000]]]
 //.
 // CHECK-60: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 32, i64 8]
-// CHECK-60: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x4000]]]
+// CHECK-60: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 [[#0x1]], i64 [[#0x8000]]]
 //.
 // CHECK-LABEL: define {{[^@]+}}@_Z3fooP2S2
 // CHECK-SAME: (ptr noundef [[ARR:%.*]]) #[[ATTR0:[0-9]+]] {
