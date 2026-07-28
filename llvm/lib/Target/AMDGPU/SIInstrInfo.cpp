@@ -7521,10 +7521,6 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   MachineBasicBlock *CreatedBB = nullptr;
 
-  // Legalize True16
-  if (ST.useRealTrue16Insts())
-    legalizeOperandsVALUt16(MI, MRI);
-
   // Legalize VOP2
   if (isVOP2(MI) || isVOPC(MI)) {
     legalizeOperandsVOP2(MRI, MI);
@@ -7907,26 +7903,18 @@ void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI, unsigned OpIdx,
   int16_t RCID = getOpRegClassID(get(Opcode).operands()[OpIdx]);
   const TargetRegisterClass *ExpectedRC = RI.getRegClass(RCID);
   if (RI.getMatchingSuperRegClass(CurrRC, ExpectedRC, AMDGPU::lo16)) {
-    // Default to the lo16 only if the subregister is not specified.
-    if (Op.getSubReg() == AMDGPU::NoSubRegister)
-      Op.setSubReg(AMDGPU::lo16);
-    return;
-  }
-
-  const TargetRegisterClass *CurrSRC =
-      RI.getSubRegisterClass(CurrRC, Op.getSubReg());
-  if (RI.getMatchingSuperRegClass(ExpectedRC, CurrSRC, AMDGPU::lo16)) {
+    Op.setSubReg(AMDGPU::lo16);
+  } else if (RI.getMatchingSuperRegClass(ExpectedRC, CurrRC, AMDGPU::lo16)) {
     const DebugLoc &DL = MI.getDebugLoc();
     Register NewDstReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
     BuildMI(*MBB, MI, DL, get(AMDGPU::IMPLICIT_DEF), Undef);
     BuildMI(*MBB, MI, DL, get(AMDGPU::REG_SEQUENCE), NewDstReg)
-        .addReg(Op.getReg(), {}, Op.getSubReg())
+        .addReg(Op.getReg())
         .addImm(AMDGPU::lo16)
         .addReg(Undef)
         .addImm(AMDGPU::hi16);
     Op.setReg(NewDstReg);
-    Op.setSubReg(AMDGPU::NoSubRegister);
   }
 }
 void SIInstrInfo::legalizeOperandsVALUt16(MachineInstr &MI,
@@ -8464,6 +8452,7 @@ void SIInstrInfo::moveToVALUImpl(
           .add(Inst.getOperand(0))
           .add(Inst.getOperand(1));
     }
+    legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     int SCCIdx = Inst.findRegisterDefOperandIdx(AMDGPU::SCC, /*TRI=*/nullptr);
     const MachineOperand &SCCOp = Inst.getOperand(SCCIdx);
@@ -8530,6 +8519,7 @@ void SIInstrInfo::moveToVALUImpl(
                                  .addImm(0)  // omod
                                  .addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
     Inst.eraseFromParent();
@@ -8552,6 +8542,7 @@ void SIInstrInfo::moveToVALUImpl(
     if (AMDGPU::hasNamedOperand(NewOpcode, AMDGPU::OpName::op_sel))
       NewInstr.addImm(0); // opsel0
     MRI.replaceRegWith(Inst.getOperand(0).getReg(), NewDst);
+    legalizeOperandsVALUt16(*NewInstr, MRI);
     legalizeOperands(*NewInstr, MDT);
     addUsersToMoveToVALUWorklist(NewDst, MRI, Worklist);
     Inst.eraseFromParent();
@@ -8590,14 +8581,9 @@ void SIInstrInfo::moveToVALUImpl(
         // that copies will end up as machine instructions and not be
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
-        unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
-        for (MachineOperand &UseMO :
-             make_early_inc_range(MRI.use_operands(DstReg))) {
-          UseMO.setSubReg(
-              RI.composeSubRegIndices(SrcSubReg, UseMO.getSubReg()));
-          UseMO.setReg(NewDstReg);
-        }
+        MRI.replaceRegWith(DstReg, NewDstReg);
         MRI.clearKillFlags(NewDstReg);
+        Inst.getOperand(0).setReg(DstReg);
 
         if (!MRI.constrainRegClass(NewDstReg, CommonRC))
           llvm_unreachable("failed to constrain register");
@@ -8745,6 +8731,8 @@ void SIInstrInfo::moveToVALUImpl(
     MRI.replaceRegWith(DstReg, NewDstReg);
   }
   fixImplicitOperands(*NewInstr);
+
+  legalizeOperandsVALUt16(*NewInstr, MRI);
 
   // Legalize the operands
   legalizeOperands(*NewInstr, MDT);
