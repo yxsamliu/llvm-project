@@ -1844,6 +1844,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
         "A variable in a %s directive cannot be an element of a common block"_err_en_US,
         ContextDirectiveAsFortran());
   } else if (FindEquivalenceSet(*name->symbol)) {
+#if 0//<<<<<<< HEAD
     auto allowThreadprivateEquivalence{
         context_.langOptions().AllowThreadprivateEquivalence};
     if (!allowThreadprivateEquivalence) {
@@ -1855,6 +1856,23 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
           "Variable '%s' appears a %s directive and an EQUIVALENCE statement, which does not conform to the OpenMP API specification."_warn_en_US,
           name->symbol->name(), ContextDirectiveAsFortran());
     }
+#else//=======
+    context_.Say(name->source,
+        "A variable in a %s directive cannot appear in an EQUIVALENCE statement"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsDummy(*name->symbol)) {
+    context_.Say(name->source,
+        "A dummy argument cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsAutomatic(*name->symbol)) {
+    context_.Say(name->source,
+        "An automatic data object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+  } else if (IsFunctionResult(*name->symbol)) {
+    context_.Say(name->source,
+        "A function result object cannot appear in %s, because it cannot be given the SAVE attribute"_err_en_US,
+        ContextDirectiveAsFortran());
+#endif//>>>>>>> f3159b97be5deff08b5bcb6a5d4cf71c991b5555
   } else if (name->symbol->test(Symbol::Flag::OmpThreadprivate) &&
       directive == llvm::omp::Directive::OMPD_declare_target) {
     context_.Say(name->source,
