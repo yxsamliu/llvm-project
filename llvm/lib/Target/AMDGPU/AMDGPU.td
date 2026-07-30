@@ -238,6 +238,15 @@ def FeatureXNACK : SubtargetFeature<"xnack",
   InlineIgnore
 >;
 
+// Whether the hardware supports WGP (work-group processor) execution
+// mode, as opposed to the per-kernel CU-mode selection
+// (FeatureCuMode).
+defm SupportsWGP : AMDGPUSubtargetFeature<"supports-wgp",
+  "Hardware supports WGP mode",
+  /*GenPredicate=*/false, /*GenAssemblerPredicate=*/false,
+  [], InlineIgnore
+>;
+
 def FeatureCuMode : SubtargetFeature<"cumode",
   "EnableCuMode",
   "true",
@@ -1104,6 +1113,10 @@ defm GetWaveIdInst : AMDGPUSubtargetFeature<"get-wave-id-inst",
   "Has s_get_waveid_in_workgroup instruction"
 >;
 
+defm PopsExitingWaveID : AMDGPUSubtargetFeature<"pops-exiting-wave-id",
+  "Has POPS_EXITING_WAVE_ID hardware register"
+>;
+
 defm SMemTimeInst : AMDGPUSubtargetFeature<"s-memtime-inst",
   "Has s_memtime instruction"
 >;
@@ -1584,7 +1597,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
 def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
   "gfx10",
   [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
-   FeatureSupportsWave32, FeatureSupportsWave64,
+   FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace,
    FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureInv2PiInlineImm,
@@ -1615,7 +1628,7 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
 def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
   "gfx11",
   [FeatureFP64, FeatureAddressableLocalMemorySize65536, FeatureMIMG_R128,
-   FeatureSupportsWave32, FeatureSupportsWave64,
+   FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1672,7 +1685,7 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
 def FeatureGFX13 : GCNSubtargetFeatureGeneration<"GFX13",
   "gfx13",
   [FeatureFP64, FeatureMIMG_R128,
-   FeatureSupportsWave32, FeatureSupportsWave64,
+   FeatureSupportsWave32, FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureFlatAddressSpace, Feature16BitInsts,
    FeatureInv2PiInlineImm, FeatureApertureRegs,
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
@@ -1786,7 +1799,8 @@ def FeatureISAVersion9_0_Consumer_Common : FeatureSet<
     [FeatureImageGather4D16Bug,
      FeatureDsSrc2Insts,
      FeatureExtendedImageInsts,
-     FeatureGDS])>;
+     FeatureGDS,
+     FeaturePopsExitingWaveID])>;
 
 def FeatureISAVersion9_Generic : FeatureSet<
   !listconcat(FeatureISAVersion9_0_Consumer_Common.Features,
@@ -1958,7 +1972,8 @@ def FeatureISAVersion10_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureMsadInsts,
    FeatureMqsadPkInsts,
-   FeatureMqsadInsts]>;
+   FeatureMqsadInsts,
+   FeaturePopsExitingWaveID]>;
 
 def FeatureISAVersion10_1_Common : FeatureSet<
   !listconcat(FeatureISAVersion10_Common.Features,
@@ -2143,7 +2158,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
-   FeatureSupportsWave64,
+   FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
    FeatureLDSBankCount32,

@@ -2221,6 +2221,8 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
    List AMDGPU intrinsics.
 
+.. _amdgpu-av-load-store:
+
 '``llvm.amdgcn.av``' Intrinsics
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
