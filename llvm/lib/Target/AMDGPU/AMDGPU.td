@@ -749,12 +749,12 @@ defm PackedFP32SingleSGPROps : AMDGPUSubtargetFeature<"packed-fp32-single-sgpr-o
   "Support packed fp32 instructions with SGPR operands propagating low to high 32 bit"
 >;
 
-defm PackedFP64Ops : AMDGPUSubtargetFeature<"packed-fp64-ops",
-  "Support packed fp64 instructions"
+defm PackedFP64SingleSGPROps : AMDGPUSubtargetFeature<"packed-fp64-single-sgpr-ops",
+  "Support packed fp64 instructions with SGPR operands propagating low to high 64 bit"
 >;
 
-defm PackedU64Ops : AMDGPUSubtargetFeature<"packed-u64-ops",
-  "Support packed uint64 instructions"
+defm PackedU64SingleSGPROps : AMDGPUSubtargetFeature<"packed-u64-single-sgpr-ops",
+  "Support packed uint64 instructions with SGPR operands propagating low to high 64 bit"
 >;
 
 defm R128A16 : AMDGPUSubtargetFeature<"r128-a16",
@@ -2361,8 +2361,8 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
-   FeaturePackedFP64Ops,
-   FeaturePackedU64Ops,
+   FeaturePackedFP64SingleSGPROps,
+   FeaturePackedU64SingleSGPROps,
    FeatureGFX1251GEMMInsts,
    FeatureGFX125xLowestRateWMMA,
    FeatureCubeInsts,
@@ -2996,6 +2996,12 @@ def HasAnyPackedFP32Ops : Predicate<"Subtarget->hasAnyPackedFP32Ops()">,
 def HasUnalignedDS2Bug : Predicate<"Subtarget->hasUnalignedDS2Bug()">;
 
 def NotHasUnalignedDS2Bug : Predicate<"!Subtarget->hasUnalignedDS2Bug()">;
+
+def HasAnyPackedFP64Ops : Predicate<"Subtarget->hasAnyPackedFP64Ops()">,
+  AssemblerPredicate<(any_of FeaturePackedFP64SingleSGPROps)>;
+
+def HasAnyPackedU64Ops : Predicate<"Subtarget->hasAnyPackedU64Ops()">,
+  AssemblerPredicate<(any_of FeaturePackedU64SingleSGPROps)>;
 
 def NeedsAlignedVGPRs : Predicate<"Subtarget->needsAlignedVGPRs()">,
                       AssemblerPredicate<(all_of FeatureRequiresAlignedVGPRs)>;
