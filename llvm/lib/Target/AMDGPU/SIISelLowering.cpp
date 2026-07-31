@@ -908,7 +908,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                            VT, Custom);
     }
 
-    if (Subtarget->hasPackedFP32Ops()) {
+    if (Subtarget->hasAnyPackedFP32Ops()) {
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
                          MVT::v2f32, Legal);
       setOperationAction({ISD::FADD, ISD::FMUL, ISD::FMA, ISD::FNEG},
@@ -18724,7 +18724,7 @@ SDValue SITargetLowering::performClampCombine(SDNode *N,
   if (F > One)
     return DCI.DAG.getConstantFP(One, SDLoc(N), N->getValueType(0));
 
-  return SDValue(CSrc, 0);
+  return getCanonicalConstantFP(DCI.DAG, SDLoc(N), N->getValueType(0), F);
 }
 
 SDValue SITargetLowering::performSelectCombine(SDNode *N,

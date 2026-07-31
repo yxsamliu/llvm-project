@@ -190,6 +190,9 @@
 # MLIR IRDL-related
 /mlir/**/*IRDL* @moxinilian
 
+# BOLT
+/bolt/ @aaupov @maksfb @rafaelauler @ayermolo @yota9 @paschalis-mpeis @yozhu @yavtuk
+
 # Bazel build system.
 /utils/bazel/ @rupprecht @keith @aaronmondal @googlewalt
 /utils/bazel/llvm-project-overlay/libc/ @labath @kaladron
