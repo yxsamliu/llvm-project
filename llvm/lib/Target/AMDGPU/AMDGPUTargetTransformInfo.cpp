@@ -323,8 +323,8 @@ GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_FixedWidthVector:
     return TypeSize::getFixed((ST->hasPackedFP64Ops() || ST->hasPackedU64Ops())
                                   ? 128
-                              : ST->hasPackedFP32Ops() ? 64
-                                                       : 32);
+                              : ST->hasAnyPackedFP32Ops() ? 64
+                                                          : 32);
   case TargetTransformInfo::RGK_ScalableVector:
     return TypeSize::getScalable(0);
   }
@@ -340,9 +340,9 @@ unsigned GCNTTIImpl::getMaximumVF(unsigned ElemWidth, unsigned Opcode) const {
     return 32 * 4 / ElemWidth;
   // For a given width return the max 0number of elements that can be combined
   // into a wider bit value:
-  return (ElemWidth == 8 && ST->has16BitInsts())       ? 4
-         : (ElemWidth == 16 && ST->has16BitInsts())    ? 2
-         : (ElemWidth == 32 && ST->hasPackedFP32Ops()) ? 2
+  return (ElemWidth == 8 && ST->has16BitInsts())          ? 4
+         : (ElemWidth == 16 && ST->has16BitInsts())       ? 2
+         : (ElemWidth == 32 && ST->hasAnyPackedFP32Ops()) ? 2
          : (ElemWidth == 64 &&
             (ST->hasPackedFP64Ops() || ST->hasPackedU64Ops()))
              ? 2
@@ -611,7 +611,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
-    if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
+    if (ST->hasAnyPackedFP32Ops() && SLT == MVT::f32)
       NElts = (NElts + 1) / 2;
     if (ST->hasBF16PackedInsts() && SLT == MVT::bf16)
       NElts = (NElts + 1) / 2;
@@ -886,7 +886,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       (ST->hasPackedU64Ops() && SLT == MVT::i64)) {
     NElts = (NElts + 1) / 2;
   } else if (SLT == MVT::f32) {
-    bool HasPk2FP32Op = ST->hasPackedFP32Ops() &&
+    bool HasPk2FP32Op = ST->hasAnyPackedFP32Ops() &&
                         IID != Intrinsic::minimumnum &&
                         IID != Intrinsic::maximumnum;
     NElts = HasPk2FP32Op ? (NElts + 1) / 2 : NElts;
