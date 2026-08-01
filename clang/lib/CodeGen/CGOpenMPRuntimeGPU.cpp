@@ -3353,19 +3353,13 @@ static OffloadArch getOffloadArch(const CodeGenModule &CGM) {
 }
 
 bool CGOpenMPRuntimeGPU::needsHintsForFastFPAtomics() {
-  return getOffloadArch(CGM) == OffloadArch::GFX90a;
+  return strncmp(OffloadArchToString(getOffloadArch(CGM)), "gfx90a", strlen("gfx90a")) == 0;
 }
 
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
   OffloadArch Arch = getOffloadArch(CGM);
-  switch (Arch) {
-  case OffloadArch::GFX90a:
-  case OffloadArch::GFX942:
-    return true;
-  default:
-    break;
-  }
-  return false;
+  return strncmp(OffloadArchToString(Arch), "gfx90a", strlen("gfx90a")) == 0 ||
+         strncmp(OffloadArchToString(Arch), "gfx942", strlen("gfx942")) == 0;
 }
 
 std::pair<bool, RValue>
