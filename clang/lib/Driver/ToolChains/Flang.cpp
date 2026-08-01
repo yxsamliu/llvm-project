@@ -206,6 +206,10 @@ void Flang::addDebugOptions(const llvm::opt::ArgList &Args, const JobAction &JA,
       CmdArgs.push_back(SplitDWARFOut);
     }
   }
+
+  // Handle compressed debug sections (-gz).
+  renderDebugInfoCompressionArgs(Args, CmdArgs, D, TC);
+
   addDebugInfoForProfilingArgs(D, TC, Args, CmdArgs);
 }
 
