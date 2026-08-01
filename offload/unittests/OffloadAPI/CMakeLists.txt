@@ -65,5 +65,4 @@ add_offload_unittest("queue"
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp
     symbol/olGetSymbolInfo.cpp
-    symbol/olGetSymbolInfoSize.cpp
-    symbol/olIterateSymbols.cpp)
+    symbol/olGetSymbolInfoSize.cpp)

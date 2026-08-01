@@ -199,12 +199,10 @@ struct ol_program_impl_t {
 };
 
 struct ol_symbol_impl_t {
-  ol_symbol_impl_t(GenericKernelTy *Kernel)
-      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
-        Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
-      : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
-        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
+  ol_symbol_impl_t(const char *Name, GenericKernelTy *Kernel)
+      : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL), Name(Name) {}
+  ol_symbol_impl_t(const char *Name, GlobalTy &&Global)
+      : PluginImpl(Global), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE), Name(Name) {}
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
@@ -1283,10 +1281,11 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   return Error::success();
 }
 
-Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
-                                                 StringRef Name,
-                                                 ol_symbol_kind_t Kind) {
+Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
+                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
   auto &Device = Program->Image->getDevice();
+
+  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
 
   switch (Kind) {
   case OL_SYMBOL_KIND_KERNEL: {
@@ -1299,10 +1298,12 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       if (auto Err = KernelImpl->init(Device, *Program->Image))
         return Err;
 
-      Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
+      Kernel = std::make_unique<ol_symbol_impl_t>(KernelImpl->getName(),
+                                                  &*KernelImpl);
     }
 
-    return Kernel.get();
+    *Symbol = Kernel.get();
+    return Error::success();
   }
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
@@ -1313,59 +1314,17 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
                   Device, *Program->Image, GlobalObj))
         return Res;
 
-      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
+      Global = std::make_unique<ol_symbol_impl_t>(GlobalObj.getName().c_str(),
+                                                  std::move(GlobalObj));
     }
 
-    return Global.get();
+    *Symbol = Global.get();
+    return Error::success();
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getSymbol kind enum '%i' is invalid", Kind);
   }
-}
-
-Error olGetSymbol_impl(ol_program_handle_t Program, const char *Name,
-                       ol_symbol_kind_t Kind, ol_symbol_handle_t *Symbol) {
-  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
-
-  auto SymbolOrErr = getSymbolImplDetail(Program, Name, Kind);
-  if (!SymbolOrErr)
-    return SymbolOrErr.takeError();
-
-  *Symbol = *SymbolOrErr;
-  return Error::success();
-}
-
-Error olIterateSymbols_impl(ol_program_handle_t Program, ol_symbol_kind_t Kind,
-                            ol_symbol_iterate_cb_t Callback, void *UserData) {
-  SymbolKindTy PluginKind;
-  switch (Kind) {
-  case OL_SYMBOL_KIND_KERNEL:
-    PluginKind = SymbolKindTy::Kernel;
-    break;
-  case OL_SYMBOL_KIND_GLOBAL_VARIABLE:
-    PluginKind = SymbolKindTy::GlobalVariable;
-    break;
-  default:
-    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
-                              "iterateSymbols kind enum '%i' is invalid", Kind);
-  }
-
-  auto &Device = Program->Image->getDevice();
-  std::lock_guard<std::mutex> Lock(Program->SymbolListMutex);
-
-  Error SymbolErr = Error::success();
-  Error IterateErr = Device.Plugin.getGlobalHandler().iterateSymbols(
-      *Program->Image, PluginKind, [&](StringRef Name) {
-        auto SymbolOrErr = getSymbolImplDetail(Program, Name, Kind);
-        if (!SymbolOrErr) {
-          SymbolErr = SymbolOrErr.takeError();
-          return false;
-        }
-        return Callback(*SymbolOrErr, UserData);
-      });
-
-  return joinErrors(std::move(IterateErr), std::move(SymbolErr));
 }
 
 Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
@@ -1387,8 +1346,6 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   switch (PropName) {
   case OL_SYMBOL_INFO_KIND:
     return Info.write<ol_symbol_kind_t>(Symbol->Kind);
-  case OL_SYMBOL_INFO_NAME:
-    return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
     if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
       return Err;

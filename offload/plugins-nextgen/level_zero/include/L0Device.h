@@ -576,7 +576,7 @@ public:
     V = 0;
     return Plugin::success();
   }
-  Expected<GenericKernelTy &> constructKernel(StringRef Name) override;
+  Expected<GenericKernelTy &> constructKernel(const char *Name) override;
 
   Error callGlobalConstructors(GenericPluginTy &Plugin,
                                DeviceImageTy &Image) override;
