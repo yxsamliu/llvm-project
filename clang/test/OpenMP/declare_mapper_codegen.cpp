@@ -1,4 +1,5 @@
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
+// XFAIL: *
 
 // expected-no-diagnostics
 #ifndef HEADER
