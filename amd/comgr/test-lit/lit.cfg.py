@@ -1,6 +1,7 @@
 import glob
 import os
 import platform
+import sys
 import subprocess
 import tempfile
 
@@ -129,6 +130,9 @@ config.substitutions.append(("%FileCheck", _fwd(config.llvm_tools_dir, "FileChec
 config.substitutions.append(
     ("%amd-llvm-spirv", _fwd(config.llvm_tools_dir, "amd-llvm-spirv"))
 )
+
+# Interpreter used to run Python test helpers (e.g. enumerate-isa-check.py).
+config.substitutions.append(("%python", _fwd(sys.executable)))
 config.substitutions.append(
     ("%hotswap_transpile_cli", _fwd(config.comgr_obj_dir, "hotswap_transpile_cli"))
 )
