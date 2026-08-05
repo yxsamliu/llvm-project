@@ -4,7 +4,6 @@ cmake_minimum_required(VERSION 3.20)
 # standalone build. A nested project() re-runs the superbuild dependency provider
 # and re-imports LLVM, which links a second copy of the AMDGPU static libraries
 # into amd_comgr and double-registers their cl::opts under a non-folding linker.
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -22,16 +21,16 @@ link_directories(${LLVM_LIBRARY_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
 # --- Library ------------------------------------------------------------------
-# Reads an AMDGPU code object's metadata (MsgPack notes + kernel descriptor)
-# into the neutral common/kernel-meta.h model the raiser consumes. Built as its
-# own OBJECT library, separate from the raiser, so a client that only needs
-# `raiseToIR` (e.g. the raiser unit test) does not pull in the loader's
-# comgr-metadata / comgr-symbol dependencies.
+# The per-ISA AMDGPU MC stack (mc-state) plus the architecture-neutral
+# instruction identity the raiser dispatches on (canonical-op) and the MCInst
+# format helpers (amdgpu-formats). Its own OBJECT library so the MC/decoder
+# role stays distinct from the raiser and the code-object loader.
 
 # Follow COMGR's selected LLVM linkage mode: in a dylib build link the single
 # `LLVM` shared library, otherwise the individual static components. Linking
 # fixed component libraries unconditionally can pull both the dylib and the
-# static components into a dylib build, risking duplicate symbols.
+# static components into a dylib build, risking duplicate symbols. Kept PUBLIC
+# so consumers inherit the same set when they link this OBJECT library.
 if(LLVM_LINK_LLVM_DYLIB)
   set(HOTSWAP_LLVM_LIBS LLVM)
 else()
@@ -58,61 +57,47 @@ else()
     LLVMTransformUtils)
 endif()
 
-add_library(hotswap-loader OBJECT
-  code-object-utils.cpp
+add_library(hotswap-decoder OBJECT
+  mc-state.cpp
+  amdgpu-formats.cpp
+  canonical-op.cpp
+  isa-profile.cpp
 )
 
-if(NOT TARGET hotswap::loader)
-  add_library(hotswap::loader ALIAS hotswap-loader)
+if(NOT TARGET hotswap::decoder)
+  add_library(hotswap::decoder ALIAS hotswap-decoder)
 endif()
 
-llvm_update_compile_flags(hotswap-loader)
+llvm_update_compile_flags(hotswap-decoder)
 # llvm_update_compile_flags does not reliably carry LLVM's -fno-rtti to a
-# standalone find_package(LLVM) consumer, and the loader raises HotswapError
+# standalone find_package(LLVM) consumer, and the MC stack raises HotswapError
 # (an llvm::ErrorInfo). Mirror LLVM_ENABLE_RTTI explicitly so we do not emit
 # typeinfo an RTTI-off LLVM cannot resolve at link time.
 if(NOT LLVM_ENABLE_RTTI)
   if(MSVC)
-    target_compile_options(hotswap-loader PRIVATE /GR-)
+    target_compile_options(hotswap-decoder PRIVATE /GR-)
   else()
-    target_compile_options(hotswap-loader PRIVATE -fno-rtti)
+    target_compile_options(hotswap-decoder PRIVATE -fno-rtti)
   endif()
 endif()
-set_target_properties(hotswap-loader PROPERTIES POSITION_INDEPENDENT_CODE ON)
-
-# Match LLVM's RTTI setting explicitly. llvm_update_compile_flags only adds
-# -fno-rtti when it detects a GCC-compatible compiler, which is not set in this
-# subproject scope, so against an RTTI-disabled libLLVM the ErrorInfo<HotswapError>
-# instantiation would emit C++ typeinfo referencing llvm::ErrorInfoBase, a symbol
-# that library never defines.
-if(NOT LLVM_ENABLE_RTTI)
-  if(MSVC)
-    target_compile_options(hotswap-loader PRIVATE /GR-)
-  else()
-    target_compile_options(hotswap-loader PRIVATE -fno-rtti)
-  endif()
-endif()
+set_target_properties(hotswap-decoder PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 # Public include root (src/) so consumers can `#include "hotswap/..."`.
-target_include_directories(hotswap-loader PUBLIC
+target_include_directories(hotswap-decoder PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../..>
 )
 
-# The decoder consumes AMDGPU target-private headers (SIDefines.h,
-# SIInstrInfo.h, AMDGPUBaseInfo.h), which transitively include the
-# TableGen-generated AMDGPUGen*.inc files. Those live in the LLVM source and
-# build trees and are not exposed by an install tree.
-# comgr-metadata.h -> comgr.h -> amd_comgr.h, configured into comgr's binary
-# include/ directory (src/hotswap/loader -> src/hotswap -> src -> comgr root).
-get_filename_component(HOTSWAP_COMGR_BINARY_DIR
-  "${CMAKE_CURRENT_BINARY_DIR}/../../.." ABSOLUTE)
-# SIDefines.h and its siblings are hand-written AMDGPU headers that live only
-# in the LLVM source tree; the build tree carries just the generated *.inc.
-# Locate that source across the layouts comgr builds in: an in-tree monorepo
-# build exposes it as LLVM_MAIN_SRC_DIR, a find_package(LLVM) consumer as
-# LLVM_BUILD_MAIN_SRC_DIR, and the ROCm superbuild sets neither but keeps
-# amd/comgr next to llvm/ under a shared root. Probe for the header rather than
-# trust one variable, so a wrong or empty root fails the configure loudly.
+# The MC stack consumes AMDGPU target-private headers (AMDGPUMCTargetDesc.h,
+# AMDGPUBaseInfo.h, SIDefines.h). SIDefines.h and its siblings are hand-written
+# headers that live only in the LLVM source tree; the TableGen-generated
+# AMDGPUGen*.inc they transitively include live only in the LLVM build tree.
+# Neither is exposed by an install tree, so locate both.
+#
+# Source: an in-tree monorepo build exposes it as LLVM_MAIN_SRC_DIR, a
+# find_package(LLVM) consumer as LLVM_BUILD_MAIN_SRC_DIR, and the ROCm
+# superbuild sets neither but keeps amd/comgr next to llvm/ under a shared root.
+# Probe for the header rather than trust one variable, so a wrong or empty root
+# fails the configure loudly.
 set(HOTSWAP_AMDGPU_SRC_DIR "")
 foreach(HotswapLLVMRoot
     "${LLVM_MAIN_SRC_DIR}"
@@ -127,7 +112,7 @@ foreach(HotswapLLVMRoot
 endforeach()
 if(NOT HOTSWAP_AMDGPU_SRC_DIR)
   message(FATAL_ERROR
-    "hotswap-loader: cannot find the LLVM AMDGPU target sources "
+    "hotswap-decoder: cannot find the LLVM AMDGPU target sources "
     "(SIDefines.h); set LLVM_MAIN_SRC_DIR to the llvm source directory.")
 endif()
 
@@ -159,20 +144,22 @@ foreach(HotswapGenInc
     AMDGPUGenSubtargetInfo.inc)
   if(NOT EXISTS "${HOTSWAP_AMDGPU_GEN_DIR}/${HotswapGenInc}")
     message(FATAL_ERROR
-      "hotswap-loader: cannot find the generated AMDGPU headers "
+      "hotswap-decoder: cannot find the generated AMDGPU headers "
       "(${HotswapGenInc}); pass -DLLVM_BUILD_BINARY_DIR=<llvm build dir>.")
   endif()
 endforeach()
 
-target_include_directories(hotswap-loader PRIVATE
+# comgr.h (pulled in for COMGR::ensureLLVMInitialized) includes the configured
+# amd_comgr.h from comgr's binary include/ tree
+# (src/hotswap/decoder -> src/hotswap -> src -> comgr root).
+get_filename_component(HOTSWAP_COMGR_BINARY_DIR
+  "${CMAKE_CURRENT_BINARY_DIR}/../../.." ABSOLUTE)
+
+target_include_directories(hotswap-decoder PRIVATE
   "${HOTSWAP_AMDGPU_SRC_DIR}"
   "${HOTSWAP_AMDGPU_SRC_DIR}/Utils"
   "${HOTSWAP_AMDGPU_GEN_DIR}"
   "${HOTSWAP_COMGR_BINARY_DIR}/include"
 )
 
-# PRIVATE keeps these out of the link interface, but CMake still records them as
-# $<LINK_ONLY:> for an OBJECT library; clear the interface so consumers get the
-# objects only (see ../CMakeLists.txt).
-target_link_libraries(hotswap-loader PRIVATE ${HOTSWAP_LLVM_LIBS})
-set_target_properties(hotswap-loader PROPERTIES INTERFACE_LINK_LIBRARIES "")
+target_link_libraries(hotswap-decoder PUBLIC ${HOTSWAP_LLVM_LIBS})
