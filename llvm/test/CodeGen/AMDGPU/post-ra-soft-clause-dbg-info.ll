@@ -39,7 +39,9 @@ define amdgpu_kernel void @dbg_clause_reorder(ptr addrspace(1) %out, ptr addrspa
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v1, v0, s[2:3] offset:32
+; GCN-NEXT:    ;DEBUG_VALUE: foo:b <- $vgpr1
 ; GCN-NEXT:    global_load_dword v2, v0, s[2:3]
+; GCN-NEXT:    ;DEBUG_VALUE: foo:a <- $vgpr2
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_add_f32_e32 v1, 2.0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
