@@ -1005,9 +1005,6 @@ define void @runtime_stride_diff_types(ptr %pl, ptr %ps, i64 %stride) {
 ; CHECK-NEXT:    [[GEP_S7:%.*]] = getelementptr i8, ptr [[GEP_S6]], i64 [[STRIDE]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i8> [[TMP2]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP4]], ptr [[GEP_S0]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i8> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i8> [[TMP2]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i8> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i8> [[TMP3]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[TMP5]] to i16
 ; CHECK-NEXT:    store i16 [[TMP6]], ptr [[GEP_S1]], align 2
