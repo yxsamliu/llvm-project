@@ -962,11 +962,11 @@ Error L0DeviceTy::callGlobalCtorDtorCommon(GenericPluginTy &Plugin,
 
   AsyncInfoWrapperTy AsyncInfoWrapper(*this, /*AsyncInfoPtr=*/nullptr);
 
-  KernelLaunchArgsTy LaunchArgs{};
+  KernelArgsTy KernelArgs{};
   uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
   auto Err =
       L0Kernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads, 0,
-                          LaunchArgs, AsyncInfoWrapper);
+                          KernelArgs, KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
   AsyncInfoWrapper.finalize(Err);
   return CleanupBufferAndErr(std::move(Err));

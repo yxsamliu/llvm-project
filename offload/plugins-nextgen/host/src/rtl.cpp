@@ -100,18 +100,18 @@ struct GenELF64KernelTy : public GenericKernelTy {
   /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelLaunchArgsTy &LaunchArgs,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
+    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
-    if (LaunchArgs.Flags.Cooperative)
+    if (KernelArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchArgs.Args);
+    Func(LaunchParams.Args);
     return Plugin::success();
   }
 

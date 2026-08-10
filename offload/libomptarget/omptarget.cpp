@@ -2521,8 +2521,11 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   KernelArgs.DynCGroupMem = SharedMemorySize;
   KernelArgs.Flags.StrictBlocksAndThreads = true;
 
+  KernelExtraArgsTy KernelExtraArgs{};
+  KernelExtraArgs.ReplayOutcome = ReplayOutcome;
+
   int Ret = Device.launchKernel(Symbols[0].DevPtr, TgtArgs, TgtOffsets,
-                                KernelArgs, ReplayOutcome, AsyncInfo);
+                                KernelArgs, &KernelExtraArgs, AsyncInfo);
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT() << "Failed to launch kernel replay.";
     return OFFLOAD_FAIL;

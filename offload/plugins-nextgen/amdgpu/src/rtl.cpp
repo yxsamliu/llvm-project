@@ -848,7 +848,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   /// Launch the AMDGPU kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelLaunchArgsTy &LaunchArgs,
+                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
   /// Return maximum block size for maximum occupancy
@@ -863,8 +863,7 @@ struct AMDGPUKernelTy : public GenericKernelTy {
 
   /// Print more elaborate kernel launch info for AMDGPU
   Error printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
-                               const KernelLaunchArgsTy &LaunchArgs,
-                               uint32_t NumThreads[3],
+                               KernelArgsTy &KernelArgs, uint32_t NumThreads[3],
                                uint32_t NumBlocks[3]) const override;
   /// Print the "old" AMD KernelTrace single-line format
   void printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
@@ -5138,11 +5137,11 @@ private:
 
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
-    KernelLaunchArgsTy LaunchArgs = {};
+    KernelArgsTy KernelArgs = {};
     uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
-    auto Err =
-        AMDGPUKernel.launchImpl(*this, NumBlocksAndThreads, NumBlocksAndThreads,
-                                0, LaunchArgs, AsyncInfoWrapper);
+    auto Err = AMDGPUKernel.launchImpl(
+        *this, NumBlocksAndThreads, NumBlocksAndThreads, 0, KernelArgs,
+        KernelLaunchParamsTy{}, AsyncInfoWrapper);
 
     AsyncInfoWrapper.finalize(Err);
     return Err;
@@ -6284,10 +6283,11 @@ private:
 Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                  uint32_t DynBlockMemSize,
-                                 KernelLaunchArgsTy &LaunchArgs,
+                                 KernelArgsTy &KernelArgs,
+                                 KernelLaunchParamsTy LaunchParams,
                                  AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   // Cooperative kernel launch is not yet supported for AMDGPU
-  if (LaunchArgs.Flags.Cooperative)
+  if (KernelArgs.Flags.Cooperative)
     return Plugin::error(ErrorCode::UNSUPPORTED,
                          "cooperative kernel launch not supported for AMDGPU");
 
@@ -6306,9 +6306,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Copy explicit arguments.
   size_t ExplicitEnd = 0;
-  if (LaunchArgs.Args) {
+  if (LaunchParams.Args) {
     const auto &ArgMDs = KernelInfo.ArgMDs;
-    uint32_t NumArgs = LaunchArgs.NumArgs;
+    uint32_t NumArgs = LaunchParams.NumArgs;
 
     if (NumArgs > ArgMDs.size())
       return Plugin::error(
@@ -6319,7 +6319,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
     for (size_t I = 0; I < NumArgs; I++) {
       auto [Offset, Size] = ArgMDs[I];
-      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchArgs.Args[I], Size);
+      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchParams.Args[I],
+                  Size);
     }
 
     auto [Offset, Size] = ArgMDs[NumArgs - 1];
@@ -6364,7 +6365,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                : 1 + (NumBlocks[1] * NumThreads[1] != 1));
 
     hsa_utils::initImplArg(ImplArgs, &ImplArgsTy::DynamicLdsSize, ImplArgsSize,
-                           LaunchArgs.DynCGroupMem);
+                           KernelArgs.DynCGroupMem);
   }
 
   // Get required OMPT-related data
@@ -6429,7 +6430,6 @@ void AMDGPUKernelTy::printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
   }
 }
 
-<<<<<<< HEAD
 Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
                                              KernelArgsTy &KernelArgs,
                                              uint32_t NumThreads[3],
@@ -6441,11 +6441,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
       GenericDevice.enableKernelDurationTracing())
     printAMDOneLineKernelTrace(GenericDevice, KernelArgs, NumThreads, NumBlocks);
 
-=======
-Error AMDGPUKernelTy::printLaunchInfoDetails(
-    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
-    uint32_t NumThreads[3], uint32_t NumBlocks[3]) const {
->>>>>>> 067aa365bfaf
   // Only do all this when the output is requested
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
@@ -6455,8 +6450,8 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(
   auto *ThreadsPerGroup = NumThreads;
 
   // Kernel Arguments Info
-  auto ArgNum = LaunchArgs.NumArgs;
-  auto LoopTripCount = LaunchArgs.Tripcount;
+  auto ArgNum = KernelArgs.NumArgs;
+  auto LoopTripCount = KernelArgs.Tripcount;
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
