@@ -5727,10 +5727,11 @@ static DIExpression *createOrReplaceFragment(const DIExpression *Expr,
       HasFragment = true;
       continue;
     }
-    if (auto Extract = dyn_cast<DIExpression::ExtractBitsOp>(Op)) {
+    if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_zext ||
+        Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext) {
       HasBitExtract = true;
-      int64_t ExtractOffsetInBits = Extract.getOffsetInBits();
-      int64_t ExtractSizeInBits = Extract.getSizeInBits();
+      int64_t ExtractOffsetInBits = Op.getArg(0);
+      int64_t ExtractSizeInBits = Op.getArg(1);
 
       // DIExpression::createFragmentExpression doesn't know how to handle
       // a fragment that is smaller than the extract. Copy the behaviour
@@ -5966,8 +5967,9 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
     // Offset defined by a DW_OP_LLVM_extract_bits_[sz]ext.
     int64_t ExtractOffsetInBits = 0;
     for (auto Op : getAddressExpression(DbgVariable)->expr_ops()) {
-      if (auto Extract = dyn_cast<DIExpression::ExtractBitsOp>(Op)) {
-        ExtractOffsetInBits = Extract.getOffsetInBits();
+      if (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_zext ||
+          Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext) {
+        ExtractOffsetInBits = Op.getArg(0);
         break;
       }
     }

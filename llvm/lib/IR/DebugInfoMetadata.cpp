@@ -1998,7 +1998,6 @@ bool DIExpression::ExprOperand::isNonEmitting() const {
   return getOp() == dwarf::DW_OP_LLVM_tag_offset;
 }
 
-<<<<<<< HEAD
 bool DIExpression::isValid(
     std::optional<DIExpressionEnv> Env,
     std::optional<std::reference_wrapper<llvm::raw_ostream>> ErrS) const {
@@ -2014,46 +2013,6 @@ bool DIExpression::isValid(
       *ErrS << Verifier.getErrorMsg() << '\n';
     return Result;
   }
-=======
-bool DIExpression::ArgOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_arg);
-}
-
-bool DIExpression::FragmentOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_fragment);
-}
-
-bool DIExpression::ExtractBitsOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_extract_bits_sext) ||
-         Op->is(dwarf::DW_OP_LLVM_extract_bits_zext);
-}
-
-bool DIExpression::ExtractBitsOp::isSigned() const {
-  return is(dwarf::DW_OP_LLVM_extract_bits_sext);
-}
-
-bool DIExpression::ConvertOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_convert);
-}
-
-bool DIExpression::EntryValueOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_entry_value);
-}
-
-bool DIExpression::TagOffsetOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_LLVM_tag_offset);
-}
-
-bool DIExpression::ConstuOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_constu);
-}
-
-bool DIExpression::PlusUconstOp::classof(const ExprOperand *Op) {
-  return Op->is(dwarf::DW_OP_plus_uconst);
-}
-
-bool DIExpression::isValid() const {
->>>>>>> 1a4bc95e1a99
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
     if (I->get() + I->getSize() > E->get())
@@ -2102,10 +2061,9 @@ bool DIExpression::isValid() const {
       // register location. One reason for this is that we currently can't
       // calculate the size of the resulting DWARF block for other expressions.
       auto FirstOp = expr_op_begin();
-      if (auto Arg = dyn_cast<ArgOp>(*FirstOp); Arg && Arg.getIndex() == 0)
+      if (FirstOp->getOp() == dwarf::DW_OP_LLVM_arg && FirstOp->getArg(0) == 0)
         ++FirstOp;
-      if (I->get() != FirstOp->get() ||
-          cast<EntryValueOp>(*I).getNumOperations() != 1)
+      if (I->get() != FirstOp->get() || I->getArg(0) != 1)
         return false;
       break;
     }
@@ -2212,14 +2170,15 @@ bool DIExpression::isSingleLocationExpression() const {
 
   auto ExprOpBegin = expr_ops().begin();
   auto ExprOpEnd = expr_ops().end();
-  if (auto Arg = dyn_cast<ArgOp>(*ExprOpBegin)) {
-    if (Arg.getIndex() != 0)
+  if (ExprOpBegin->getOp() == dwarf::DW_OP_LLVM_arg) {
+    if (ExprOpBegin->getArg(0) != 0)
       return false;
     ++ExprOpBegin;
   }
 
-  return !std::any_of(ExprOpBegin, ExprOpEnd,
-                      [](auto Op) { return Op.is(dwarf::DW_OP_LLVM_arg); });
+  return !std::any_of(ExprOpBegin, ExprOpEnd, [](auto Op) {
+    return Op.getOp() == dwarf::DW_OP_LLVM_arg;
+  });
 }
 
 std::optional<ArrayRef<uint64_t>>
@@ -2329,8 +2288,10 @@ bool DIExpression::isEqualExpression(const DIExpression *FirstExpr,
 std::optional<DIExpression::FragmentInfo>
 DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   for (auto I = Start; I != End; ++I)
-    if (auto Fragment = dyn_cast<FragmentOp>(*I))
-      return FragmentInfo{Fragment.getSizeInBits(), Fragment.getOffsetInBits()};
+    if (I->getOp() == dwarf::DW_OP_LLVM_fragment) {
+      DIExpression::FragmentInfo Info = {I->getArg(1), I->getArg(0)};
+      return Info;
+    }
   return std::nullopt;
 }
 
@@ -2345,10 +2306,6 @@ DIExpression::getFragmentInfo(NewElementsRef E) {
 std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
   std::optional<uint64_t> InitialActiveBits = Var->getSizeInBits();
   std::optional<uint64_t> ActiveBits = InitialActiveBits;
-  auto NarrowActiveBits = [&](uint64_t SizeInBits) {
-    ActiveBits = ActiveBits ? std::min(*ActiveBits, SizeInBits) : SizeInBits;
-  };
-
   for (auto Op : expr_ops()) {
     switch (Op.getOp()) {
     default:
@@ -2358,20 +2315,23 @@ std::optional<uint64_t> DIExpression::getActiveBits(DIVariable *Var) {
       break;
     case dwarf::DW_OP_LLVM_extract_bits_zext:
     case dwarf::DW_OP_LLVM_extract_bits_sext: {
-      auto Extract = cast<ExtractBitsOp>(Op);
       // We can't handle an extract whose sign doesn't match that of the
       // variable.
       std::optional<DIBasicType::Signedness> VarSign = Var->getSignedness();
       bool VarSigned = (VarSign == DIBasicType::Signedness::Signed);
-      if (!VarSign || VarSigned != Extract.isSigned()) {
+      bool OpSigned = (Op.getOp() == dwarf::DW_OP_LLVM_extract_bits_sext);
+      if (!VarSign || VarSigned != OpSigned) {
         ActiveBits = InitialActiveBits;
         break;
       }
-      NarrowActiveBits(Extract.getSizeInBits());
-      break;
+      [[fallthrough]];
     }
     case dwarf::DW_OP_LLVM_fragment:
-      NarrowActiveBits(cast<FragmentOp>(Op).getSizeInBits());
+      // Extract or fragment narrows the active bits
+      if (ActiveBits)
+        ActiveBits = std::min(*ActiveBits, Op.getArg(1));
+      else
+        ActiveBits = Op.getArg(1);
       break;
     }
   }
@@ -2439,10 +2399,10 @@ bool DIExpression::extractLeadingOffset(
         Op == dwarf::DW_OP_LLVM_extract_bits_zext ||
         Op == dwarf::DW_OP_LLVM_extract_bits_sext) {
       break;
-    } else if (auto PlusUconst = dyn_cast<PlusUconstOp>(*ExprOpIt)) {
-      OffsetInBytes += PlusUconst.getOffset();
-    } else if (auto Constant = dyn_cast<ConstuOp>(*ExprOpIt)) {
-      uint64_t Value = Constant.getValue();
+    } else if (Op == dwarf::DW_OP_plus_uconst) {
+      OffsetInBytes += ExprOpIt->getArg(0);
+    } else if (Op == dwarf::DW_OP_constu) {
+      uint64_t Value = ExprOpIt->getArg(0);
       ++ExprOpIt;
       if (ExprOpIt->getOp() == dwarf::DW_OP_plus)
         OffsetInBytes += Value;
@@ -2475,15 +2435,10 @@ bool DIExpression::extractLeadingOffset(
 bool DIExpression::hasAllLocationOps(unsigned N) const {
   SmallDenseSet<uint64_t, 4> SeenOps;
   for (auto ExprOp : expr_ops())
-<<<<<<< HEAD
     if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
       SeenOps.insert(ExprOp.getArg(0));
     else if (ExprOp.getOp() == dwarf::DW_OP_LLVM_poisoned)
       return true;
-=======
-    if (auto Arg = dyn_cast<ArgOp>(ExprOp))
-      SeenOps.insert(Arg.getIndex());
->>>>>>> 1a4bc95e1a99
   for (uint64_t Idx = 0; Idx < N; ++Idx)
     if (!SeenOps.contains(Idx))
       return false;
@@ -2542,7 +2497,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
 
   // Handle non-variadic intrinsics by prepending the opcodes.
   if (!any_of(Expr->expr_ops(),
-              [](auto Op) { return Op.is(dwarf::DW_OP_LLVM_arg); })) {
+              [](auto Op) { return Op.getOp() == dwarf::DW_OP_LLVM_arg; })) {
     assert(ArgNo == 0 &&
            "Location Index must be 0 for a non-variadic expression.");
     SmallVector<uint64_t, 8> NewOps(Ops);
@@ -2561,7 +2516,7 @@ DIExpression *DIExpression::appendOpsToArg(const DIExpression *Expr,
       }
     }
     Op.appendToVector(NewOps);
-    if (auto Arg = dyn_cast<ArgOp>(Op); Arg && Arg.getIndex() == ArgNo)
+    if (Op.getOp() == dwarf::DW_OP_LLVM_arg && Op.getArg(0) == ArgNo)
       llvm::append_range(NewOps, Ops);
   }
   if (StackValue)
@@ -2641,18 +2596,17 @@ DIExpression *DIExpression::replaceArg(const DIExpression *Expr,
   SmallVector<uint64_t, 8> NewOps;
 
   for (auto Op : Expr->expr_ops()) {
-    auto Arg = dyn_cast<ArgOp>(Op);
-    if (!Arg || Arg.getIndex() < OldArg) {
+    if (Op.getOp() != dwarf::DW_OP_LLVM_arg || Op.getArg(0) < OldArg) {
       Op.appendToVector(NewOps);
       continue;
     }
     NewOps.push_back(dwarf::DW_OP_LLVM_arg);
-    uint64_t ArgIndex = Arg.getIndex() == OldArg ? NewArg : Arg.getIndex();
+    uint64_t Arg = Op.getArg(0) == OldArg ? NewArg : Op.getArg(0);
     // OldArg has been deleted from the Op list, so decrement all indices
     // greater than it.
-    if (ArgIndex > OldArg)
-      --ArgIndex;
-    NewOps.push_back(ArgIndex);
+    if (Arg > OldArg)
+      --Arg;
+    NewOps.push_back(Arg);
   }
   return DIExpression::get(Expr->getContext(), NewOps);
 }
@@ -2878,15 +2832,14 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
           return std::nullopt;
         break;
       case dwarf::DW_OP_LLVM_fragment: {
-        auto Fragment = cast<FragmentOp>(Op);
         // If we've decided we don't need a fragment then give up if we see that
         // there's already a fragment expression.
         // FIXME: We could probably do better here
         if (!EmitFragment)
           return std::nullopt;
         // Make the new offset point into the existing fragment.
-        uint64_t FragmentOffsetInBits = Fragment.getOffsetInBits();
-        uint64_t FragmentSizeInBits = Fragment.getSizeInBits();
+        uint64_t FragmentOffsetInBits = Op.getArg(0);
+        uint64_t FragmentSizeInBits = Op.getArg(1);
         (void)FragmentSizeInBits;
         assert((OffsetInBits + SizeInBits <= FragmentSizeInBits) &&
                "new fragment outside of original fragment");
@@ -2895,12 +2848,11 @@ std::optional<DIExpression *> DIExpression::createFragmentExpression(
       }
       case dwarf::DW_OP_LLVM_extract_bits_zext:
       case dwarf::DW_OP_LLVM_extract_bits_sext: {
-        auto Extract = cast<ExtractBitsOp>(Op);
         // If we're extracting bits from inside of the fragment that we're
         // creating then we don't have a fragment after all, and just need to
         // adjust the offset that we're extracting from.
-        uint64_t ExtractOffsetInBits = Extract.getOffsetInBits();
-        uint64_t ExtractSizeInBits = Extract.getSizeInBits();
+        uint64_t ExtractOffsetInBits = Op.getArg(0);
+        uint64_t ExtractSizeInBits = Op.getArg(1);
         if (ExtractOffsetInBits >= OffsetInBits &&
             ExtractOffsetInBits + ExtractSizeInBits <=
                 OffsetInBits + SizeInBits) {
@@ -3017,20 +2969,17 @@ DIExpression::constantFold(const ConstantInt *CI) {
         return {this, CI};
       First = false;
       break;
-    case dwarf::DW_OP_LLVM_convert: {
+    case dwarf::DW_OP_LLVM_convert:
       if (!First)
         break;
       Changed = true;
-      auto Convert = cast<ConvertOp>(Op);
-      if (Convert.getEncoding() == dwarf::DW_ATE_signed)
-        NewInt = NewInt.sextOrTrunc(Convert.getBitSize());
+      if (Op.getArg(1) == dwarf::DW_ATE_signed)
+        NewInt = NewInt.sextOrTrunc(Op.getArg(0));
       else {
-        assert(Convert.getEncoding() == dwarf::DW_ATE_unsigned &&
-               "Unexpected operand");
-        NewInt = NewInt.zextOrTrunc(Convert.getBitSize());
+        assert(Op.getArg(1) == dwarf::DW_ATE_unsigned && "Unexpected operand");
+        NewInt = NewInt.zextOrTrunc(Op.getArg(0));
       }
       continue;
-    }
     }
     Op.appendToVector(Ops);
   }
@@ -3043,8 +2992,8 @@ DIExpression::constantFold(const ConstantInt *CI) {
 uint64_t DIExpression::getNumLocationOperands() const {
   uint64_t Result = 0;
   for (auto ExprOp : expr_ops())
-    if (auto Arg = dyn_cast<ArgOp>(ExprOp))
-      Result = std::max(Result, Arg.getIndex() + 1);
+    if (ExprOp.getOp() == dwarf::DW_OP_LLVM_arg)
+      Result = std::max(Result, ExprOp.getArg(0) + 1);
   assert(hasAllLocationOps(Result) &&
          "Expression is missing one or more location operands.");
   return Result;
