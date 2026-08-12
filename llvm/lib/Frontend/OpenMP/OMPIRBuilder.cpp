@@ -8166,7 +8166,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createOrderedThreadsSimd(
   if (!updateToLocation(Loc))
     return Loc.IP;
 
-  Directive OMPD = Directive::OMPD_ordered;
+  Directive OMPD = Directive::OMPD_ordered_blockassoc;
   Instruction *EntryCall = nullptr;
   Instruction *ExitCall = nullptr;
 
