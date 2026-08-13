@@ -98,7 +98,6 @@ else()
     kmp_str.cpp
     kmp_tasking.cpp
     kmp_threadprivate.cpp
-    kmp_traits.cpp
     kmp_utility.cpp
     kmp_barrier.cpp
     kmp_wait_release.cpp
