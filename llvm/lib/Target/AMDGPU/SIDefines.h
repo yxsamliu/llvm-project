@@ -55,11 +55,6 @@ enum {
 }
 
 namespace SIInstrFlags {
-
-// Raw TSFlags bit constants — use the predicate functions below instead of
-// testing these directly. This namespace makes accidental direct use a
-// compile error outside of SIDefines.h itself.
-namespace DontUseRawTSFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
   // Low bits - basic encoding information.
@@ -188,7 +183,6 @@ enum : uint64_t {
   // Is a SWMMAC instruction.
   IsSWMMAC = UINT64_C(1) << 63,
 };
-} // namespace DontUseRawTSFlags
 
 // Predicate functions over TSFlags — the single place where raw TSFlags bit
 // tests are written. All callers (SIInstrInfo methods, MC-layer code) go
@@ -208,189 +202,187 @@ inline uint64_t getTSFlags(const MCInstrInfo &MII, const MCInst &Inst) {
 }
 
 template <typename... T> constexpr bool isSALU(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SALU;
+  return getTSFlags(O...) & SALU;
 }
 template <typename... T> constexpr bool isVALU(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VALU;
+  return getTSFlags(O...) & VALU;
 }
 template <typename... T> constexpr bool isSOP1(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOP1;
+  return getTSFlags(O...) & SOP1;
 }
 template <typename... T> constexpr bool isSOP2(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOP2;
+  return getTSFlags(O...) & SOP2;
 }
 template <typename... T> constexpr bool isSOPC(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPC;
+  return getTSFlags(O...) & SOPC;
 }
 template <typename... T> constexpr bool isSOPK(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPK;
+  return getTSFlags(O...) & SOPK;
 }
 template <typename... T> constexpr bool isSOPP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SOPP;
+  return getTSFlags(O...) & SOPP;
 }
 template <typename... T> constexpr bool isVOP1(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP1;
+  return getTSFlags(O...) & VOP1;
 }
 template <typename... T> constexpr bool isVOP2(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP2;
+  return getTSFlags(O...) & VOP2;
 }
 template <typename... T> constexpr bool isVOPC(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOPC;
+  return getTSFlags(O...) & VOPC;
 }
 template <typename... T> constexpr bool isVOP3(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP3;
+  return getTSFlags(O...) & VOP3;
 }
 template <typename... T> constexpr bool isVOP3P(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP3P;
+  return getTSFlags(O...) & VOP3P;
 }
 template <typename... T> constexpr bool isVOP3Like(const T &...O) {
-  return getTSFlags(O...) &
-         (DontUseRawTSFlags::VOP3 | DontUseRawTSFlags::VOP3P);
+  return getTSFlags(O...) & (VOP3 | VOP3P);
 }
 template <typename... T> constexpr bool isVINTRP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VINTRP;
+  return getTSFlags(O...) & VINTRP;
 }
 template <typename... T> constexpr bool isSDWA(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SDWA;
+  return getTSFlags(O...) & SDWA;
 }
 template <typename... T> constexpr bool isDPP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::DPP;
+  return getTSFlags(O...) & DPP;
 }
 template <typename... T> constexpr bool isTRANS(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::TRANS;
+  return getTSFlags(O...) & TRANS;
 }
 template <typename... T> constexpr bool isMUBUF(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MUBUF;
+  return getTSFlags(O...) & MUBUF;
 }
 template <typename... T> constexpr bool isMTBUF(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MTBUF;
+  return getTSFlags(O...) & MTBUF;
 }
 template <typename... T> constexpr bool isBuffer(const T &...O) {
-  return getTSFlags(O...) &
-         (DontUseRawTSFlags::MUBUF | DontUseRawTSFlags::MTBUF);
+  return getTSFlags(O...) & (MUBUF | MTBUF);
 }
 template <typename... T> constexpr bool isSMRD(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SMRD;
+  return getTSFlags(O...) & SMRD;
 }
 template <typename... T> constexpr bool isMIMG(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::MIMG;
+  return getTSFlags(O...) & MIMG;
 }
 template <typename... T> constexpr bool isVIMAGE(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VIMAGE;
+  return getTSFlags(O...) & VIMAGE;
 }
 template <typename... T> constexpr bool isVSAMPLE(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VSAMPLE;
+  return getTSFlags(O...) & VSAMPLE;
 }
 template <typename... T> constexpr bool isEXP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::EXP;
+  return getTSFlags(O...) & EXP;
 }
 template <typename... T> constexpr bool isFLAT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FLAT;
+  return getTSFlags(O...) & FLAT;
 }
 template <typename... T> constexpr bool isDS(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::DS;
+  return getTSFlags(O...) & DS;
 }
 template <typename... T> constexpr bool isSpill(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::Spill;
+  return getTSFlags(O...) & Spill;
 }
 template <typename... T> constexpr bool isLDSDIR(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::LDSDIR;
+  return getTSFlags(O...) & LDSDIR;
 }
 template <typename... T> constexpr bool isVINTERP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VINTERP;
+  return getTSFlags(O...) & VINTERP;
 }
 template <typename... T> constexpr bool isWQM(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::WQM;
+  return getTSFlags(O...) & WQM;
 }
 template <typename... T> constexpr bool isDisableWQM(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::DisableWQM;
+  return getTSFlags(O...) & DisableWQM;
 }
 template <typename... T> constexpr bool isGather4(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::Gather4;
+  return getTSFlags(O...) & Gather4;
 }
 template <typename... T> constexpr bool usesTENSOR_CNT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::TENSOR_CNT;
+  return getTSFlags(O...) & TENSOR_CNT;
 }
 template <typename... T> constexpr bool isScalarStore(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::SCALAR_STORE;
+  return getTSFlags(O...) & SCALAR_STORE;
 }
 template <typename... T> constexpr bool isFixedSize(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FIXED_SIZE;
+  return getTSFlags(O...) & FIXED_SIZE;
 }
 template <typename... T> constexpr bool usesASYNC_CNT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::ASYNC_CNT;
+  return getTSFlags(O...) & ASYNC_CNT;
 }
 template <typename... T> constexpr bool hasVOP3OpSel(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP3_OPSEL;
+  return getTSFlags(O...) & VOP3_OPSEL;
 }
 template <typename... T> constexpr bool isMaybeAtomic(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::maybeAtomic;
+  return getTSFlags(O...) & maybeAtomic;
 }
 template <typename... T> constexpr bool hasFPClamp(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FPClamp;
+  return getTSFlags(O...) & FPClamp;
 }
 template <typename... T> constexpr bool hasIntClamp(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IntClamp;
+  return getTSFlags(O...) & IntClamp;
 }
 template <typename... T> constexpr bool hasClampLo(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::ClampLo;
+  return getTSFlags(O...) & ClampLo;
 }
 template <typename... T> constexpr bool hasClampHi(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::ClampHi;
+  return getTSFlags(O...) & ClampHi;
 }
 template <typename... T> constexpr bool isPacked(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsPacked;
+  return getTSFlags(O...) & IsPacked;
 }
 template <typename... T> constexpr bool isD16Buf(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::D16Buf;
+  return getTSFlags(O...) & D16Buf;
 }
 template <typename... T> constexpr bool isFlatGlobal(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FlatGlobal;
+  return getTSFlags(O...) & FlatGlobal;
 }
 template <typename... T> constexpr bool usesFPDPRounding(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FPDPRounding;
+  return getTSFlags(O...) & FPDPRounding;
 }
 template <typename... T> constexpr bool isFPAtomic(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FPAtomic;
+  return getTSFlags(O...) & FPAtomic;
 }
 template <typename... T> constexpr bool isMAI(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsMAI;
+  return getTSFlags(O...) & IsMAI;
 }
 template <typename... T> constexpr bool isDOT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsDOT;
+  return getTSFlags(O...) & IsDOT;
 }
 template <typename... T> constexpr bool isFlatScratch(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::FlatScratch;
+  return getTSFlags(O...) & FlatScratch;
 }
 template <typename... T> constexpr bool isAtomicNoRet(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsAtomicNoRet;
+  return getTSFlags(O...) & IsAtomicNoRet;
 }
 template <typename... T> constexpr bool isAtomicRet(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsAtomicRet;
+  return getTSFlags(O...) & IsAtomicRet;
 }
 template <typename... T> constexpr bool isWMMA(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsWMMA;
+  return getTSFlags(O...) & IsWMMA;
 }
 template <typename... T> constexpr bool isTiedSourceNotRead(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::TiedSourceNotRead;
+  return getTSFlags(O...) & TiedSourceNotRead;
 }
 template <typename... T> constexpr bool isNeverUniform(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsNeverUniform;
+  return getTSFlags(O...) & IsNeverUniform;
 }
 template <typename... T> constexpr bool isGWS(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::GWS;
+  return getTSFlags(O...) & GWS;
 }
 template <typename... T> constexpr bool isSWMMAC(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::IsSWMMAC;
+  return getTSFlags(O...) & IsSWMMAC;
 }
 template <typename... T> constexpr bool isVOPD3(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOPD3;
+  return getTSFlags(O...) & VOPD3;
 }
 template <typename... T> constexpr bool usesVM_CNT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VM_CNT;
+  return getTSFlags(O...) & VM_CNT;
 }
 template <typename... T> constexpr bool usesLGKM_CNT(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::LGKM_CNT;
+  return getTSFlags(O...) & LGKM_CNT;
 }
 
 // Compound predicates.

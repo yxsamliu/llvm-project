@@ -138,9 +138,9 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         }
       }
     } else if (TII->isLDSDMA(*MI)) {
-      if (SIInstrFlags::usesTENSOR_CNT(*MI))
+      if (MI->getDesc().TSFlags & SIInstrFlags::TENSOR_CNT)
         RegionTDM.push_back(&SU);
-      else if (SIInstrFlags::usesASYNC_CNT(*MI))
+      else if (MI->getDesc().TSFlags & SIInstrFlags::ASYNC_CNT)
         RegionAsync.push_back(&SU);
     } else if (Op == AMDGPU::S_WAIT_TENSORCNT ||
                Op == AMDGPU::S_WAIT_ASYNCCNT) {
@@ -170,8 +170,12 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
           continue;
 
         Register DepReg = PredDep.getReg();
-        bool IsAsync = Op == AMDGPU::S_WAIT_ASYNCCNT;
-        Register LDSDMACnt = IsAsync ? AMDGPU::ASYNCcnt : AMDGPU::TENSORcnt;
+        Register LDSDMACnt = AMDGPU::TENSORcnt;
+        uint64_t LDSDMAFlags = SIInstrFlags::TENSOR_CNT;
+        if (Op == AMDGPU::S_WAIT_ASYNCCNT) {
+          LDSDMACnt = AMDGPU::ASYNCcnt;
+          LDSDMAFlags = SIInstrFlags::ASYNC_CNT;
+        }
 
         if (DepReg != LDSDMACnt)
           continue;
@@ -181,9 +185,7 @@ void BarrierLatency::apply(ScheduleDAGInstrs *DAG) {
         // The data dep can be carried by a non-LDSDMA SU
         // (e.g. an intervening COPY or pseudo). Such predecessors are not
         // tracked, so needWaitFor cannot reason about them.
-        const MachineInstr &PredMI = *PredSU->getInstr();
-        if (IsAsync ? !SIInstrFlags::usesASYNC_CNT(PredMI)
-                    : !SIInstrFlags::usesTENSOR_CNT(PredMI))
+        if (!(PredSU->getInstr()->getDesc().TSFlags & LDSDMAFlags))
           continue;
 
         if (!needWaitFor(Op == AMDGPU::S_WAIT_ASYNCCNT ? RegionAsync
