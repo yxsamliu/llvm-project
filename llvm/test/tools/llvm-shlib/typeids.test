@@ -1,4 +1,5 @@
 # REQUIRES: x86_64-linux, llvm-dylib
+# REQUIRES: stability_in_psdb
 
 # Make sure there's no llvm::Any::TypeId symbol local to the shared library.  As
 # the adress of llvm::Any::TypeId::Id is used as a global unique identifier for
