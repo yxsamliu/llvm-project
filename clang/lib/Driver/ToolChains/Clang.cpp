@@ -9756,8 +9756,13 @@ static bool requiresProfileRT(unsigned ID) {
   switch (ID) {
   case options::OPT_fprofile_generate:
   case options::OPT_fprofile_generate_EQ:
+  case options::OPT_fcs_profile_generate:
+  case options::OPT_fcs_profile_generate_EQ:
   case options::OPT_fprofile_instr_generate:
   case options::OPT_fprofile_instr_generate_EQ:
+  case options::OPT_fcreate_profile:
+  case options::OPT_fprofile_generate_cold_function_coverage:
+  case options::OPT_fprofile_generate_cold_function_coverage_EQ:
   case options::OPT_fcoverage_mapping:
   case options::OPT_fno_coverage_mapping:
   case options::OPT_fcoverage_compilation_dir_EQ:
@@ -9829,8 +9834,16 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fmultilib_flag,
       OPT_fprofile_generate,
       OPT_fprofile_generate_EQ,
+      OPT_fcs_profile_generate,
+      OPT_fcs_profile_generate_EQ,
       OPT_fprofile_instr_generate,
       OPT_fprofile_instr_generate_EQ,
+      OPT_fcreate_profile,
+      OPT_fprofile_generate_cold_function_coverage,
+      OPT_fprofile_generate_cold_function_coverage_EQ,
+      OPT_fno_profile_generate,
+      OPT_fno_profile_instr_generate,
+      OPT_noprofilelib,
       OPT_fcoverage_mapping,
       OPT_fno_coverage_mapping,
       OPT_fcoverage_compilation_dir_EQ,
@@ -9855,13 +9868,15 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     return TC.getVFS().exists(
         TC.getCompilerRT(Args, Name, ToolChain::FT_Static));
   };
-  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC) {
+  auto ShouldForwardForToolChain = [&](Arg *A, const ToolChain &TC,
+                                       const ArgList &TCArgs) {
     unsigned ID = A->getOption().getID();
     // Don't forward profiling arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
     // Coverage mapping flags require -fprofile-instr-generate, so drop them
     // together to avoid a device cc1 diagnostic.
-    if (requiresProfileRT(ID) && !ToolChainHasRT(TC, "profile"))
+    if (requiresProfileRT(ID) && !TCArgs.hasArg(OPT_noprofilelib) &&
+        !ToolChainHasRT(TC, "profile"))
       return false;
     // Don't forward sanitizer arguments if the toolchain doesn't support it.
     // Without this check using it on the host would result in linker errors.
@@ -9871,13 +9886,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     return TC.HasNativeLLVMSupport() || ID != OPT_mllvm;
   };
   auto ShouldForward = [&](const llvm::DenseSet<unsigned> &Set, Arg *A,
-                           const ToolChain &TC) {
+                           const ToolChain &TC, const ArgList &TCArgs) {
     if (A->getOption().matches(OPT_v) && SuppressHIPNoRDCVerbose)
       return false;
     return (Set.contains(A->getOption().getID()) ||
             (A->getOption().getGroup().isValid() &&
              Set.contains(A->getOption().getGroup().getID()))) &&
-           ShouldForwardForToolChain(A, TC);
+           ShouldForwardForToolChain(A, TC, TCArgs);
   };
 
   ArgStringList CmdArgs;
@@ -9896,10 +9911,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());
-        else if (ShouldForward(CompilerOptions, A, *TC)) {
+        else if (ShouldForward(CompilerOptions, A, *TC, ToolChainArgs)) {
           A->claim();
           A->render(Args, CompilerArgs);
-        } else if (ShouldForward(LinkerOptions, A, *TC)) {
+        } else if (ShouldForward(LinkerOptions, A, *TC, ToolChainArgs)) {
           A->claim();
           A->render(Args, LinkerArgs);
         }
@@ -10003,9 +10018,12 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         Twine("--device-compiler=--rocm-path=") + A->getValue()));
   }
 
-  // Construct the link job so we can wrap around it.
-  Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
-  const auto &LinkCommand = C.getJobs().getJobs().back();
+  Command *LinkCommand = nullptr;
+  if (JA.getType() != types::TY_HIP_FATBIN) {
+    // Construct the link job so we can wrap around it.
+    Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
+    LinkCommand = C.getJobs().getJobs().back().get();
+  }
 
   // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
   // wrapper.
@@ -10073,8 +10091,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Add the linker arguments to be forwarded by the wrapper.
-  CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") +
-                                       LinkCommand->getExecutable()));
+  CmdArgs.push_back(Args.MakeArgString(
+      Twine("--linker-path=") +
+      (LinkCommand ? LinkCommand->getExecutable()
+                   : Args.MakeArgString(getToolChain().GetLinkerPath()))));
 
   // We use action type to differentiate two use cases of the linker wrapper.
   // TY_Image for normal linker wrapper work.
@@ -10087,6 +10107,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
     for (auto Input : Inputs)
       CmdArgs.push_back(Input.getFilename());
   } else {
+    assert(LinkCommand && "expected link command for normal wrapper job");
     for (const char *LinkArg : LinkCommand->getArguments())
       CmdArgs.push_back(LinkArg);
   }
@@ -10113,8 +10134,14 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   const char *Exec =
       Args.MakeArgString(getToolChain().GetProgramPath("clang-linker-wrapper"));
 
-  // Replace the executable and arguments of the link job with the
-  // wrapper.
-  LinkCommand->replaceExecutable(Exec);
-  LinkCommand->replaceArguments(CmdArgs);
+  if (LinkCommand) {
+    // Replace the executable and arguments of the link job with the
+    // wrapper.
+    LinkCommand->replaceExecutable(Exec);
+    LinkCommand->replaceArguments(CmdArgs);
+  } else {
+    C.addCommand(std::make_unique<Command>(JA, *this,
+                                           ResponseFileSupport::AtFileUTF8(),
+                                           Exec, CmdArgs, Inputs, Output));
+  }
 }

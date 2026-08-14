@@ -701,13 +701,13 @@
 // SPIRV-ONLY-NEXT: 2: compiler, {1}, ir, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 3: backend, {2}, assembler, (device-hip, gfx1030)
 // SPIRV-ONLY-NEXT: 4: assembler, {3}, object, (device-hip, gfx1030)
-// SPIRV-ONLY-NEXT: 5: linker, {4}, image, (device-hip, gfx1030)
-// SPIRV-ONLY-NEXT: 6: offload, "device-hip (amdgcn-amd-amdhsa:gfx1030)" {5}, image
-// SPIRV-ONLY-NEXT: 7: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 8: preprocessor, {7}, hip-cpp-output, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 9: compiler, {8}, ir, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 10: backend, {9}, lto-bc, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 11: linker, {10}, image, (device-hip, amdgcnspirv)
-// SPIRV-ONLY-NEXT: 12: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {11}, image
-// SPIRV-ONLY-NEXT: 13: linker, {6, 12}, hip-fatbin, (device-hip)
+// SPIRV-ONLY-NEXT: 5: offload, "device-hip (amdgcn-amd-amdhsa:gfx1030)" {4}, object
+// SPIRV-ONLY-NEXT: 6: input, "[[INPUT]]", hip, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 7: preprocessor, {6}, hip-cpp-output, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 8: compiler, {7}, ir, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 9: backend, {8}, lto-bc, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 10: linker, {9}, image, (device-hip, amdgcnspirv)
+// SPIRV-ONLY-NEXT: 11: offload, "device-hip (spirv64-amd-amdhsa:amdgcnspirv)" {10}, image
+// SPIRV-ONLY-NEXT: 12: llvm-offload-binary, {5, 11}, image, (device-hip)
+// SPIRV-ONLY-NEXT: 13: clang-linker-wrapper, {12}, hip-fatbin, (device-hip)
 // SPIRV-ONLY-NEXT: 14: offload, "device-hip (amdgcn-amd-amdhsa)" {13}, none

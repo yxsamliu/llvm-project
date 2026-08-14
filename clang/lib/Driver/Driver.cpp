@@ -5080,6 +5080,11 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       Args.hasFlag(options::OPT_fhip_emit_relocatable,
                    options::OPT_fno_hip_emit_relocatable, false);
 
+  bool HasGPUOutputBundleOption = Args.hasArg(
+      options::OPT_gpu_bundle_output, options::OPT_no_gpu_bundle_output);
+  bool BundleGPUOutput = Args.hasFlag(options::OPT_gpu_bundle_output,
+                                      options::OPT_no_gpu_bundle_output, true);
+
   if (!HIPNoRDC && HIPRelocatableObj)
     C.getDriver().Diag(diag::err_opt_not_valid_with_opt)
         << "-fhip-emit-relocatable"
@@ -5101,6 +5106,7 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
 
   ActionList OffloadActions;
   OffloadAction::DeviceDependences DDeps;
+  bool HIPDeviceOnlyNeedsLink = false;
 
   const Action::OffloadKind OffloadKinds[] = {
       Action::OFK_OpenMP, Action::OFK_Cuda, Action::OFK_HIP, Action::OFK_SYCL};
@@ -5189,8 +5195,9 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       }
     }
 
-    // Compiling HIP in device-only non-RDC mode requires linking each action
-    // individually.
+    // Compiling HIP in device-only non-RDC mode requires linking each action.
+    // Keep the inputs unlinked so the linker wrapper can link all device
+    // images in one invocation.
     for (Action *&A : DeviceActions) {
       auto *OffloadTriple = A->getOffloadingToolChain()
                                 ? &A->getOffloadingToolChain()->getTriple()
@@ -5200,12 +5207,19 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
           (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
            OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
 
-      if ((A->getType() != types::TY_Object && !IsHIPSPV &&
-           A->getType() != types::TY_LTO_BC) ||
-          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
+      if (HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
-      ActionList LinkerInput = {A};
-      A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
+
+      if (IsHIPSPV) {
+        ActionList LinkerInput = {A};
+        A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);
+        continue;
+      }
+
+      if (A->getType() != types::TY_Object && A->getType() != types::TY_LTO_BC)
+        continue;
+
+      HIPDeviceOnlyNeedsLink = true;
     }
 
     auto *TCAndArch = TCAndArchs.begin();
@@ -5229,18 +5243,18 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
     }
   }
 
-  // HIP code in device-only non-RDC mode will bundle the output if it invoked
-  // the linker or if the user explicitly requested it.
+  // HIP code in device-only non-RDC mode will bundle linked output by default
+  // or bundle any output if the user explicitly requested it.
   bool ShouldBundleHIP =
-      Args.hasFlag(options::OPT_gpu_bundle_output,
-                   options::OPT_no_gpu_bundle_output, false) ||
-      (!Args.getLastArg(options::OPT_no_gpu_bundle_output) && HIPNoRDC &&
-       offloadDeviceOnly() && llvm::none_of(OffloadActions, [](Action *A) {
-         return A->getType() != types::TY_Image;
-       }));
+      BundleGPUOutput &&
+      (HasGPUOutputBundleOption ||
+       (HIPNoRDC && offloadDeviceOnly() &&
+        (HIPDeviceOnlyNeedsLink || llvm::none_of(OffloadActions, [](Action *A) {
+           return A->getType() != types::TY_Image;
+         }))));
 
   // All kinds exit now in device-only mode except for non-RDC mode HIP.
-  if (offloadDeviceOnly() && !ShouldBundleHIP)
+  if (offloadDeviceOnly() && !ShouldBundleHIP && !HIPDeviceOnlyNeedsLink)
     return C.MakeAction<OffloadAction>(DDeps, types::TY_Nothing);
 
   if (OffloadActions.empty())
@@ -5256,37 +5270,57 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
         C.MakeAction<LinkJobAction>(OffloadActions, types::TY_CUDA_FATBIN);
     DDep.add(*FatbinAction, *C.getSingleOffloadToolChain<Action::OFK_Cuda>(),
              /*BA=*/{}, Action::OFK_Cuda);
-  } else if (!UsesLLVMOffloading && HIPNoRDC && offloadDeviceOnly()) {
-    // If we are in device-only non-RDC-mode we just emit the final HIP
-    // fatbinary for each translation unit, linking each input individually.
-    Action *FatbinAction =
-        C.MakeAction<LinkJobAction>(OffloadActions, types::TY_HIP_FATBIN);
-    DDep.add(*FatbinAction,
-             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
-             /*BA=*/{}, Action::OFK_HIP);
-  } else if (!UsesLLVMOffloading && HIPNoRDC) {
+  } else if (HIPNoRDC) {
     // Host + device assembly: defer to clang-offload-bundler (see
     // BuildActions).
-    if (HIPAsmBundleDeviceOut &&
+    if (!offloadDeviceOnly() && HIPAsmBundleDeviceOut &&
         shouldBundleHIPAsmWithNewDriver(C, Args, C.getDriver())) {
       for (Action *OA : OffloadActions)
         HIPAsmBundleDeviceOut->push_back(OA);
       return HostAction;
     }
-    // Package all the offloading actions into a single output that can be
-    // embedded in the host and linked.
-    Action *PackagerAction =
-        C.MakeAction<OffloadPackagerJobAction>(OffloadActions, types::TY_Image);
 
-    // For HIP non-RDC compilation, wrap the device binary with linker wrapper
-    // before bundling with host code. Do not bind a specific GPU arch here,
-    // as the packaged image may contain entries for multiple GPUs.
-    ActionList AL{PackagerAction};
-    PackagerAction =
-        C.MakeAction<LinkerWrapperJobAction>(AL, types::TY_HIP_FATBIN);
-    DDep.add(*PackagerAction,
-             *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
-             /*BA=*/{}, Action::OFK_HIP);
+    Action *DeviceOutputAction;
+    if (offloadDeviceOnly() && !HIPDeviceOnlyNeedsLink) {
+      // Non-link outputs use clang-offload-bundler when explicitly requested.
+      DeviceOutputAction =
+          C.MakeAction<LinkJobAction>(OffloadActions, types::TY_HIP_FATBIN);
+    } else {
+      // Package all device inputs so the linker wrapper can link every GPU
+      // architecture in one invocation.
+      Action *Packager = C.MakeAction<OffloadPackagerJobAction>(
+          OffloadActions, types::TY_Image);
+      ActionList WrapperInputs = {Packager};
+      DeviceOutputAction = C.MakeAction<LinkerWrapperJobAction>(
+          WrapperInputs, types::TY_HIP_FATBIN);
+      if (offloadDeviceOnly() && !ShouldBundleHIP) {
+        auto *Unbundler = C.MakeAction<OffloadUnbundlingJobAction>(
+            DeviceOutputAction, types::TY_Image);
+        for (Action *A : OffloadActions) {
+          const ToolChain *DeviceTC = nullptr;
+          BoundArch DeviceArch;
+          cast<OffloadAction>(A)->doOnEachDeviceDependence(
+              [&](Action *, const ToolChain *TC, BoundArch BA) {
+                assert(!DeviceTC && "expected one device dependence");
+                DeviceTC = TC;
+                DeviceArch = BA;
+              });
+          assert(DeviceTC && "expected a device toolchain");
+          Unbundler->registerDependentActionInfo(DeviceTC, DeviceArch,
+                                                 Action::OFK_HIP);
+        }
+        DeviceOutputAction = Unbundler;
+      }
+    }
+    if (auto *UA = dyn_cast<OffloadUnbundlingJobAction>(DeviceOutputAction)) {
+      for (const auto &Info : UA->getDependentActionsInfo())
+        DDep.add(*DeviceOutputAction, *Info.DependentToolChain,
+                 Info.DependentBoundArch, Action::OFK_HIP);
+    } else {
+      DDep.add(*DeviceOutputAction,
+               *C.getOffloadToolChains<Action::OFK_HIP>().first->second,
+               /*BA=*/{}, Action::OFK_HIP);
+    }
   } else {
     // Package all the offloading actions into a single output that can be
     // embedded in the host and linked.
@@ -6367,32 +6401,35 @@ InputInfoList Driver::BuildJobsForActionNoCache(
 
   // Determine the place to write output to, if any.
   InputInfo Result;
-  InputInfoList UnbundlingResults;
+  InputInfoList MultipleResults;
   if (auto *UA = dyn_cast<OffloadUnbundlingJobAction>(JA)) {
     // If we have an unbundling job, we need to create results for all the
     // outputs. We also update the results cache so that other actions using
     // this unbundling action can get the right results.
+    bool ChangesType = UA->getInputs().front()->getType() != UA->getType();
     for (auto &UI : UA->getDependentActionsInfo()) {
       assert(UI.DependentOffloadKind != Action::OFK_None &&
              "Unbundling with no offloading??");
 
-      // Unbundling actions are never at the top level. When we generate the
-      // offloading prefix, we also do that for the host file because the
-      // unbundling action does not change the type of the output which can
-      // cause a overwrite.
+      // Most unbundling actions are internal and keep the input type. The HIP
+      // device-only fatbin-to-image unbundling action is a final output action,
+      // so let a single output use -o while keeping generated names for
+      // multiple outputs.
       std::string OffloadingPrefix = Action::GetOffloadingFileNamePrefix(
           UI.DependentOffloadKind, UI.DependentToolChain->getTripleString(),
           /*CreatePrefixForHost=*/true);
       auto CurI = InputInfo(
           UA,
           GetNamedOutputPath(C, *UA, BaseInput, UI.DependentBoundArch,
-                             /*AtTopLevel=*/false,
+                             /*AtTopLevel=*/ChangesType,
                              MultipleArchs ||
                                  UI.DependentOffloadKind == Action::OFK_HIP,
-                             OffloadingPrefix),
+                             OffloadingPrefix,
+                             /*UseFinalOutput=*/ChangesType &&
+                                 UA->getDependentActionsInfo().size() == 1),
           BaseInput);
       // Save the unbundling result.
-      UnbundlingResults.push_back(CurI);
+      MultipleResults.push_back(CurI);
 
       // Get the unique string identifier for this dependence and cache the
       // result.
@@ -6414,9 +6451,14 @@ InputInfoList Driver::BuildJobsForActionNoCache(
     // returned for the current depending action.
     std::pair<const Action *, std::string> ActionTC = {
         A, GetTriplePlusArchString(TC, BA, TargetDeviceOffloadKind)};
-    assert(CachedResults.find(ActionTC) != CachedResults.end() &&
-           "Result does not exist??");
-    Result = CachedResults[ActionTC].front();
+    auto ResultIt = CachedResults.find(ActionTC);
+    if (ResultIt != CachedResults.end()) {
+      Result = ResultIt->second.front();
+    } else {
+      assert(ChangesType &&
+             "unbundling result missing for current toolchain/arch");
+      Result = MultipleResults.front();
+    }
   } else if (JA->getType() == types::TY_Nothing)
     Result = {InputInfo(A, BaseInput)};
   else {
@@ -6443,23 +6485,23 @@ InputInfoList Driver::BuildJobsForActionNoCache(
       if (i + 1 != e)
         llvm::errs() << ", ";
     }
-    if (UnbundlingResults.empty())
+    if (MultipleResults.empty())
       llvm::errs() << "], output: " << Result.getAsString() << "\n";
     else {
       llvm::errs() << "], outputs: [";
-      for (unsigned i = 0, e = UnbundlingResults.size(); i != e; ++i) {
-        llvm::errs() << UnbundlingResults[i].getAsString();
+      for (unsigned i = 0, e = MultipleResults.size(); i != e; ++i) {
+        llvm::errs() << MultipleResults[i].getAsString();
         if (i + 1 != e)
           llvm::errs() << ", ";
       }
       llvm::errs() << "] \n";
     }
   } else {
-    if (UnbundlingResults.empty())
+    if (MultipleResults.empty())
       T->ConstructJob(C, *JA, Result, InputInfos, Args, LinkingOutput);
     else
-      T->ConstructJobMultipleOutputs(C, *JA, UnbundlingResults, InputInfos,
-                                     Args, LinkingOutput);
+      T->ConstructJobMultipleOutputs(C, *JA, MultipleResults, InputInfos, Args,
+                                     LinkingOutput);
   }
   return {Result};
 }
@@ -6578,7 +6620,8 @@ static const char *GetModuleOutputPath(Compilation &C, const JobAction &JA,
 const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
                                        const char *BaseInput, BoundArch BA,
                                        bool AtTopLevel, bool MultipleArchs,
-                                       StringRef OffloadingPrefix) const {
+                                       StringRef OffloadingPrefix,
+                                       bool UseFinalOutput) const {
   std::string BoundArchStr = sanitizeTargetIDInFileName(BA.ArchName);
 
   llvm::PrettyStackTraceString CrashInfo("Computing output path");
@@ -6609,7 +6652,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
 
   // Output to a user requested destination?
   if (AtTopLevel && !isa<DsymutilJobAction>(JA) && !isa<VerifyJobAction>(JA)) {
-    if (Arg *FinalOutput = C.getArgs().getLastArg(options::OPT_o))
+    if (Arg *FinalOutput =
+            UseFinalOutput ? C.getArgs().getLastArg(options::OPT_o) : nullptr)
       return C.addResultFile(FinalOutput->getValue(), &JA);
   }
 

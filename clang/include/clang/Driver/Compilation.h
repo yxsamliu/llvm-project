@@ -101,11 +101,11 @@ class Compilation {
   llvm::opt::ArgStringList TempFiles;
 
   /// Result files which should be removed on failure.
-  ArgStringMap ResultFiles;
+  ActionFileMap ResultFiles;
 
   /// Result files which are generated correctly on failure, and which should
   /// only be removed if we crash.
-  ArgStringMap FailureResultFiles;
+  ActionFileMap FailureResultFiles;
 
   /// -ftime-trace result files.
   ArgStringMap TimeTraceFiles;
@@ -227,9 +227,9 @@ public:
   llvm::opt::ArgStringList &getTempFiles() { return TempFiles; }
   const llvm::opt::ArgStringList &getTempFiles() const { return TempFiles; }
 
-  const ArgStringMap &getResultFiles() const { return ResultFiles; }
+  const ActionFileMap &getResultFiles() const { return ResultFiles; }
 
-  const ArgStringMap &getFailureResultFiles() const {
+  const ActionFileMap &getFailureResultFiles() const {
     return FailureResultFiles;
   }
 
@@ -266,14 +266,14 @@ public:
   /// addResultFile - Add a file to remove on failure, and returns its
   /// argument.
   const char *addResultFile(const char *Name, const JobAction *JA) {
-    ResultFiles[JA] = Name;
+    ResultFiles[JA].push_back(Name);
     return Name;
   }
 
   /// addFailureResultFile - Add a file to remove if we crash, and returns its
   /// argument.
   const char *addFailureResultFile(const char *Name, const JobAction *JA) {
-    FailureResultFiles[JA] = Name;
+    FailureResultFiles[JA].push_back(Name);
     return Name;
   }
 
@@ -304,8 +304,7 @@ public:
   /// JobAction.  Otherwise, delete all files in the map.
   /// \param IssueErrors - Report failures as errors.
   /// \return Whether all files were removed successfully.
-  bool CleanupFileMap(const ArgStringMap &Files,
-                      const JobAction *JA,
+  bool CleanupFileMap(const ActionFileMap &Files, const JobAction *JA,
                       bool IssueErrors = false) const;
 
   /// ExecuteCommand - Execute an actual command.

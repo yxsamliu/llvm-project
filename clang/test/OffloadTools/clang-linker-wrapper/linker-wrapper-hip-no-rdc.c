@@ -55,3 +55,18 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: test -s %t.gfx9-4-generic-xnack+.co
 // RUN: test -f %t.gfx1200.co
 // RUN: test -s %t.gfx1200.co
+
+// Clang passes the exact output filename for each device image.
+// RUN: rm -rf %t.dir && mkdir %t.dir
+// RUN: cd %t.dir && %clang -x hip --cuda-device-only \
+// RUN:   --no-gpu-bundle-output --offload-arch=gfx900 \
+// RUN:   --offload-arch=gfx1200 -nogpuinc -nogpulib %s
+// RUN: test -f %t.dir/linker-wrapper-hip-no-rdc-hip-amdgcn-amd-amdhsa-gfx900.out
+// RUN: test -f %t.dir/linker-wrapper-hip-no-rdc-hip-amdgcn-amd-amdhsa-gfx1200.out
+
+// The implicit filename keeps its target suffix for one architecture too.
+// RUN: rm -rf %t.single.dir && mkdir %t.single.dir
+// RUN: cd %t.single.dir && %clang -x hip --cuda-device-only \
+// RUN:   --no-gpu-bundle-output --offload-arch=gfx1200 \
+// RUN:   -nogpuinc -nogpulib %s
+// RUN: test -f %t.single.dir/linker-wrapper-hip-no-rdc-hip-amdgcn-amd-amdhsa-gfx1200.out

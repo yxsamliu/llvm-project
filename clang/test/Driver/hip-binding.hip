@@ -57,24 +57,45 @@
 // RUN:        --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY %s
 //      MULTI-D-ONLY: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908:.+]]"
-// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]"], output: "[[GFX908_OUT:.+]]"
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
-// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
-// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908_OUT]]", "[[GFX90a_OUT]]"], output: "{{.+}}"
+// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[GFX908]]", "[[GFX90a]]"], output: "[[PACKAGE:.+]]"
+// MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PACKAGE]]"], output: "{{.+}}"
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc -emit-llvm \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN:        --no-gpu-bundle-output --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY %s
+//
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE %s
+//      MULTI-D-ONLY-NO-BUNDLE: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908:.+]]"
+// MULTI-D-ONLY-NO-BUNDLE-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A:.+]]"
+// MULTI-D-ONLY-NO-BUNDLE-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[GFX908]]", "[[GFX90A]]"], output: "[[PACKAGE:.+]]"
+// MULTI-D-ONLY-NO-BUNDLE-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PACKAGE]]"], output: "[[FATBIN:.+]]"
+// MULTI-D-ONLY-NO-BUNDLE-NEXT: # "amdgcn-amd-amdhsa" - "offload bundler", inputs: ["[[FATBIN]]"], outputs: ["a.out-hip-amdgcn-amd-amdhsa-gfx908", "a.out-hip-amdgcn-amd-amdhsa-gfx90a"]
+//
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN:        --gpu-bundle-output --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE %s
+//
+// RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
 // RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE-O %s
 // MULTI-D-ONLY-NO-BUNDLE-O: error: cannot specify -o when generating multiple output files
+
+// RUN: %clang -### --target=x86_64-linux-gnu -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-device-only -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=SINGLE-D-ONLY-NO-BUNDLE %s
+// SINGLE-D-ONLY-NO-BUNDLE: # "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PACKAGE:.+]]"], output: "[[FATBIN:.+]]"
+// SINGLE-D-ONLY-NO-BUNDLE-NEXT: # "amdgcn-amd-amdhsa" - "offload bundler", inputs: ["[[FATBIN]]"], outputs: ["a.out-hip-amdgcn-amd-amdhsa-gfx90a"]
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
 // RUN:        --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o a.out %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
 //      MULTI-D-ONLY-O: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908_OBJ:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908_OBJ]]"], output: "[[GFX908:.+]]"
 // MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A_OBJ:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90A_OBJ]]"], output: "[[GFX90A:.+]]"
-// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]", "[[GFX90A]]"], output: "a.out"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[GFX908_OBJ]]", "[[GFX90A_OBJ]]"], output: "[[PACKAGE:.+]]"
+// MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PACKAGE]]"], output: "a.out"
 
 // RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc -emit-llvm \
 // RUN:        --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o a.out %s 2>&1 \

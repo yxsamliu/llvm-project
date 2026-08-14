@@ -617,8 +617,9 @@ private:
   SmallVector<DependentActionInfo, 6> DependentActionInfoArray;
 
 public:
-  // Offloading unbundling doesn't change the type of output.
+  // Offloading unbundling usually doesn't change the type of output.
   OffloadUnbundlingJobAction(Action *Input);
+  OffloadUnbundlingJobAction(Action *Input, types::ID OutputType);
 
   /// Register information about a dependent action.
   void registerDependentActionInfo(const ToolChain *TC, BoundArch BA,

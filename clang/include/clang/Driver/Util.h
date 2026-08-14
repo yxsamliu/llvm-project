@@ -21,6 +21,10 @@ namespace driver {
   /// ArgStringMap - Type used to map a JobAction to its result file.
   typedef llvm::DenseMap<const JobAction*, const char*> ArgStringMap;
 
+  /// ActionFileMap - Type used to map a JobAction to its result files.
+  typedef llvm::DenseMap<const JobAction *, SmallVector<const char *, 1>>
+      ActionFileMap;
+
   /// ActionList - Type used for lists of actions.
   typedef SmallVector<Action*, 3> ActionList;
 

@@ -440,6 +440,10 @@ void OffloadUnbundlingJobAction::anchor() {}
 OffloadUnbundlingJobAction::OffloadUnbundlingJobAction(Action *Input)
     : JobAction(OffloadUnbundlingJobClass, Input, Input->getType()) {}
 
+OffloadUnbundlingJobAction::OffloadUnbundlingJobAction(Action *Input,
+                                                       types::ID OutputType)
+    : JobAction(OffloadUnbundlingJobClass, Input, OutputType) {}
+
 void OffloadPackagerJobAction::anchor() {}
 
 OffloadPackagerJobAction::OffloadPackagerJobAction(ActionList &Inputs,
