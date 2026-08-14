@@ -57,7 +57,7 @@
 // HIP-DEVICE-PGO-RAW-SAME: "--device-compiler=amdgcn-amd-amdhsa=-fprofile-generate"
 // HIP-DEVICE-PGO-RAW-SAME: "--emit-fatbin-only"
 // HIP-DEVICE-PGO-RAW: "{{.*}}clang-offload-bundler"
-// HIP-DEVICE-PGO-RAW-SAME: "-type=hipfb"
+// HIP-DEVICE-PGO-RAW-SAME: "-type=o"
 // HIP-DEVICE-PGO-RAW-SAME: "-output=a.out-hip-amdgcn-amd-amdhsa-gfx906"
 // HIP-DEVICE-PGO-RAW-SAME: "-unbundle"
 

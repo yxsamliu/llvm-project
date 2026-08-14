@@ -9642,8 +9642,12 @@ void OffloadBundler::ConstructJobMultipleOutputs(
   InputInfo Input = Inputs.front();
 
   // Get the type.
-  CmdArgs.push_back(TCArgs.MakeArgString(
-      Twine("-type=") + types::getTypeTempSuffix(Input.getType())));
+  types::ID BundleType = JA.getType();
+  if (Input.getType() == types::TY_HIP_FATBIN &&
+      JA.getType() == types::TY_Image)
+    BundleType = types::TY_Object;
+  CmdArgs.push_back(TCArgs.MakeArgString(Twine("-type=") +
+                                         types::getTypeTempSuffix(BundleType)));
 
   // Get the targets.
   SmallString<128> Triples;

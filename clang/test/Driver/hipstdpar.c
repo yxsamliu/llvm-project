@@ -44,16 +44,15 @@
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-AMDGPU-TC %s
 // HIPSTDPAR-AMDGPU-TC: "-mllvm" "-amdgpu-enable-hipstdpar"
 
-// Check that the base AMDGPU toolchain linker forwards the hipstdpar flag as a
-// plugin-opt for the LTO path.
+// Check device-only link forwards the hipstdpar flag through linker wrapper.
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
 // RUN:   --hipstdpar -flto --hipstdpar-path=%S/Inputs/hipstdpar \
 // RUN:   --hipstdpar-thrust-path=%S/Inputs/hipstdpar/thrust \
 // RUN:   --hipstdpar-prim-path=%S/Inputs/hipstdpar/rocprim \
 // RUN:   --rocm-path=%S/Inputs/rocm -nogpulib %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=HIPSTDPAR-AMDGPU-LTO %s
-// HIPSTDPAR-AMDGPU-LTO: {{.*}}ld.lld
-// HIPSTDPAR-AMDGPU-LTO-SAME: "-plugin-opt=-amdgpu-enable-hipstdpar"
+// HIPSTDPAR-AMDGPU-LTO: {{".*clang-linker-wrapper"}}
+// HIPSTDPAR-AMDGPU-LTO-SAME: "--device-compiler=amdgcn-amd-amdhsa=--hipstdpar"
 
 // Check that without --hipstdpar none of the backend flags are added.
 // RUN: %clang -### --target=amdgcn-amd-amdhsa \
