@@ -5105,6 +5105,8 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       options::OPT_foffload_via_llvm, options::OPT_fno_offload_via_llvm, false);
 
   ActionList OffloadActions;
+  SmallVector<OffloadUnbundlingJobAction::DependentActionInfo, 6>
+      HIPUnbundleTargets;
   OffloadAction::DeviceDependences DDeps;
   bool HIPDeviceOnlyNeedsLink = false;
 
@@ -5238,6 +5240,9 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
                           false))
           DDep.add(*Input, *TCAndArch->first, TCAndArch->second, Kind);
       OffloadActions.push_back(C.MakeAction<OffloadAction>(DDep, A->getType()));
+      if (Kind == Action::OFK_HIP)
+        HIPUnbundleTargets.push_back(
+            {TCAndArch->first, TCAndArch->second, Kind});
 
       ++TCAndArch;
     }
@@ -5296,19 +5301,10 @@ Driver::BuildOffloadingActions(Compilation &C, llvm::opt::DerivedArgList &Args,
       if (offloadDeviceOnly() && !ShouldBundleHIP) {
         auto *Unbundler = C.MakeAction<OffloadUnbundlingJobAction>(
             DeviceOutputAction, types::TY_Image);
-        for (Action *A : OffloadActions) {
-          const ToolChain *DeviceTC = nullptr;
-          BoundArch DeviceArch;
-          cast<OffloadAction>(A)->doOnEachDeviceDependence(
-              [&](Action *, const ToolChain *TC, BoundArch BA) {
-                assert(!DeviceTC && "expected one device dependence");
-                DeviceTC = TC;
-                DeviceArch = BA;
-              });
-          assert(DeviceTC && "expected a device toolchain");
-          Unbundler->registerDependentActionInfo(DeviceTC, DeviceArch,
-                                                 Action::OFK_HIP);
-        }
+        for (const auto &Info : HIPUnbundleTargets)
+          Unbundler->registerDependentActionInfo(Info.DependentToolChain,
+                                                 Info.DependentBoundArch,
+                                                 Info.DependentOffloadKind);
         DeviceOutputAction = Unbundler;
       }
     }
