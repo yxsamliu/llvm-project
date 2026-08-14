@@ -618,8 +618,8 @@ private:
 
 public:
   // Offloading unbundling usually doesn't change the type of output.
-  OffloadUnbundlingJobAction(Action *Input);
-  OffloadUnbundlingJobAction(Action *Input, types::ID OutputType);
+  OffloadUnbundlingJobAction(Action *Input,
+                             types::ID OutputType = types::TY_Nothing);
 
   /// Register information about a dependent action.
   void registerDependentActionInfo(const ToolChain *TC, BoundArch BA,

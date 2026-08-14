@@ -437,12 +437,11 @@ OffloadBundlingJobAction::OffloadBundlingJobAction(ActionList &Inputs)
 
 void OffloadUnbundlingJobAction::anchor() {}
 
-OffloadUnbundlingJobAction::OffloadUnbundlingJobAction(Action *Input)
-    : JobAction(OffloadUnbundlingJobClass, Input, Input->getType()) {}
-
 OffloadUnbundlingJobAction::OffloadUnbundlingJobAction(Action *Input,
                                                        types::ID OutputType)
-    : JobAction(OffloadUnbundlingJobClass, Input, OutputType) {}
+    : JobAction(OffloadUnbundlingJobClass, Input,
+                OutputType == types::TY_Nothing ? Input->getType()
+                                                : OutputType) {}
 
 void OffloadPackagerJobAction::anchor() {}
 
