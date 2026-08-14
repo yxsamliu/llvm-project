@@ -969,18 +969,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
-  /// Initialize the async info for interoperability purposes.
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    if (auto Err = setContext())
-      return Err;
-
-    CUstream Stream;
-    if (auto Err = getStream(AsyncInfoWrapper, Stream))
-      return Err;
-
-    return Plugin::success();
-  }
-
   /// Insert a data fence between previous data operations and the following
   /// operations. This is a no-op for CUDA devices as operations inserted into
   /// a queue are in-order.
@@ -1677,6 +1665,20 @@ public:
   }
 };
 
+struct CUDAPluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &Device,
+                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    auto &CUDADevice = static_cast<CUDADeviceTy &>(Device);
+    if (auto Err = CUDADevice.setContext())
+      return Err;
+
+    CUstream Stream;
+    return CUDADevice.getStream(AsyncInfoWrapper, Stream);
+  }
+};
+
 /// Class implementing the CUDA-specific functionalities of the plugin.
 struct CUDAPluginTy final : public GenericPluginTy {
   /// Create a CUDA plugin.
@@ -1740,6 +1742,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new CUDADeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<CUDAPluginContextTy>(*this, Devices);
   }
 
   /// Creates a CUDA global handler.
