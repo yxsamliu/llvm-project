@@ -10018,11 +10018,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         Twine("--device-compiler=--rocm-path=") + A->getValue()));
   }
 
+  const char *LinkerPath = Args.MakeArgString(getToolChain().GetLinkerPath());
   Command *LinkCommand = nullptr;
   if (JA.getType() != types::TY_HIP_FATBIN) {
     // Construct the link job so we can wrap around it.
     Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
     LinkCommand = C.getJobs().getJobs().back().get();
+    LinkerPath = LinkCommand->getExecutable();
   }
 
   // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
@@ -10091,10 +10093,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Add the linker arguments to be forwarded by the wrapper.
-  CmdArgs.push_back(Args.MakeArgString(
-      Twine("--linker-path=") +
-      (LinkCommand ? LinkCommand->getExecutable()
-                   : Args.MakeArgString(getToolChain().GetLinkerPath()))));
+  CmdArgs.push_back(Args.MakeArgString(Twine("--linker-path=") + LinkerPath));
 
   // We use action type to differentiate two use cases of the linker wrapper.
   // TY_Image for normal linker wrapper work.

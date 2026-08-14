@@ -149,7 +149,7 @@ bool Compilation::CleanupFileList(const llvm::opt::ArgStringList &Files,
   return Success;
 }
 
-bool Compilation::CleanupFileMap(const ActionFileMap &Files,
+bool Compilation::CleanupFileMap(const ArgStringMap &Files,
                                  const JobAction *JA, bool IssueErrors) const {
   bool Success = true;
   for (const auto &File : Files) {
@@ -157,8 +157,7 @@ bool Compilation::CleanupFileMap(const ActionFileMap &Files,
     // Otherwise, delete all files in the map.
     if (JA && File.first != JA)
       continue;
-    for (const char *Filename : File.second)
-      Success &= CleanupFile(Filename, IssueErrors);
+    Success &= CleanupFile(File.second, IssueErrors);
   }
   return Success;
 }
