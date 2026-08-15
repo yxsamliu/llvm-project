@@ -918,6 +918,13 @@ public:
              bool ShouldPreserveUseListOrder = false,
              bool IsForDebug = false) const;
 
+  /// Print the function using slots assigned on first use for non-local
+  /// values. This is intended for fast debugging output; slot numbers may not
+  /// match those from printing the containing module.
+  void printFast(raw_ostream &OS, AssemblyAnnotationWriter *AAW = nullptr,
+                 bool ShouldPreserveUseListOrder = false,
+                 bool IsForDebug = false) const;
+
   /// viewCFG - This function is meant for use from the debugger.  You can just
   /// say 'call F->viewCFG()' and a ghostview window should pop up from the
   /// program, displaying the CFG of the current function with the code for each

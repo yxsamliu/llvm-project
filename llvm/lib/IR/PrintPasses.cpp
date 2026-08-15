@@ -68,9 +68,9 @@ cl::opt<ChangePrinter> llvm::PrintChanged(
     cl::values(
         clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
         clEnumValN(ChangePrinter::FastVerbose, "fast",
-                   "Use faster function-local metadata numbering"),
+                   "Use faster function-local slot numbering"),
         clEnumValN(ChangePrinter::FastQuiet, "fast-quiet",
-                   "Use faster function-local metadata numbering in quiet "
+                   "Use faster function-local slot numbering in quiet "
                    "mode"),
         clEnumValN(ChangePrinter::DiffVerbose, "diff",
                    "Display patch-like changes"),

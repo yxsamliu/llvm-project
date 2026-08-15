@@ -194,11 +194,11 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
 }
 
 void printIR(raw_ostream &OS, const Function *F,
-             bool UseLocalMetadataSlots = false) {
+             bool UseFastFunctionPrinting = false) {
   if (!isFunctionInPrintList(F->getName()))
     return;
-  if (UseLocalMetadataSlots)
-    F->print(OS);
+  if (UseFastFunctionPrinting)
+    F->printFast(OS);
   else
     OS << *F;
 }
@@ -292,7 +292,7 @@ bool shouldPrintIR(IRUnitRef IR) {
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// an IRUnitRef and does actual print job.
 void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR,
-                    bool UseLocalMetadataSlots = false) {
+                    bool UseFastFunctionPrinting = false) {
   if (!shouldPrintIR(IR))
     return;
 
@@ -309,7 +309,7 @@ void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR,
   }
 
   if (const auto *F = dyn_cast<Function>(IR)) {
-    printIR(OS, F, UseLocalMetadataSlots);
+    printIR(OS, F, UseFastFunctionPrinting);
     return;
   }
 
@@ -519,7 +519,7 @@ void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
 void IRChangedPrinter::generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                                 std::string &Output) {
   raw_string_ostream OS(Output);
-  unwrapAndPrint(OS, IR, UseLocalMetadataSlots);
+  unwrapAndPrint(OS, IR, UseFastFunctionPrinting);
   OS.str();
 }
 

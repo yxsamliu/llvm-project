@@ -800,6 +800,7 @@ private:
   const Function* TheFunction = nullptr;
   bool FunctionProcessed = false;
   bool ShouldInitializeAllMetadata;
+  bool UseLazySlots;
 
   std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
       ProcessModuleHookFn;
@@ -857,7 +858,8 @@ public:
   /// functions, giving correct numbering for metadata referenced only from
   /// within a function (even if no functions have been initialized).
   explicit SlotTracker(const Function *F,
-                       bool ShouldInitializeAllMetadata = false);
+                       bool ShouldInitializeAllMetadata = false,
+                       bool UseLazySlots = false);
 
   /// Construct from a module summary index.
   explicit SlotTracker(const ModuleSummaryIndex *Index);
@@ -1057,20 +1059,28 @@ static SlotTracker *createSlotTracker(const Value *V) {
 // Module level constructor. Causes the contents of the Module (sans functions)
 // to be added to the slot table.
 SlotTracker::SlotTracker(const Module *M, bool ShouldInitializeAllMetadata)
-    : TheModule(M), ShouldInitializeAllMetadata(ShouldInitializeAllMetadata) {}
+    : TheModule(M), ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
+      UseLazySlots(false) {}
 
 // Function level constructor. Causes the contents of the Module and the one
 // function provided to be added to the slot table.
-SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata)
+SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata,
+                         bool UseLazySlots)
     : TheModule(F ? F->getParent() : nullptr), TheFunction(F),
-      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata) {}
+      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
+      UseLazySlots(UseLazySlots) {
+  assert((!ShouldInitializeAllMetadata || !UseLazySlots) &&
+         "lazy slots cannot preserve module metadata numbering");
+}
 
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
-    : TheModule(nullptr), ShouldInitializeAllMetadata(false), TheIndex(Index) {}
+    : TheModule(nullptr), ShouldInitializeAllMetadata(false),
+      UseLazySlots(false), TheIndex(Index) {}
 
 inline void SlotTracker::initializeIfNeeded() {
   if (TheModule) {
-    processModule();
+    if (!UseLazySlots)
+      processModule();
     TheModule = nullptr; ///< Prevent re-processing next time we're called.
   }
 
@@ -1145,7 +1155,7 @@ void SlotTracker::processFunction() {
   fNext = 0;
 
   // Process function metadata if it wasn't hit at the module-level.
-  if (!ShouldInitializeAllMetadata)
+  if (!ShouldInitializeAllMetadata && !UseLazySlots)
     processFunctionMetadata(*TheFunction);
 
   // Add all the function arguments with no names.
@@ -1167,11 +1177,13 @@ void SlotTracker::processFunction() {
 
       // We allow direct calls to any llvm.foo function here, because the
       // target may not be linked into the optimizer.
-      if (const auto *Call = dyn_cast<CallBase>(&I)) {
-        // Add all the call attributes to the table.
-        AttributeSet Attrs = Call->getAttributes().getFnAttrs();
-        if (Attrs.hasAttributes())
-          CreateAttributeSetSlot(Attrs);
+      if (!UseLazySlots) {
+        if (const auto *Call = dyn_cast<CallBase>(&I)) {
+          // Add all the call attributes to the table.
+          AttributeSet Attrs = Call->getAttributes().getFnAttrs();
+          if (Attrs.hasAttributes())
+            CreateAttributeSetSlot(Attrs);
+        }
       }
     }
   }
@@ -1302,6 +1314,10 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 
   // Find the value in the module map
   ValueMap::iterator MI = mMap.find(V);
+  if (MI == mMap.end() && UseLazySlots) {
+    CreateModuleSlot(V);
+    MI = mMap.find(V);
+  }
   return MI == mMap.end() ? -1 : (int)MI->second;
 }
 
@@ -1327,6 +1343,8 @@ int SlotTracker::getMetadataSlot(const MDNode *N) {
 
   // Find the MDNode in the module map
   mdn_iterator MI = mdnMap.find(N);
+  if (MI == mdnMap.end() && UseLazySlots)
+    MI = mdnMap.try_emplace(N, mdnNext++).first;
   return MI == mdnMap.end() ? -1 : (int)MI->second;
 }
 
@@ -1347,6 +1365,10 @@ int SlotTracker::getAttributeGroupSlot(AttributeSet AS) {
 
   // Find the AttributeSet in the module map.
   as_iterator AI = asMap.find(AS);
+  if (AI == asMap.end() && UseLazySlots) {
+    CreateAttributeSetSlot(AS);
+    AI = asMap.find(AS);
+  }
   return AI == asMap.end() ? -1 : (int)AI->second;
 }
 
@@ -2987,13 +3009,7 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
-  if (!TheModule)
-    return;
-  for (const GlobalObject &GO : TheModule->global_objects())
-    if (const Comdat *C = GO.getComdat())
-      Comdats.insert(C);
-}
+              : ShouldPreserveUseListOrder) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
@@ -3104,6 +3120,10 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 
 void AssemblyWriter::printModule(const Module *M) {
   Machine.initializeIfNeeded();
+
+  for (const GlobalObject &GO : M->global_objects())
+    if (const Comdat *C = GO.getComdat())
+      Comdats.insert(C);
 
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
@@ -5098,6 +5118,17 @@ void AssemblyWriter::printUseLists(const Function *F) {
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder, bool IsForDebug) const {
   SlotTracker SlotTable(this->getParent());
+  formatted_raw_ostream OS(ROS);
+  AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
+                   ShouldPreserveUseListOrder);
+  W.printFunction(this);
+}
+
+void Function::printFast(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
+                         bool ShouldPreserveUseListOrder,
+                         bool IsForDebug) const {
+  SlotTracker SlotTable(this, /*ShouldInitializeAllMetadata=*/false,
+                        /*UseLazySlots=*/true);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);

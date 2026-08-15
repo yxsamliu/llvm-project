@@ -5,23 +5,30 @@
 
 declare i32 @opaque(i32)
 
-define i32 @first(i32 %arg) {
+define i32 @first(i32 %arg) #0 {
   %keep = call i32 @opaque(i32 %arg), !annotation !0
   ret i32 %keep
 }
 
-define i32 @second(i32 %arg) {
-  %keep = call i32 @opaque(i32 %arg), !annotation !1
+define i32 @second(i32 %arg) #1 {
+  %keep = call i32 @opaque(i32 %arg), !annotation !1, !other !3
   %constant = add i32 2, 3
   %result = add i32 %keep, %constant
   ret i32 %result
 }
 
 !0 = !{!"first metadata"}
-!1 = !{!"second metadata"}
+!1 = !{!2}
+!2 = !{!"second metadata"}
+!3 = !{!"other metadata"}
+
+attributes #0 = { nounwind }
+attributes #1 = { noinline }
 
 ; NORMAL: *** IR Dump After InstSimplifyPass on second ***
-; NORMAL: %keep = call i32 @opaque(i32 %arg), !annotation !1
+; NORMAL: define i32 @second(i32 %arg) #1 {
+; NORMAL: %keep = call i32 @opaque(i32 %arg), !annotation !1, !other !3
 
 ; FAST: *** IR Dump After InstSimplifyPass on second ***
-; FAST: %keep = call i32 @opaque(i32 %arg), !annotation !0
+; FAST: define i32 @second(i32 %arg) #0 {
+; FAST: %keep = call i32 @opaque(i32 %arg), !annotation !0, !other !1
