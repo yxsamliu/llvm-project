@@ -5,13 +5,18 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "llvm/AsmParser/Parser.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ModuleSlotTracker.h"
+#include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -102,5 +107,94 @@ TEST(AsmWriterTest, PrintNullOperandBundle) {
   raw_string_ostream OS(S);
   Invoke->print(OS);
   EXPECT_THAT(S, HasSubstr("<null operand bundle!>"));
+}
+
+TEST(AsmWriterTest, FunctionInstructionPrinterMatchesInstructionPrint) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    declare i32 @callee(i32)
+
+    define i32 @test(i32 %arg, ptr %ptr) {
+    entry:
+      %0 = add nsw i32 %arg, 1, !annotation !0
+      %named = call i32 @callee(i32 %0) [ "tag"(i32 %arg) ], !prof !1
+      store atomic i32 %named, ptr %ptr release, align 4, !annotation !0
+      ret i32 %named
+    }
+
+    !0 = !{!"attached metadata"}
+    !1 = !{!"branch_weights", i32 10}
+  )",
+                                                  Err, Ctx);
+  ASSERT_TRUE(M);
+  Function &F = *M->getFunction("test");
+
+  for (bool IsForDebug : {false, true}) {
+    std::string Expected;
+    raw_string_ostream ExpectedOS(Expected);
+    ModuleSlotTracker ExpectedMST(M.get());
+    ExpectedOS << "before:";
+    for (const Instruction &I : instructions(F)) {
+      I.print(ExpectedOS, ExpectedMST, IsForDebug);
+      ExpectedOS << ":after\n";
+    }
+
+    std::string Actual;
+    raw_string_ostream ActualOS(Actual);
+    ModuleSlotTracker ActualMST(M.get());
+    FunctionInstructionPrinter Printer(ActualOS, ActualMST, F, IsForDebug);
+    ActualOS << "before:";
+    for (const Instruction &I : instructions(F)) {
+      Printer.printInstruction(I);
+      ActualOS << ":after\n";
+    }
+
+    EXPECT_EQ(Expected, Actual);
+  }
+}
+
+TEST(AsmWriterTest, FunctionPrintMatchesFullModuleSlotTracker) {
+  LLVMContext Ctx;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(R"(
+    define i32 @first(i32 %arg) #0 {
+      %value = add i32 %arg, 1, !annotation !0
+      ret i32 %value
+    }
+
+    define i32 @second(i32 %arg) #1 {
+      %value = mul i32 %arg, 2, !annotation !1
+      ret i32 %value
+    }
+
+    define i32 @third(i32 %arg) #2 {
+      %value = sub i32 %arg, 3, !annotation !2
+      ret i32 %value
+    }
+
+    attributes #0 = { nounwind }
+    attributes #1 = { noinline }
+    attributes #2 = { alwaysinline }
+
+    !0 = !{!"first metadata"}
+    !1 = !{!"second metadata"}
+    !2 = !{!"third metadata"}
+  )",
+                                                  Err, Ctx);
+  ASSERT_TRUE(M);
+
+  for (const Function &F : *M) {
+    std::string Expected;
+    raw_string_ostream ExpectedOS(Expected);
+    ModuleSlotTracker MST(M.get());
+    static_cast<const Value &>(F).print(ExpectedOS, MST);
+
+    std::string Actual;
+    raw_string_ostream ActualOS(Actual);
+    static_cast<const Value &>(F).print(ActualOS);
+
+    EXPECT_EQ(Expected, Actual);
+  }
 }
 }
