@@ -853,9 +853,9 @@ public:
 
   /// Construct from a function, starting out in incorp state.
   ///
-  /// If \c ShouldInitializeAllMetadata, initializes all metadata in all
-  /// functions, giving correct numbering for metadata referenced only from
-  /// within a function (even if no functions have been initialized).
+  /// If \c ShouldInitializeAllMetadata, initializes metadata in module order
+  /// through this function, giving the same numbering for its metadata as a
+  /// module-level slot tracker.
   explicit SlotTracker(const Function *F,
                        bool ShouldInitializeAllMetadata = false);
 
@@ -1118,13 +1118,18 @@ void SlotTracker::processModule() {
       CreateMetadataSlot(N);
   }
 
+  bool ProcessFunctionMetadata = ShouldInitializeAllMetadata;
   for (const Function &F : *TheModule) {
     if (!F.hasName())
       // Add all the unnamed functions to the table.
       CreateModuleSlot(&F);
 
-    if (ShouldInitializeAllMetadata)
+    if (ProcessFunctionMetadata)
       processFunctionMetadata(F);
+
+    if (&F == TheFunction)
+      // Metadata in later functions cannot affect slots used by TheFunction.
+      ProcessFunctionMetadata = false;
 
     // Add all the function attributes to the table.
     // FIXME: Add attributes of other objects?
@@ -5260,6 +5265,14 @@ void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
+  if (const auto *F = dyn_cast<Function>(this)) {
+    formatted_raw_ostream OS(ROS);
+    SlotTracker SlotTable(F, /*ShouldInitializeAllMetadata=*/true);
+    AssemblyWriter W(OS, SlotTable, F->getParent(), nullptr, IsForDebug);
+    W.printFunction(F);
+    return;
+  }
+
   bool ShouldInitializeAllMetadata = false;
   if (auto *I = dyn_cast<Instruction>(this))
     ShouldInitializeAllMetadata = isReferencingMDNode(*I);
