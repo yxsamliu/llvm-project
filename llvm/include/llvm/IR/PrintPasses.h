@@ -24,7 +24,9 @@ enum class ChangePrinter {
   ColourDiffVerbose,
   ColourDiffQuiet,
   DotCfgVerbose,
-  DotCfgQuiet
+  DotCfgQuiet,
+  FastVerbose,
+  FastQuiet
 };
 
 extern LLVM_ABI cl::opt<ChangePrinter> PrintChanged;

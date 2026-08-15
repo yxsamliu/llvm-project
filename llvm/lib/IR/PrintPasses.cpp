@@ -67,6 +67,11 @@ cl::opt<ChangePrinter> llvm::PrintChanged(
     cl::ValueOptional, cl::init(ChangePrinter::None),
     cl::values(
         clEnumValN(ChangePrinter::Quiet, "quiet", "Run in quiet mode"),
+        clEnumValN(ChangePrinter::FastVerbose, "fast",
+                   "Use faster function-local metadata numbering"),
+        clEnumValN(ChangePrinter::FastQuiet, "fast-quiet",
+                   "Use faster function-local metadata numbering in quiet "
+                   "mode"),
         clEnumValN(ChangePrinter::DiffVerbose, "diff",
                    "Display patch-like changes"),
         clEnumValN(ChangePrinter::DiffQuiet, "diff-quiet",
@@ -269,6 +274,8 @@ void llvm::reportChangedIR(StringRef Before, StringRef After,
     switch (PrintChanged) {
     case ChangePrinter::None:
       llvm_unreachable("");
+    case ChangePrinter::FastQuiet:
+    case ChangePrinter::FastVerbose:
     case ChangePrinter::Quiet:
     case ChangePrinter::Verbose:
     case ChangePrinter::DotCfgQuiet:   // unimplemented

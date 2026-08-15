@@ -285,9 +285,12 @@ protected:
 // to preserve it as the IR changes in each pass.  Note that the banner is
 // included in this representation but it is massaged before reporting.
 class LLVM_ABI IRChangedPrinter : public TextChangeReporter<std::string> {
+  bool UseLocalMetadataSlots;
+
 public:
-  IRChangedPrinter(bool VerboseMode)
-      : TextChangeReporter<std::string>(VerboseMode) {}
+  IRChangedPrinter(bool VerboseMode, bool UseLocalMetadataSlots = false)
+      : TextChangeReporter<std::string>(VerboseMode),
+        UseLocalMetadataSlots(UseLocalMetadataSlots) {}
   ~IRChangedPrinter() override;
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 

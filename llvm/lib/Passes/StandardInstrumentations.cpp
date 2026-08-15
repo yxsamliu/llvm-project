@@ -193,10 +193,14 @@ const Module *unwrapModule(IRUnitRef IR, bool Force = false) {
   llvm_unreachable("Unknown IR unit");
 }
 
-void printIR(raw_ostream &OS, const Function *F) {
+void printIR(raw_ostream &OS, const Function *F,
+             bool UseLocalMetadataSlots = false) {
   if (!isFunctionInPrintList(F->getName()))
     return;
-  OS << *F;
+  if (UseLocalMetadataSlots)
+    F->print(OS);
+  else
+    OS << *F;
 }
 
 void printIR(raw_ostream &OS, const Module *M) {
@@ -287,7 +291,8 @@ bool shouldPrintIR(IRUnitRef IR) {
 
 /// Generic IR-printing helper that unpacks a pointer to IRUnit wrapped into
 /// an IRUnitRef and does actual print job.
-void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR) {
+void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR,
+                    bool UseLocalMetadataSlots = false) {
   if (!shouldPrintIR(IR))
     return;
 
@@ -304,7 +309,7 @@ void unwrapAndPrint(raw_ostream &OS, IRUnitRef IR) {
   }
 
   if (const auto *F = dyn_cast<Function>(IR)) {
-    printIR(OS, F);
+    printIR(OS, F, UseLocalMetadataSlots);
     return;
   }
 
@@ -505,14 +510,16 @@ IRChangedPrinter::~IRChangedPrinter() = default;
 
 void IRChangedPrinter::registerCallbacks(PassInstrumentationCallbacks &PIC) {
   if (PrintChanged == ChangePrinter::Verbose ||
-      PrintChanged == ChangePrinter::Quiet)
+      PrintChanged == ChangePrinter::Quiet ||
+      PrintChanged == ChangePrinter::FastVerbose ||
+      PrintChanged == ChangePrinter::FastQuiet)
     TextChangeReporter<std::string>::registerRequiredCallbacks(PIC);
 }
 
 void IRChangedPrinter::generateIRRepresentation(IRUnitRef IR, StringRef PassID,
                                                 std::string &Output) {
   raw_string_ostream OS(Output);
-  unwrapAndPrint(OS, IR);
+  unwrapAndPrint(OS, IR, UseLocalMetadataSlots);
   OS.str();
 }
 
@@ -2442,7 +2449,10 @@ StandardInstrumentations::StandardInstrumentations(
     PrintPassOptions PrintPassOpts)
     : PrintPass(DebugLogging, PrintPassOpts), OptNone(DebugLogging),
       OptPassGate(Context),
-      PrintChangedIR(PrintChanged == ChangePrinter::Verbose),
+      PrintChangedIR(PrintChanged == ChangePrinter::Verbose ||
+                         PrintChanged == ChangePrinter::FastVerbose,
+                     PrintChanged == ChangePrinter::FastVerbose ||
+                         PrintChanged == ChangePrinter::FastQuiet),
       PrintChangedDiff(PrintChanged == ChangePrinter::DiffVerbose ||
                            PrintChanged == ChangePrinter::ColourDiffVerbose,
                        PrintChanged == ChangePrinter::ColourDiffVerbose ||
