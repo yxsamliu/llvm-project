@@ -42,6 +42,7 @@
 #include "llvm/IR/DebugProgramInstruction.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/FunctionInstructionPrinter.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/IR/GlobalObject.h"
@@ -5314,6 +5315,42 @@ void Value::print(raw_ostream &ROS, ModuleSlotTracker &MST,
   } else {
     llvm_unreachable("Unknown value to print out!");
   }
+}
+
+struct FunctionInstructionPrinter::Impl {
+  const Function &F;
+  std::unique_ptr<SlotTracker> EmptySlotTable;
+  formatted_raw_ostream OS;
+  std::unique_ptr<AssemblyWriter> Writer;
+
+  Impl(raw_ostream &ROS, ModuleSlotTracker &MST, const Function &F,
+       bool IsForDebug)
+      : F(F), OS(ROS) {
+    MST.incorporateFunction(F);
+    SlotTracker *SlotTable = MST.getMachine();
+    if (!SlotTable) {
+      EmptySlotTable =
+          std::make_unique<SlotTracker>(static_cast<const Module *>(nullptr));
+      SlotTable = EmptySlotTable.get();
+    }
+    Writer = std::make_unique<AssemblyWriter>(OS, *SlotTable, F.getParent(),
+                                              nullptr, IsForDebug);
+  }
+};
+
+FunctionInstructionPrinter::FunctionInstructionPrinter(raw_ostream &OS,
+                                                       ModuleSlotTracker &MST,
+                                                       const Function &F,
+                                                       bool IsForDebug)
+    : P(std::make_unique<Impl>(OS, MST, F, IsForDebug)) {}
+
+FunctionInstructionPrinter::~FunctionInstructionPrinter() = default;
+
+void FunctionInstructionPrinter::printInstruction(const Instruction &I) {
+  assert(I.getFunction() == &P->F &&
+         "instruction must belong to the configured function");
+  P->Writer->printInstruction(I);
+  P->OS.flush();
 }
 
 /// Print without a type, skipping the TypePrinting object.
