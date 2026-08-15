@@ -32,6 +32,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -250,6 +251,13 @@ protected:
 
   // Stack of IRs before passes.
   std::vector<IRUnitT> BeforeStack;
+  // The after representation of the last interesting pass can be reused as
+  // the before representation of the next pass on the same IR unit.
+  std::optional<IRUnitRef> CachedIR;
+  std::optional<IRUnitT> CachedRepresentation;
+  // Reuse is only safe when no non-ignored outer pass can mutate the IR
+  // between consecutive instrumented passes.
+  unsigned ActivePasses = 0;
   // Is this the first IR seen?
   bool InitialIR = true;
 

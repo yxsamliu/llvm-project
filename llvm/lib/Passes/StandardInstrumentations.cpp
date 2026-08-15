@@ -373,10 +373,25 @@ bool isInteresting(IRUnitRef IR, StringRef PassID, StringRef PassName) {
   return true;
 }
 
+bool isSameIRUnit(IRUnitRef LHS, IRUnitRef RHS) {
+  if (const auto *M = dyn_cast<Module>(LHS))
+    return M == dyn_cast<Module>(RHS);
+  if (const auto *F = dyn_cast<Function>(LHS))
+    return F == dyn_cast<Function>(RHS);
+  if (const auto *C = dyn_cast<LazyCallGraph::SCC>(LHS))
+    return C == dyn_cast<LazyCallGraph::SCC>(RHS);
+  if (const auto *L = dyn_cast<Loop>(LHS))
+    return L == dyn_cast<Loop>(RHS);
+  if (const auto *MF = dyn_cast<MachineFunction>(LHS))
+    return MF == dyn_cast<MachineFunction>(RHS);
+  llvm_unreachable("Unknown wrapped IR type");
+}
+
 } // namespace
 
 template <typename T> ChangeReporter<T>::~ChangeReporter() {
   assert(BeforeStack.empty() && "Problem with Change Printer stack.");
+  assert(ActivePasses == 0 && "Active change-reporting passes at exit");
 }
 
 template <typename T>
@@ -389,17 +404,31 @@ void ChangeReporter<T>::saveIRBeforePass(IRUnitRef IR, StringRef PassID,
       handleInitialIR(IR);
   }
 
+  const bool IsIgnored = isIgnored(PassID);
+  if (!IsIgnored)
+    ++ActivePasses;
+
   // Always need to place something on the stack because invalidated passes
   // are not given the IR so it cannot be determined whether the pass was for
   // something that was filtered out.
   BeforeStack.emplace_back();
 
-  if (!isInteresting(IR, PassID, PassName))
+  if (!isInteresting(IR, PassID, PassName)) {
+    CachedIR.reset();
+    CachedRepresentation.reset();
     return;
+  }
 
   // Save the IR representation on the stack.
   T &Data = BeforeStack.back();
-  generateIRRepresentation(IR, PassID, Data);
+  if (ActivePasses == 1 && CachedIR && isSameIRUnit(*CachedIR, IR)) {
+    assert(CachedRepresentation && "Cached IR representation is missing");
+    Data = std::move(*CachedRepresentation);
+  } else {
+    generateIRRepresentation(IR, PassID, Data);
+  }
+  CachedIR.reset();
+  CachedRepresentation.reset();
 }
 
 template <typename T>
@@ -409,10 +438,15 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
 
   std::string Name = getIRName(IR);
 
-  if (isIgnored(PassID)) {
+  const bool IsIgnored = isIgnored(PassID);
+  if (IsIgnored) {
+    CachedIR.reset();
+    CachedRepresentation.reset();
     if (VerboseMode)
       handleIgnored(PassID, Name);
   } else if (!isInteresting(IR, PassID, PassName)) {
+    CachedIR.reset();
+    CachedRepresentation.reset();
     if (VerboseMode)
       handleFiltered(PassID, Name);
   } else {
@@ -428,6 +462,17 @@ void ChangeReporter<T>::handleIRAfterPass(IRUnitRef IR, StringRef PassID,
         omitAfter(PassID, Name);
     } else
       handleAfter(PassID, Name, Before, After, IR);
+    if (ActivePasses == 1) {
+      CachedIR = IR;
+      CachedRepresentation = std::move(After);
+    } else {
+      CachedIR.reset();
+      CachedRepresentation.reset();
+    }
+  }
+  if (!IsIgnored) {
+    assert(ActivePasses != 0 && "Unbalanced change-reporting pass callbacks");
+    --ActivePasses;
   }
   BeforeStack.pop_back();
 }
@@ -442,6 +487,12 @@ void ChangeReporter<T>::handleInvalidatedPass(StringRef PassID) {
   // forms of the banner anyway.
   if (VerboseMode)
     handleInvalidated(PassID);
+  CachedIR.reset();
+  CachedRepresentation.reset();
+  if (!isIgnored(PassID)) {
+    assert(ActivePasses != 0 && "Unbalanced change-reporting pass callbacks");
+    --ActivePasses;
+  }
   BeforeStack.pop_back();
 }
 
