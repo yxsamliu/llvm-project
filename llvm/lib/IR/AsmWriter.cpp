@@ -4944,10 +4944,11 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     printShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
   }
 
-  // Print Metadata info.
-  SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
-  I.getAllMetadata(InstMD);
-  printMetadataAttachments(InstMD, ", ");
+  if (!shouldUseFastIRPrinting()) {
+    SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
+    I.getAllMetadata(InstMD);
+    printMetadataAttachments(InstMD, ", ");
+  }
 
   // Print a nice comment.
   printInfoComment(I);

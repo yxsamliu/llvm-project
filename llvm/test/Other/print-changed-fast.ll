@@ -3,9 +3,9 @@
 ; RUN: opt -S -passes=instsimplify -filter-print-funcs=second \
 ; RUN:   -print-changed=fast-quiet -disable-output < %s 2>&1 | FileCheck %s --check-prefix=FAST
 ; RUN: opt -S -passes=instsimplify -filter-print-funcs=second \
-; RUN:   -print-changed=quiet -print-ir-fast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=FAST
+; RUN:   -print-changed=quiet -print-ir-fast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=LOSSY
 ; RUN: opt -S -passes=instsimplify -filter-print-funcs=second \
-; RUN:   -print-changed=diff-quiet -print-ir-fast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=FAST-DIFF
+; RUN:   -print-changed=diff-quiet -print-ir-fast -disable-output < %s 2>&1 | FileCheck %s --check-prefix=LOSSY-DIFF
 
 declare i32 @opaque(i32)
 
@@ -37,7 +37,13 @@ attributes #1 = { noinline }
 ; FAST: define i32 @second(i32 %arg) #0 {
 ; FAST: %keep = call i32 @opaque(i32 %arg), !annotation !0, !other !1
 
-; FAST-DIFF: *** IR Dump After InstSimplifyPass on second ***
-; FAST-DIFF: %keep = call i32 @opaque(i32 %arg), !annotation !0, !other !1
-; FAST-DIFF: -  %constant = add i32 2, 3
-; FAST-DIFF: +  %result = add i32 %keep, 5
+; LOSSY: *** IR Dump After InstSimplifyPass on second ***
+; LOSSY: define i32 @second(i32 %arg) #0 {
+; LOSSY: %keep = call i32 @opaque(i32 %arg)
+; LOSSY-NOT: !annotation
+; LOSSY-NOT: !other
+
+; LOSSY-DIFF: *** IR Dump After InstSimplifyPass on second ***
+; LOSSY-DIFF: %keep = call i32 @opaque(i32 %arg)
+; LOSSY-DIFF: -  %constant = add i32 2, 3
+; LOSSY-DIFF: +  %result = add i32 %keep, 5

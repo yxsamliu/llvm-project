@@ -34,14 +34,13 @@ define void @second() {
 ; NORMAL: ret void, !annotation !3
 ; NORMAL: !named = !{!0}
 
-; FAST-MODULE: ret void, !annotation !0
-; FAST-MODULE: ret void, !annotation !2
-; FAST-MODULE: !named = !{!4}
-; FAST-MODULE: !0 = !{!1}
-; FAST-MODULE: !1 = !{!"first metadata"}
-; FAST-MODULE: !2 = !{!3}
-; FAST-MODULE: !3 = !{!"second metadata"}
-; FAST-MODULE: !4 = !{!"named metadata"}
+; FAST-MODULE: ret void
+; FAST-MODULE-NOT: !annotation
+; FAST-MODULE: ret void
+; FAST-MODULE-NOT: !annotation
+; FAST-MODULE: !named = !{!0}
+; FAST-MODULE: !0 = !{!"named metadata"}
 
 ; FAST-FUNCTION: define void @second() {
-; FAST-FUNCTION: ret void, !annotation !0
+; FAST-FUNCTION: ret void
+; FAST-FUNCTION-NOT: !annotation

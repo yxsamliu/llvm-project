@@ -45,7 +45,7 @@ LLVM_ABI bool shouldPrintAfterPass(StringRef PassID);
 LLVM_ABI bool shouldPrintBeforeAll();
 LLVM_ABI bool shouldPrintAfterAll();
 
-// Returns true if textual IR should use the faster debug printing path.
+// Returns true if textual IR should use the faster lossy debug printing path.
 LLVM_ABI bool shouldUseFastIRPrinting();
 
 // The list of passes to print before/after, if we only want to print

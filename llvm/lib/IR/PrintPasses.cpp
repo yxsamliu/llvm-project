@@ -40,7 +40,7 @@ static cl::opt<bool> PrintAfterAll("print-after-all",
 
 static cl::opt<bool>
     PrintIRFast("print-ir-fast",
-                llvm::cl::desc("Use faster textual IR printing for debugging"),
+                llvm::cl::desc("Use faster lossy IR printing for debugging"),
                 cl::init(false), cl::Hidden);
 
 // Print out the IR after passes, similar to -print-after-all except that it
