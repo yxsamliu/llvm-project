@@ -101,7 +101,7 @@ void formatted_raw_ostream::UpdatePosition(const char *Ptr, size_t Size) {
 /// ComputePosition - Examine the current output and update line and column
 /// counts.
 void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
-  if (DisableScan)
+  if (DisableScan || !TrackPosition)
     return;
 
   // If our previous scan pointer is inside the buffer, assume we already
@@ -123,6 +123,8 @@ void formatted_raw_ostream::ComputePosition(const char *Ptr, size_t Size) {
 /// \param NewCol - The column to move to.
 ///
 formatted_raw_ostream &formatted_raw_ostream::PadToColumn(unsigned NewCol) {
+  assert(TrackPosition && "column tracking is disabled");
+
   // Figure out what's in the buffer and add it to the column count.
   ComputePosition(getBufferStart(), GetNumBytesInBuffer());
 

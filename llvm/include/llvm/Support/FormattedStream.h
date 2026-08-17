@@ -57,6 +57,9 @@ class LLVM_ABI formatted_raw_ostream : public raw_ostream {
   /// codes.
   bool DisableScan;
 
+  /// Whether to scan output to maintain line and column positions.
+  bool TrackPosition;
+
   void write_impl(const char *Ptr, size_t Size) override;
 
   /// current_pos - Return the current position within the stream,
@@ -132,13 +135,14 @@ public:
   /// so it doesn't want another layer of buffering to be happening
   /// underneath it.
   ///
-  formatted_raw_ostream(raw_ostream &Stream)
-      : TheStream(nullptr), Position(0, 0), DisableScan(false) {
+  formatted_raw_ostream(raw_ostream &Stream, bool TrackPosition = true)
+      : TheStream(nullptr), Position(0, 0), DisableScan(false),
+        TrackPosition(TrackPosition) {
     setStream(Stream);
   }
   explicit formatted_raw_ostream()
       : TheStream(nullptr), Position(0, 0), Scanned(nullptr),
-        DisableScan(false) {}
+        DisableScan(false), TrackPosition(true) {}
 
   ~formatted_raw_ostream() override {
     flush();
@@ -152,13 +156,17 @@ public:
   /// \param NewCol - The column to move to.
   formatted_raw_ostream &PadToColumn(unsigned NewCol);
 
+  bool isPositionTrackingEnabled() const { return TrackPosition; }
+
   unsigned getColumn() {
+    assert(TrackPosition && "column tracking is disabled");
     // Calculate current position, taking buffer contents into account.
     ComputePosition(getBufferStart(), GetNumBytesInBuffer());
     return Position.first;
   }
 
   unsigned getLine() {
+    assert(TrackPosition && "line tracking is disabled");
     // Calculate current position, taking buffer contents into account.
     ComputePosition(getBufferStart(), GetNumBytesInBuffer());
     return Position.second;

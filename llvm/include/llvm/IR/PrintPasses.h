@@ -45,6 +45,9 @@ LLVM_ABI bool shouldPrintAfterPass(StringRef PassID);
 LLVM_ABI bool shouldPrintBeforeAll();
 LLVM_ABI bool shouldPrintAfterAll();
 
+// Returns true if textual IR should use the faster debug printing path.
+LLVM_ABI bool shouldUseFastIRPrinting();
+
 // The list of passes to print before/after, if we only want to print
 // before/after specific passes.
 LLVM_ABI std::vector<std::string> printBeforePasses();

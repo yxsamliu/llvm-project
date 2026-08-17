@@ -60,6 +60,7 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/TypedPointerType.h"
@@ -801,6 +802,7 @@ private:
   bool FunctionProcessed = false;
   bool ShouldInitializeAllMetadata;
   bool UseLazySlots;
+  bool ShouldCreateLazyMetadataClosure;
 
   std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
       ProcessModuleHookFn;
@@ -850,7 +852,8 @@ public:
   /// functions, giving correct numbering for metadata referenced only from
   /// within a function (even if no functions have been initialized).
   explicit SlotTracker(const Module *M,
-                       bool ShouldInitializeAllMetadata = false);
+                       bool ShouldInitializeAllMetadata = false,
+                       bool UseLazySlots = false);
 
   /// Construct from a function, starting out in incorp state.
   ///
@@ -1058,9 +1061,14 @@ static SlotTracker *createSlotTracker(const Value *V) {
 
 // Module level constructor. Causes the contents of the Module (sans functions)
 // to be added to the slot table.
-SlotTracker::SlotTracker(const Module *M, bool ShouldInitializeAllMetadata)
+SlotTracker::SlotTracker(const Module *M, bool ShouldInitializeAllMetadata,
+                         bool UseLazySlots)
     : TheModule(M), ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
-      UseLazySlots(false) {}
+      UseLazySlots(UseLazySlots),
+      ShouldCreateLazyMetadataClosure(UseLazySlots) {
+  assert((!ShouldInitializeAllMetadata || !UseLazySlots) &&
+         "lazy slots cannot preserve module metadata numbering");
+}
 
 // Function level constructor. Causes the contents of the Module and the one
 // function provided to be added to the slot table.
@@ -1068,14 +1076,15 @@ SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata,
                          bool UseLazySlots)
     : TheModule(F ? F->getParent() : nullptr), TheFunction(F),
       ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
-      UseLazySlots(UseLazySlots) {
+      UseLazySlots(UseLazySlots), ShouldCreateLazyMetadataClosure(false) {
   assert((!ShouldInitializeAllMetadata || !UseLazySlots) &&
          "lazy slots cannot preserve module metadata numbering");
 }
 
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
     : TheModule(nullptr), ShouldInitializeAllMetadata(false),
-      UseLazySlots(false), TheIndex(Index) {}
+      UseLazySlots(false), ShouldCreateLazyMetadataClosure(false),
+      TheIndex(Index) {}
 
 inline void SlotTracker::initializeIfNeeded() {
   if (TheModule) {
@@ -1343,8 +1352,14 @@ int SlotTracker::getMetadataSlot(const MDNode *N) {
 
   // Find the MDNode in the module map
   mdn_iterator MI = mdnMap.find(N);
-  if (MI == mdnMap.end() && UseLazySlots)
-    MI = mdnMap.try_emplace(N, mdnNext++).first;
+  if (MI == mdnMap.end() && UseLazySlots) {
+    if (ShouldCreateLazyMetadataClosure) {
+      CreateMetadataSlot(N);
+      MI = mdnMap.find(N);
+    } else {
+      MI = mdnMap.try_emplace(N, mdnNext++).first;
+    }
+  }
   return MI == mdnMap.end() ? -1 : (int)MI->second;
 }
 
@@ -4339,22 +4354,41 @@ void AssemblyWriter::printArgument(const Argument *Arg, AttributeSet Attrs) {
 /// printBasicBlock - This member is called for each basic block in a method.
 void AssemblyWriter::printBasicBlock(const BasicBlock *BB) {
   bool IsEntryBlock = BB->getParent() && BB->isEntryBlock();
-  if (BB->hasName()) {              // Print out the label if it exists...
+  bool HasLabel = BB->hasName() || !IsEntryBlock;
+  if (HasLabel)
     Out << "\n";
-    printLLVMName(Out, BB->getName(), LabelPrefix);
-    Out << ':';
-  } else if (!IsEntryBlock) {
-    Out << "\n";
+
+  auto PrintLabel = [&](raw_ostream &OS) {
+    if (BB->hasName()) {
+      printLLVMName(OS, BB->getName(), LabelPrefix);
+      OS << ':';
+      return;
+    }
+
     int Slot = Machine.getLocalSlot(BB);
     if (Slot != -1)
-      Out << Slot << ":";
+      OS << Slot << ":";
     else
-      Out << "<badref>:";
+      OS << "<badref>:";
+  };
+
+  unsigned LabelWidth = 0;
+  if (!IsEntryBlock && !Out.isPositionTrackingEnabled()) {
+    SmallString<128> Label;
+    raw_svector_ostream LabelStream(Label);
+    PrintLabel(LabelStream);
+    LabelWidth = Label.size();
+    Out << Label;
+  } else if (HasLabel) {
+    PrintLabel(Out);
   }
 
   if (!IsEntryBlock) {
     // Output predecessors for the block.
-    Out.PadToColumn(50);
+    if (Out.isPositionTrackingEnabled())
+      Out.PadToColumn(50);
+    else
+      Out.indent(LabelWidth < 50 ? 50 - LabelWidth : 1);
     Out << ";";
     if (pred_empty(BB)) {
       Out << " No predecessors!";
@@ -5117,6 +5151,10 @@ void AssemblyWriter::printUseLists(const Function *F) {
 
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder, bool IsForDebug) const {
+  if (shouldUseFastIRPrinting()) {
+    printFast(ROS, AAW, ShouldPreserveUseListOrder, IsForDebug);
+    return;
+  }
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
@@ -5129,7 +5167,7 @@ void Function::printFast(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                          bool IsForDebug) const {
   SlotTracker SlotTable(this, /*ShouldInitializeAllMetadata=*/false,
                         /*UseLazySlots=*/true);
-  formatted_raw_ostream OS(ROS);
+  formatted_raw_ostream OS(ROS, /*TrackPosition=*/AAW != nullptr);
   AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printFunction(this);
@@ -5138,18 +5176,22 @@ void Function::printFast(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder,
                      bool IsForDebug) const {
-  SlotTracker SlotTable(this->getParent());
-  formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
-                   IsForDebug,
+  SlotTracker SlotTable(this->getParent(),
+                        /*ShouldInitializeAllMetadata=*/false,
+                        /*UseLazySlots=*/shouldUseFastIRPrinting());
+  formatted_raw_ostream OS(ROS, /*TrackPosition=*/!shouldUseFastIRPrinting() ||
+                                    AAW != nullptr);
+  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printBasicBlock(this);
 }
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                    bool ShouldPreserveUseListOrder, bool IsForDebug) const {
-  SlotTracker SlotTable(this);
-  formatted_raw_ostream OS(ROS);
+  SlotTracker SlotTable(this, /*ShouldInitializeAllMetadata=*/false,
+                        /*UseLazySlots=*/shouldUseFastIRPrinting());
+  formatted_raw_ostream OS(ROS, /*TrackPosition=*/!shouldUseFastIRPrinting() ||
+                                    AAW != nullptr);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printModule(this);
@@ -5291,6 +5333,18 @@ void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
+  if (shouldUseFastIRPrinting()) {
+    if (const auto *F = dyn_cast<Function>(this)) {
+      F->printFast(ROS, nullptr, /*ShouldPreserveUseListOrder=*/false,
+                   IsForDebug);
+      return;
+    }
+    if (const auto *BB = dyn_cast<BasicBlock>(this)) {
+      BB->print(ROS, nullptr, /*ShouldPreserveUseListOrder=*/false, IsForDebug);
+      return;
+    }
+  }
+
   bool ShouldInitializeAllMetadata = false;
   if (auto *I = dyn_cast<Instruction>(this))
     ShouldInitializeAllMetadata = isReferencingMDNode(*I);
