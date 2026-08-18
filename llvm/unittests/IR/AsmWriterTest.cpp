@@ -80,6 +80,10 @@ TEST(AsmWriterTest, FastBasicBlockPrint) {
       ret void, !annotation !12
     }
 
+    define void @g() {
+      ret void
+    }
+
     !llvm.dbg.cu = !{!0}
     !llvm.module.flags = !{!5}
 
@@ -119,6 +123,36 @@ TEST(AsmWriterTest, FastBasicBlockPrint) {
   EXPECT_THAT(First, HasSubstr("#dbg_value(i32 0, !"));
   EXPECT_THAT(First, HasSubstr("!DIExpression(DW_OP_constu, 4)"));
   EXPECT_THAT(First, HasSubstr("ret void, !annotation !"));
+
+  MDNode *Earlier = MDNode::getDistinct(Ctx, MDString::get(Ctx, "earlier"));
+  M->getFunction("f")->getEntryBlock().getTerminator()->setMetadata("order",
+                                                                    Earlier);
+  MDNode *Later = MDNode::getDistinct(Ctx, MDString::get(Ctx, "later"));
+  M->getFunction("g")->getEntryBlock().getTerminator()->setMetadata("order",
+                                                                    Later);
+
+  std::string LaterOutput;
+  raw_string_ostream LaterOS(LaterOutput);
+  M->getFunction("g")->getEntryBlock().print(LaterOS);
+
+  std::string EarlierOutput;
+  raw_string_ostream EarlierOS(EarlierOutput);
+  M->getFunction("f")->getEntryBlock().print(EarlierOS);
+
+  StringRef MetadataPrefix = "!order !";
+  size_t EarlierPos = EarlierOutput.find(MetadataPrefix);
+  size_t LaterPos = LaterOutput.find(MetadataPrefix);
+  ASSERT_NE(EarlierPos, StringRef::npos);
+  ASSERT_NE(LaterPos, StringRef::npos);
+  StringRef EarlierIDText =
+      StringRef(EarlierOutput).drop_front(EarlierPos + MetadataPrefix.size());
+  StringRef LaterIDText =
+      StringRef(LaterOutput).drop_front(LaterPos + MetadataPrefix.size());
+  unsigned EarlierID;
+  unsigned LaterID;
+  ASSERT_FALSE(EarlierIDText.consumeInteger(10, EarlierID));
+  ASSERT_FALSE(LaterIDText.consumeInteger(10, LaterID));
+  EXPECT_LT(EarlierID, LaterID);
 }
 
 TEST(AsmWriterTest, PrintAddrspaceWithNullOperand) {

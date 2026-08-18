@@ -650,6 +650,8 @@ StringRef MDString::getString() const {
 void *MDNode::operator new(size_t Size, size_t NumOps, StorageType Storage) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
+  static_assert(sizeof(Header) == 2 * sizeof(size_t),
+                "MDNode header fields poorly packed");
   size_t AllocSize =
       alignTo(Header::getAllocSize(Storage, NumOps), alignof(uint64_t));
   char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
@@ -667,6 +669,9 @@ void MDNode::operator delete(void *N) {
 MDNode::MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
                ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2)
     : Metadata(ID, Storage), Context(Context) {
+  if (!isTemporary())
+    Context.pImpl->getOrCreateMetadataPrintID(this);
+
   unsigned Op = 0;
   for (Metadata *MD : Ops1)
     setOperand(Op++, MD);
@@ -696,6 +701,7 @@ MDNode::Header::Header(size_t NumOps, StorageType Storage) {
   IsLarge = isLarge(NumOps);
   IsResizable = isResizable(Storage);
   SmallSize = getSmallSize(NumOps, IsResizable, IsLarge);
+  MetadataPrintID = 0;
   if (IsLarge) {
     SmallNumOps = 0;
     new (getLargePtr()) LargeStorageVector();
@@ -788,6 +794,7 @@ void MDNode::makeUniqued() {
 
   // Make this 'uniqued'.
   Storage = Uniqued;
+  getContext().pImpl->getOrCreateMetadataPrintID(this);
   countUnresolvedOperands();
   if (!getNumUnresolved()) {
     dropReplaceableUses();
@@ -1067,6 +1074,7 @@ void MDNode::storeDistinctInContext() {
   assert(!Context.hasReplaceableUses() && "Unexpected replaceable uses");
   assert(!getNumUnresolved() && "Unexpected unresolved nodes");
   Storage = Distinct;
+  getContext().pImpl->getOrCreateMetadataPrintID(this);
   assert(isResolved() && "Expected this to be resolved");
 
   // Reset the hash.

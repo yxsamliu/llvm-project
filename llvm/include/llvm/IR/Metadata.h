@@ -1083,7 +1083,10 @@ class MDNode : public Metadata {
     size_t IsLarge : 1;
     size_t SmallSize : 4;
     size_t SmallNumOps : 4;
-    size_t : sizeof(size_t) * CHAR_BIT - 10;
+    // Zero means unassigned; stored IDs are one greater than printed IDs.
+    size_t MetadataPrintID : sizeof(size_t) * CHAR_BIT - 10;
+
+    static constexpr size_t MaxMetadataPrintID = size_t(-1) >> 10;
 
     unsigned NumUnresolved = 0;
     using LargeStorageVector = SmallVector<MDOperand, 0>;

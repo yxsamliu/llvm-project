@@ -1611,21 +1611,17 @@ public:
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
-  // IDs remain stable for the context lifetime. Tracking references prevent a
-  // recycled MDNode address from reusing an old ID; slots are not reclaimed.
-  DenseMap<const MDNode *, unsigned> MetadataPrintIDs;
-  SmallVector<TrackingMDNodeRef, 0> MetadataPrintNodes;
+  size_t NextMetadataPrintID = 0;
 
   unsigned getOrCreateMetadataPrintID(const MDNode *N) {
-    auto It = MetadataPrintIDs.find(N);
-    if (It != MetadataPrintIDs.end() &&
-        MetadataPrintNodes[It->second].get() == N)
-      return It->second;
-
-    unsigned ID = MetadataPrintNodes.size();
-    MetadataPrintNodes.emplace_back(const_cast<MDNode *>(N));
-    MetadataPrintIDs[N] = ID;
-    return ID;
+    size_t ID = N->getHeader().MetadataPrintID;
+    if (!ID) {
+      assert(NextMetadataPrintID < MDNode::Header::MaxMetadataPrintID &&
+             "too many metadata nodes");
+      ID = ++NextMetadataPrintID;
+      const_cast<MDNode *>(N)->getHeader().MetadataPrintID = ID;
+    }
+    return ID - 1;
   }
 
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
