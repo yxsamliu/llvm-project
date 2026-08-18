@@ -40,6 +40,7 @@
 ; Check that only the passes that change the IR are printed and that the
 ; others (including g) are filtered out.
 ; RUN: opt -S -print-changed=diff-quiet -passes=instsimplify -filter-print-funcs=f  2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FUNC-FILTER
+; RUN: opt -print-changed=diff-quiet -print-ir-fast -passes=instsimplify -filter-print-funcs=f -disable-output < %s 2>&1 | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FUNC-FILTER
 ;
 ; Check that the reporting of IRs respects is not affected by
 ; -print-module-scope

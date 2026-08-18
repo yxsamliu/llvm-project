@@ -15,6 +15,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -110,6 +111,11 @@ static cl::opt<bool> PreserveAssemblyUseListOrder(
 static cl::opt<bool> PrintAddrspaceName("print-addrspace-name", cl::Hidden,
                                         cl::init(false),
                                         cl::desc("Print address space names"));
+
+static cl::opt<bool>
+    PrintIRFast("print-ir-fast",
+                cl::desc("Use persistent metadata IDs for IR debugging"),
+                cl::init(false), cl::Hidden);
 
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
@@ -800,6 +806,7 @@ private:
   const Function* TheFunction = nullptr;
   bool FunctionProcessed = false;
   bool ShouldInitializeAllMetadata;
+  bool UsePersistentMetadataIDs;
 
   std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
       ProcessModuleHookFn;
@@ -856,8 +863,11 @@ public:
   /// If \c ShouldInitializeAllMetadata, initializes all metadata in all
   /// functions, giving correct numbering for metadata referenced only from
   /// within a function (even if no functions have been initialized).
+  /// If \c UsePersistentMetadataIDs, skips metadata enumeration and uses IDs
+  /// stored in the LLVM context.
   explicit SlotTracker(const Function *F,
-                       bool ShouldInitializeAllMetadata = false);
+                       bool ShouldInitializeAllMetadata = false,
+                       bool UsePersistentMetadataIDs = false);
 
   /// Construct from a module summary index.
   explicit SlotTracker(const ModuleSummaryIndex *Index);
@@ -1057,16 +1067,23 @@ static SlotTracker *createSlotTracker(const Value *V) {
 // Module level constructor. Causes the contents of the Module (sans functions)
 // to be added to the slot table.
 SlotTracker::SlotTracker(const Module *M, bool ShouldInitializeAllMetadata)
-    : TheModule(M), ShouldInitializeAllMetadata(ShouldInitializeAllMetadata) {}
+    : TheModule(M), ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
+      UsePersistentMetadataIDs(false) {}
 
 // Function level constructor. Causes the contents of the Module and the one
 // function provided to be added to the slot table.
-SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata)
+SlotTracker::SlotTracker(const Function *F, bool ShouldInitializeAllMetadata,
+                         bool UsePersistentMetadataIDs)
     : TheModule(F ? F->getParent() : nullptr), TheFunction(F),
-      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata) {}
+      ShouldInitializeAllMetadata(ShouldInitializeAllMetadata),
+      UsePersistentMetadataIDs(UsePersistentMetadataIDs) {
+  assert((!ShouldInitializeAllMetadata || !UsePersistentMetadataIDs) &&
+         "persistent metadata IDs cannot preserve module metadata numbering");
+}
 
 SlotTracker::SlotTracker(const ModuleSummaryIndex *Index)
-    : TheModule(nullptr), ShouldInitializeAllMetadata(false), TheIndex(Index) {}
+    : TheModule(nullptr), ShouldInitializeAllMetadata(false),
+      UsePersistentMetadataIDs(false), TheIndex(Index) {}
 
 inline void SlotTracker::initializeIfNeeded() {
   if (TheModule) {
@@ -1095,7 +1112,8 @@ void SlotTracker::processModule() {
   for (const GlobalVariable &Var : TheModule->globals()) {
     if (!Var.hasName())
       CreateModuleSlot(&Var);
-    processGlobalObjectMetadata(Var);
+    if (!UsePersistentMetadataIDs)
+      processGlobalObjectMetadata(Var);
     auto Attrs = Var.getAttributes();
     if (Attrs.hasAttributes())
       CreateAttributeSetSlot(Attrs);
@@ -1109,21 +1127,22 @@ void SlotTracker::processModule() {
   for (const GlobalIFunc &I : TheModule->ifuncs()) {
     if (!I.hasName())
       CreateModuleSlot(&I);
-    processGlobalObjectMetadata(I);
+    if (!UsePersistentMetadataIDs)
+      processGlobalObjectMetadata(I);
   }
 
   // Add metadata used by named metadata.
-  for (const NamedMDNode &NMD : TheModule->named_metadata()) {
-    for (const MDNode *N : NMD.operands())
-      CreateMetadataSlot(N);
-  }
+  if (!UsePersistentMetadataIDs)
+    for (const NamedMDNode &NMD : TheModule->named_metadata())
+      for (const MDNode *N : NMD.operands())
+        CreateMetadataSlot(N);
 
   for (const Function &F : *TheModule) {
     if (!F.hasName())
       // Add all the unnamed functions to the table.
       CreateModuleSlot(&F);
 
-    if (ShouldInitializeAllMetadata)
+    if (ShouldInitializeAllMetadata && !UsePersistentMetadataIDs)
       processFunctionMetadata(F);
 
     // Add all the function attributes to the table.
@@ -1145,7 +1164,7 @@ void SlotTracker::processFunction() {
   fNext = 0;
 
   // Process function metadata if it wasn't hit at the module-level.
-  if (!ShouldInitializeAllMetadata)
+  if (!ShouldInitializeAllMetadata && !UsePersistentMetadataIDs)
     processFunctionMetadata(*TheFunction);
 
   // Add all the function arguments with no names.
@@ -1324,6 +1343,12 @@ void SlotTracker::createMetadataSlot(const MDNode *N) { CreateMetadataSlot(N); }
 int SlotTracker::getMetadataSlot(const MDNode *N) {
   // Check for uninitialized state and do lazy initialization.
   initializeIfNeeded();
+
+  if (UsePersistentMetadataIDs) {
+    if (isa<DIExpression>(N))
+      return -1;
+    return N->getContext().pImpl->getOrCreateMetadataPrintID(N);
+  }
 
   // Find the MDNode in the module map
   mdn_iterator MI = mdnMap.find(N);
@@ -2987,13 +3012,7 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
-  if (!TheModule)
-    return;
-  for (const GlobalObject &GO : TheModule->global_objects())
-    if (const Comdat *C = GO.getComdat())
-      Comdats.insert(C);
-}
+              : ShouldPreserveUseListOrder) {}
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const ModuleSummaryIndex *Index, bool IsForDebug)
@@ -3104,6 +3123,10 @@ void AssemblyWriter::writeOperandBundles(const CallBase *Call) {
 
 void AssemblyWriter::printModule(const Module *M) {
   Machine.initializeIfNeeded();
+
+  for (const GlobalObject &GO : M->global_objects())
+    if (const Comdat *C = GO.getComdat())
+      Comdats.insert(C);
 
   if (ShouldPreserveUseListOrder)
     UseListOrders = predictUseListOrder(M);
@@ -4892,7 +4915,6 @@ void AssemblyWriter::printInstruction(const Instruction &I) {
     printShuffleMask(Out, SVI->getType(), SVI->getShuffleMask());
   }
 
-  // Print Metadata info.
   SmallVector<std::pair<unsigned, MDNode *>, 4> InstMD;
   I.getAllMetadata(InstMD);
   printMetadataAttachments(InstMD, ", ");
@@ -5099,6 +5121,15 @@ void AssemblyWriter::printUseLists(const Function *F) {
 
 void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder, bool IsForDebug) const {
+  if (PrintIRFast) {
+    SlotTracker SlotTable(this, /*ShouldInitializeAllMetadata=*/false,
+                          /*UsePersistentMetadataIDs=*/true);
+    formatted_raw_ostream OS(ROS);
+    AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
+                     ShouldPreserveUseListOrder);
+    W.printFunction(this);
+    return;
+  }
   SlotTracker SlotTable(this->getParent());
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this->getParent(), AAW, IsForDebug,
@@ -5109,10 +5140,11 @@ void Function::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
                      bool ShouldPreserveUseListOrder,
                      bool IsForDebug) const {
-  SlotTracker SlotTable(this->getParent());
+  SlotTracker SlotTable(this->getParent(),
+                        /*ShouldInitializeAllMetadata=*/false,
+                        /*UsePersistentMetadataIDs=*/PrintIRFast);
   formatted_raw_ostream OS(ROS);
-  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW,
-                   IsForDebug,
+  AssemblyWriter W(OS, SlotTable, this->getModule(), AAW, IsForDebug,
                    ShouldPreserveUseListOrder);
   W.printBasicBlock(this);
 }
@@ -5262,6 +5294,17 @@ void DbgLabelRecord::print(raw_ostream &ROS, ModuleSlotTracker &MST,
 }
 
 void Value::print(raw_ostream &ROS, bool IsForDebug) const {
+  if (PrintIRFast) {
+    if (const auto *F = dyn_cast<Function>(this)) {
+      F->print(ROS, nullptr, /*ShouldPreserveUseListOrder=*/false, IsForDebug);
+      return;
+    }
+    if (const auto *BB = dyn_cast<BasicBlock>(this)) {
+      BB->print(ROS, nullptr, /*ShouldPreserveUseListOrder=*/false, IsForDebug);
+      return;
+    }
+  }
+
   bool ShouldInitializeAllMetadata = false;
   if (auto *I = dyn_cast<Instruction>(this))
     ShouldInitializeAllMetadata = isReferencingMDNode(*I);

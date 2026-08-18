@@ -1611,6 +1611,23 @@ public:
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
 
+  // IDs remain stable for the context lifetime. Tracking references prevent a
+  // recycled MDNode address from reusing an old ID; slots are not reclaimed.
+  DenseMap<const MDNode *, unsigned> MetadataPrintIDs;
+  SmallVector<TrackingMDNodeRef, 0> MetadataPrintNodes;
+
+  unsigned getOrCreateMetadataPrintID(const MDNode *N) {
+    auto It = MetadataPrintIDs.find(N);
+    if (It != MetadataPrintIDs.end() &&
+        MetadataPrintNodes[It->second].get() == N)
+      return It->second;
+
+    unsigned ID = MetadataPrintNodes.size();
+    MetadataPrintNodes.emplace_back(const_cast<MDNode *>(N));
+    MetadataPrintIDs[N] = ID;
+    return ID;
+  }
+
 #define HANDLE_MDNODE_LEAF_UNIQUABLE(CLASS)                                    \
   DenseSet<CLASS *, CLASS##Info> CLASS##s;
 #include "llvm/IR/Metadata.def"
