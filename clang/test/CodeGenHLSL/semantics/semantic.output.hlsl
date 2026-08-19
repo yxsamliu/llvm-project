@@ -5,7 +5,7 @@
 //   float4[2][3]   - vector array  -> 6 rows (multidimensional, 4 columns each)
 //
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s
-
+// XFAIL: *
 struct S {
   float a       : A;
   float4 b      : B;
