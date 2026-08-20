@@ -33,9 +33,10 @@ add_library(hotswap-raiser OBJECT
   raise_failure.cpp
   reg-file.cpp
   wave-projection.cpp
-  kernarg-layout.cpp
   user-sgpr-layout.cpp
-  source-hidden-args.cpp
+  register-state.cpp
+  raise-context.cpp
+  op-resolver.cpp
 )
 
 if(NOT TARGET hotswap::raiser)

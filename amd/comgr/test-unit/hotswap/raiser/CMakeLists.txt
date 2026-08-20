@@ -103,16 +103,16 @@ target_include_directories(RegFileTests PRIVATE
 
 comgr_configure_test_target(RegFileTests)
 
-# -- KernargAbiLayoutTests ----------------------------------------------------
+# -- RegisterStateTests -------------------------------------------------------
 #
-# Covers the source kernel-argument ABI reconstruction: the user-SGPR layout
-# derived from the kernel descriptor, hidden-argument byte classification, and
-# the IR synthesis of source hidden argument values.
+# Covers the source architectural registers as the raiser sees them: operand
+# decode and reads, EXEC-predicated writes, and the per-SGPR shadow storage
+# that carries wave masks and source-wave values across blocks.
 
-add_executable(KernargAbiLayoutTests
-  KernargAbiLayoutTest.cpp)
+add_executable(RegisterStateTests
+  RegisterStateTest.cpp)
 
-target_link_libraries(KernargAbiLayoutTests PRIVATE
+target_link_libraries(RegisterStateTests PRIVATE
   ${COMGR_GTEST_LIBS}
   hotswap::raiser
   hotswap::decoder
@@ -120,10 +120,82 @@ target_link_libraries(KernargAbiLayoutTests PRIVATE
   ${COMGR_HOTSWAP_TEST_LLVM_LIBS}
   ${LLVM_PTHREAD_LIB})
 
-target_include_directories(KernargAbiLayoutTests PRIVATE
+target_include_directories(RegisterStateTests PRIVATE
   ${LLVM_INCLUDE_DIRS}
   ${PROJECT_SOURCE_DIR}/src
   ${COMGR_GTEST_INCLUDE_DIRS}
   $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>)
 
-comgr_configure_test_target(KernargAbiLayoutTests)
+comgr_configure_test_target(RegisterStateTests)
+
+# -- RaiseContextTests --------------------------------------------------------
+#
+# Covers the per-kernel context itself: source-offset block lookup.
+
+add_executable(RaiseContextTests
+  RaiseContextTest.cpp)
+
+target_link_libraries(RaiseContextTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  hotswap::raiser
+  hotswap::decoder
+  hotswap::common
+  ${COMGR_HOTSWAP_TEST_LLVM_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(RaiseContextTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>)
+
+comgr_configure_test_target(RaiseContextTests)
+
+# -- OpResolverTests ----------------------------------------------------------
+#
+# Covers the per-instruction operand accessor: the failures it propagates out of
+# the register reads it resolves through.
+
+add_executable(OpResolverTests
+  OpResolverTest.cpp)
+
+target_link_libraries(OpResolverTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  hotswap::raiser
+  hotswap::decoder
+  hotswap::common
+  ${COMGR_HOTSWAP_TEST_LLVM_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(OpResolverTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>)
+
+comgr_configure_test_target(OpResolverTests)
+
+# -- UserSgprLayoutTests ------------------------------------------------------
+#
+# Covers the user-SGPR layout the raiser derives from the kernel descriptor:
+# the canonical entry order, the kernarg preload decode, and the descriptors it
+# refuses.
+
+add_executable(UserSgprLayoutTests
+  UserSgprLayoutTest.cpp)
+
+target_link_libraries(UserSgprLayoutTests PRIVATE
+  ${COMGR_GTEST_LIBS}
+  hotswap::raiser
+  hotswap::decoder
+  hotswap::common
+  ${COMGR_HOTSWAP_TEST_LLVM_LIBS}
+  ${LLVM_PTHREAD_LIB})
+
+target_include_directories(UserSgprLayoutTests PRIVATE
+  ${LLVM_INCLUDE_DIRS}
+  ${PROJECT_SOURCE_DIR}/src
+  ${COMGR_GTEST_INCLUDE_DIRS}
+  $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>)
+
+comgr_configure_test_target(UserSgprLayoutTests)
