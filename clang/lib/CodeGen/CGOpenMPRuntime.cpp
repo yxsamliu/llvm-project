@@ -11410,8 +11410,8 @@ static void emitTargetCallKernelLaunch(
 
     llvm::OpenMPIRBuilder::TargetKernelArgs Args(
         NumTargetItems, RTArgs, NumIterations, NumTeams, NumThreads,
-        DynCGroupMem, HasNoWait, /*StrictBlocks=*/IsBare,
-        /*StrictThreads=*/IsBare, DynCGroupMemFallback);
+        DynCGroupMem, HasNoWait, /*StrictBlocksAndThreads=*/IsBare,
+        DynCGroupMemFallback);
 
     llvm::OpenMPIRBuilder::InsertPointTy AfterIP =
         cantFail(OMPRuntime->getOMPBuilder().emitKernelLaunch(

@@ -2902,8 +2902,7 @@ public:
     bool HasNoWait = false;
     /// True if the kernel strictly requires the number of blocks and threads
     /// above to run.
-    bool StrictBlocks = false;
-    bool StrictThreads = false;
+    bool StrictBlocksAndThreads = false;
     /// The fallback mechanism for the shared memory.
     omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback =
         omp::OMPDynGroupprivateFallbackType::Abort;
@@ -2913,12 +2912,12 @@ public:
     TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
                      Value *TripCount, ArrayRef<Value *> NumTeams,
                      ArrayRef<Value *> NumThreads, Value *DynCGroupMem,
-                     bool HasNoWait, bool StrictBlocks, bool StrictThreads,
+                     bool HasNoWait, bool StrictBlocksAndThreads,
                      omp::OMPDynGroupprivateFallbackType DynCGroupMemFallback)
         : NumTargetItems(NumTargetItems), RTArgs(RTArgs), TripCount(TripCount),
           NumTeams(NumTeams), NumThreads(NumThreads),
           DynCGroupMem(DynCGroupMem), HasNoWait(HasNoWait),
-          StrictBlocks(StrictBlocks), StrictThreads(StrictThreads),
+          StrictBlocksAndThreads(StrictBlocksAndThreads),
           DynCGroupMemFallback(DynCGroupMemFallback) {}
   };
 
