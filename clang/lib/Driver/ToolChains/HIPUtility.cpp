@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "HIPUtility.h"
-#include "clang/Basic/OffloadArch.h"
-#include "clang/Basic/TargetID.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Options/Options.h"
@@ -41,16 +39,8 @@ const unsigned HIPCodeObjectAlign = 4096;
 } // namespace
 
 // Constructs a triple string for clang offload bundler.
-static std::string normalizeForBundler(const llvm::Triple &OrigT,
-                                       StringRef BoundArch) {
-  llvm::Triple T(OrigT);
-  bool HasTargetID = !BoundArch.empty();
-  if (T.getSubArch() == llvm::Triple::NoSubArch && HasTargetID) {
-    llvm::Triple::SubArchType SubArch = getOffloadArchSubArch(
-        StringToOffloadArch(getProcessorFromTargetID(T, BoundArch)));
-    T.setArch(T.getArch(), SubArch);
-  }
-
+static std::string normalizeForBundler(const llvm::Triple &T,
+                                       bool HasTargetID) {
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
