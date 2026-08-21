@@ -5443,8 +5443,8 @@ private:
       const Fortran::lower::SomeExpr *rhsExpr = &assign.rhs;
       std::optional<Fortran::lower::SomeExpr> rewritten;
       if (bridge.getLoweringOptions().getSplitSumExpressionTree() &&
-          Fortran::evaluate::CanBuildSplitSumExpressionTree(assign.lhs,
-                                                            assign.rhs)) {
+          Fortran::evaluate::CanBuildSplitSumExpressionTree(
+              getFoldingContext(), assign.lhs, assign.rhs)) {
         rewritten =
             Fortran::evaluate::TryBuildSplitSumExpressionTree(assign.rhs);
         if (rewritten)
