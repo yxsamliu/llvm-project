@@ -23,4 +23,6 @@ breaks rocrand 4 tests
 breaks windows build: MSVC rejects the CRTP removal, error C2440 and C2027
 [ADT] Remove CRTP from FoldingSet and ContextualFoldingSet (NFC) (#216830)
 ---
-
+breaks comgr, device-libs, hip-test
+clang: Emit legacy amdgcn triple in HIP fatbin bundle entries (#217640)
+clang: Start using new amdgpu subarch triples (#206482)
