@@ -45,7 +45,6 @@
 #include "llvm/Support/VersionTuple.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
-#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1120,17 +1119,11 @@ ToolChain::getTargetSubDirPath(StringRef BaseDir) const {
   if (auto Path = getPathForTriple(T))
     return *Path;
 
-  if (T.isAMDGCN()) {
-    // Clear the subarch as a fallback.
-    // TODO: Remove this when libc and compiler-rt builds are migrated.
-    llvm::Triple AMDGPUTriple = T;
-    AMDGPUTriple.setArch(Triple::amdgpu);
-    if (auto Path = getPathForTriple(AMDGPUTriple))
-      return *Path;
-
-    // Try legacy architecture name.
-    AMDGPUTriple.setArchName("amdgcn");
-    if (auto Path = getPathForTriple(AMDGPUTriple))
+  // Handle the legacy AMDGPU triple case as well.
+  if (T.getArchName() == "amdgcn") {
+    llvm::Triple Canon(T);
+    Canon.setArchName("amdgpu");
+    if (auto Path = getPathForTriple(Canon))
       return *Path;
   }
 
@@ -1228,19 +1221,11 @@ ToolChain::path_list ToolChain::getArchSpecificLibPaths() const {
 
   AddPath({getTriple().str()});
 
-  // For AMDGPU, fall back to the subarch-stripped triple path, trying both the
-  // canonical "amdgpu" name and the legacy "amdgcn" name.
-  //
-  // TODO: Also try major subarch?
-  // TODO: Remove this when libc and compiler-rt builds are migrated.
-  if (getTriple().isAMDGCN()) {
+  // Handle the legacy AMDGPU triple case as well.
+  if (getTriple().getArchName() == "amdgcn") {
     llvm::Triple Canon(getTriple());
-    for (StringRef ArchName : {"amdgpu", "amdgcn"}) {
-      if (ArchName == getTriple().getArchName())
-        continue;
-      Canon.setArchName(ArchName);
-      AddPath({Canon.str()});
-    }
+    Canon.setArchName("amdgpu");
+    AddPath({Canon.str()});
   }
 
   AddPath({getOSLibName(), llvm::Triple::getArchTypeName(getArch())});
@@ -1513,8 +1498,7 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args, BoundArch BA,
     return getTripleString().str();
   case llvm::Triple::amdgpu: {
     llvm::Triple Triple = getTriple();
-    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, BA, InputType,
-                                       Triple);
+    tools::AMDGPU::setArchNameInTriple(getDriver(), Args, InputType, Triple);
     return Triple.getTriple();
   }
   case llvm::Triple::arm:
@@ -2157,12 +2141,6 @@ void ToolChain::TranslateXarchArgs(
 static bool isXArchCompatibleTripleArch(const llvm::Triple &TT,
                                         StringRef XArchVal) {
   llvm::Triple ParsedTriple(XArchVal);
-
-  // Accept -Xarch_amdgcn for all amdgpu subarches, and -Xarch_amdgpu9 for
-  // amdgpu9.xx
-  if (TT.isAMDGCN() && ParsedTriple.isAMDGCN())
-    return llvm::AMDGPU::isSubArchCompatible(TT, ParsedTriple);
-
   return TT.getArch() == ParsedTriple.getArch() &&
          TT.getSubArch() == ParsedTriple.getSubArch();
 }

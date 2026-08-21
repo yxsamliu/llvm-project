@@ -12,6 +12,7 @@
 #include "clang/Driver/ToolChain.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include <string>
 
 namespace clang {
 namespace driver {
@@ -19,8 +20,7 @@ namespace tools {
 namespace AMDGPU {
 
 void setArchNameInTriple(const Driver &D, const llvm::opt::ArgList &Args,
-                         BoundArch BA, types::ID InputType,
-                         llvm::Triple &Triple);
+                         types::ID InputType, llvm::Triple &Triple);
 void getAMDGPUArchCPUFromArgs(const llvm::Triple &Triple,
                               const llvm::opt::ArgList &Args,
                               llvm::StringRef &Arch);
