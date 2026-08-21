@@ -39,8 +39,20 @@ const unsigned HIPCodeObjectAlign = 4096;
 } // namespace
 
 // Constructs a triple string for clang offload bundler.
-static std::string normalizeForBundler(const llvm::Triple &T,
-                                       bool HasTargetID) {
+static std::string normalizeForBundler(const llvm::Triple &OrigT,
+                                       StringRef BoundArch) {
+  llvm::Triple T(OrigT);
+  bool HasTargetID = !BoundArch.empty();
+
+  // FIXME: Short-term hack. The HIP runtime hardcodes the legacy
+  // "amdgcn-amd-amdhsa--" prefix when parsing the target IDs embedded in the
+  // fatbin bundle, so force it.
+  if (HasTargetID && T.isAMDGCN()) {
+    return ("amdgcn-" + T.getVendorName() + "-" + T.getOSName() + "-" +
+            T.getEnvironmentName())
+        .str();
+  }
+
   return HasTargetID ? (T.getArchName() + "-" + T.getVendorName() + "-" +
                         T.getOSName() + "-" + T.getEnvironmentName())
                            .str()
