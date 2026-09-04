@@ -14,6 +14,7 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Interpreter/IncrementalExecutor.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/Parser.h"
@@ -38,6 +39,33 @@ using namespace clang;
 namespace {
 
 class IncrementalProcessingTest : public InterpreterTestBase {};
+
+class NoopIncrementalExecutor : public IncrementalExecutor {
+public:
+  llvm::Error addModule(PartialTranslationUnit &) override {
+    return llvm::Error::success();
+  }
+  llvm::Error removeModule(PartialTranslationUnit &) override {
+    return llvm::Error::success();
+  }
+  llvm::Error runCtors() const override { return llvm::Error::success(); }
+  llvm::Error cleanUp() override { return llvm::Error::success(); }
+  llvm::Expected<llvm::orc::ExecutorAddr>
+  getSymbolAddress(llvm::StringRef, SymbolNameKind) const override {
+    return llvm::make_error<llvm::StringError>("not implemented",
+                                               llvm::inconvertibleErrorCode());
+  }
+  llvm::Error LoadDynamicLibrary(const char *) override {
+    return llvm::Error::success();
+  }
+};
+
+class ParsingOnlyInterpreter : public Interpreter {
+public:
+  ParsingOnlyInterpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err,
+                         std::unique_ptr<IncrementalExecutorBuilder> IEB)
+      : Interpreter(std::move(CI), Err, std::move(IEB)) {}
+};
 
 // Incremental processing produces several modules, all using the same "main
 // file". Make sure CodeGen can cope with that, e.g. for static initializers.
@@ -87,5 +115,38 @@ TEST_F(IncrementalProcessingTest, EmitCXXGlobalInitFunc) {
 
   ASSERT_FALSE(GlobalInit1->getName() == GlobalInit2->getName());
 }
+
+#ifndef _WIN32
+TEST_F(IncrementalProcessingTest, HIPDeviceFunctionAcrossModules) {
+  std::vector<const char *> ClangArgv = {"-Xclang",
+                                         "-emit-llvm-only",
+                                         "-xhip",
+                                         "--offload-device-only",
+                                         "--offload-arch=gfx1100",
+                                         "-nogpuinc",
+                                         "-nogpulib",
+                                         "-include",
+                                         "/dev/null"};
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs(ClangArgv);
+  auto CI = cantFail(CB.CreateCpp());
+
+  auto IEB = std::make_unique<IncrementalExecutorBuilder>();
+  IEB->IE = std::make_unique<NoopIncrementalExecutor>();
+  llvm::Error Err = llvm::Error::success();
+  ParsingOnlyInterpreter Interp(std::move(CI), Err, std::move(IEB));
+  cantFail(std::move(Err));
+
+  cantFail(Interp.Parse("__attribute__((device)) inline void test_device("
+                        "int *p) { *p = 42; }"));
+  PartialTranslationUnit &Second = cantFail(Interp.Parse(
+      "__attribute__((global)) void test_kernel(int *p) { test_device(p); }"));
+
+  ASSERT_TRUE(Second.TheModule);
+  const Function *Device = Second.TheModule->getFunction("_Z11test_devicePi");
+  ASSERT_TRUE(Device);
+  EXPECT_FALSE(Device->isDeclaration());
+}
+#endif
 
 } // end anonymous namespace
