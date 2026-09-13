@@ -2,6 +2,8 @@
 # RUN: llc -mtriple=amdgpu11.00--amdpal -verify-machineinstrs=1 -start-before=greedy,0 -stop-after=virtregrewriter,0 -stress-regalloc=5 %s -o - | FileCheck %s
 
 # This test checks that dead bundles are handled correctly.
+# Dead split-copy definitions do not produce a spill, so they must not add a
+# preservation reload from the shared spill slot.
 ---
 name: psmain
 tracksRegLiveness: true

@@ -295,85 +295,117 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_mov_b32 s0, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
-; CHECK-NEXT:    scratch_store_b32 off, v93, s33 offset:404 ; 4-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b32 off, v93, s33 offset:468 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    v_writelane_b32 v93, s0, 14
-; CHECK-NEXT:    s_addk_co_i32 s32, 0x1a0
+; CHECK-NEXT:    s_addk_co_i32 s32, 0x1e0
 ; CHECK-NEXT:    s_clause 0x1f ; 128-byte Folded Spill
-; CHECK-NEXT:    scratch_store_b32 off, v40, s33 offset:144
+; CHECK-NEXT:    scratch_store_b32 off, v40, s33 offset:208
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v41, s33 offset:140
+; CHECK-NEXT:    scratch_store_b32 off, v41, s33 offset:204
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v42, s33 offset:136
+; CHECK-NEXT:    scratch_store_b32 off, v42, s33 offset:200
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v43, s33 offset:132
+; CHECK-NEXT:    scratch_store_b32 off, v43, s33 offset:196
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v44, s33 offset:128
+; CHECK-NEXT:    scratch_store_b32 off, v44, s33 offset:192
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v45, s33 offset:124
+; CHECK-NEXT:    scratch_store_b32 off, v45, s33 offset:188
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v46, s33 offset:120
+; CHECK-NEXT:    scratch_store_b32 off, v46, s33 offset:184
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v47, s33 offset:116
+; CHECK-NEXT:    scratch_store_b32 off, v47, s33 offset:180
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v56, s33 offset:112
+; CHECK-NEXT:    scratch_store_b32 off, v56, s33 offset:176
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v57, s33 offset:108
+; CHECK-NEXT:    scratch_store_b32 off, v57, s33 offset:172
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v58, s33 offset:104
+; CHECK-NEXT:    scratch_store_b32 off, v58, s33 offset:168
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v59, s33 offset:100
+; CHECK-NEXT:    scratch_store_b32 off, v59, s33 offset:164
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v60, s33 offset:96
+; CHECK-NEXT:    scratch_store_b32 off, v60, s33 offset:160
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v61, s33 offset:92
+; CHECK-NEXT:    scratch_store_b32 off, v61, s33 offset:156
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v62, s33 offset:88
+; CHECK-NEXT:    scratch_store_b32 off, v62, s33 offset:152
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v63, s33 offset:84
+; CHECK-NEXT:    scratch_store_b32 off, v63, s33 offset:148
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v72, s33 offset:80
+; CHECK-NEXT:    scratch_store_b32 off, v72, s33 offset:144
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v73, s33 offset:76
+; CHECK-NEXT:    scratch_store_b32 off, v73, s33 offset:140
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v74, s33 offset:72
+; CHECK-NEXT:    scratch_store_b32 off, v74, s33 offset:136
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v75, s33 offset:68
+; CHECK-NEXT:    scratch_store_b32 off, v75, s33 offset:132
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v76, s33 offset:64
+; CHECK-NEXT:    scratch_store_b32 off, v76, s33 offset:128
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v77, s33 offset:60
+; CHECK-NEXT:    scratch_store_b32 off, v77, s33 offset:124
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v78, s33 offset:56
+; CHECK-NEXT:    scratch_store_b32 off, v78, s33 offset:120
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v79, s33 offset:52
+; CHECK-NEXT:    scratch_store_b32 off, v79, s33 offset:116
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v88, s33 offset:48
+; CHECK-NEXT:    scratch_store_b32 off, v88, s33 offset:112
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v89, s33 offset:44
+; CHECK-NEXT:    scratch_store_b32 off, v89, s33 offset:108
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v90, s33 offset:40
+; CHECK-NEXT:    scratch_store_b32 off, v90, s33 offset:104
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v91, s33 offset:36
+; CHECK-NEXT:    scratch_store_b32 off, v91, s33 offset:100
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v92, s33 offset:32
+; CHECK-NEXT:    scratch_store_b32 off, v92, s33 offset:96
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v104, s33 offset:28
+; CHECK-NEXT:    scratch_store_b32 off, v104, s33 offset:92
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v105, s33 offset:24
+; CHECK-NEXT:    scratch_store_b32 off, v105, s33 offset:88
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v106, s33 offset:20
-; CHECK-NEXT:    s_clause 0x4 ; 20-byte Folded Spill
-; CHECK-NEXT:    scratch_store_b32 off, v107, s33 offset:16
+; CHECK-NEXT:    scratch_store_b32 off, v106, s33 offset:84
+; CHECK-NEXT:    s_clause 0x14 ; 84-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b32 off, v107, s33 offset:80
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v108, s33 offset:12
+; CHECK-NEXT:    scratch_store_b32 off, v108, s33 offset:76
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v109, s33 offset:8
+; CHECK-NEXT:    scratch_store_b32 off, v109, s33 offset:72
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v110, s33 offset:4
+; CHECK-NEXT:    scratch_store_b32 off, v110, s33 offset:68
 ; CHECK-NEXT:    ; meta instruction
-; CHECK-NEXT:    scratch_store_b32 off, v111, s33
+; CHECK-NEXT:    scratch_store_b32 off, v111, s33 offset:64
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v120, s33 offset:60
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v121, s33 offset:56
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v122, s33 offset:52
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v123, s33 offset:48
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v124, s33 offset:44
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v125, s33 offset:40
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v126, s33 offset:36
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v127, s33 offset:32
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v136, s33 offset:28
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v137, s33 offset:24
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v138, s33 offset:20
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v139, s33 offset:16
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v140, s33 offset:12
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v141, s33 offset:8
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v142, s33 offset:4
+; CHECK-NEXT:    ; meta instruction
+; CHECK-NEXT:    scratch_store_b32 off, v143, s33
 ; CHECK-NEXT:    v_writelane_b32 v93, s34, 0
 ; CHECK-NEXT:    v_writelane_b32 v93, s35, 1
 ; CHECK-NEXT:    v_writelane_b32 v93, s36, 2
@@ -430,50 +462,69 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_mov_b64 s[38:39], s[6:7]
 ; CHECK-NEXT:    s_mov_b64 s[48:49], s[4:5]
 ; CHECK-NEXT:    s_wait_loadcnt 0x5
-; CHECK-NEXT:    scratch_store_b128 off, v[10:13], s33 offset:148 ; 16-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[10:13], s33 offset:340 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_loadcnt 0x4
-; CHECK-NEXT:    scratch_store_b128 off, v[14:17], s33 offset:164 ; 16-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[14:17], s33 offset:356 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_loadcnt 0x3
-; CHECK-NEXT:    scratch_store_b128 off, v[18:21], s33 offset:180 ; 16-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[18:21], s33 offset:372 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
 ; CHECK-NEXT:    s_clause 0x4 ; 80-byte Folded Spill
-; CHECK-NEXT:    scratch_store_b128 off, v[22:25], s33 offset:196
-; CHECK-NEXT:    scratch_store_b128 off, v[26:29], s33 offset:212
-; CHECK-NEXT:    scratch_store_b128 off, v[30:33], s33 offset:228
-; CHECK-NEXT:    scratch_store_b128 off, v[34:37], s33 offset:244
-; CHECK-NEXT:    scratch_store_b128 off, v[38:41], s33 offset:260
+; CHECK-NEXT:    scratch_store_b128 off, v[22:25], s33 offset:388
+; CHECK-NEXT:    scratch_store_b128 off, v[26:29], s33 offset:404
+; CHECK-NEXT:    scratch_store_b128 off, v[30:33], s33 offset:420
+; CHECK-NEXT:    scratch_store_b128 off, v[34:37], s33 offset:436
+; CHECK-NEXT:    scratch_store_b128 off, v[38:41], s33 offset:452
 ; CHECK-NEXT:    s_clause 0x4
 ; CHECK-NEXT:    global_load_b128 v[10:13], v[8:9], off offset:48
 ; CHECK-NEXT:    global_load_b128 v[14:17], v[8:9], off offset:64
 ; CHECK-NEXT:    global_load_b128 v[18:21], v[8:9], off offset:80
 ; CHECK-NEXT:    global_load_b128 v[22:25], v[8:9], off offset:96
 ; CHECK-NEXT:    global_load_b128 v[26:29], v[8:9], off offset:112
+; CHECK-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b128 v[112:115], off, s33 offset:212
+; CHECK-NEXT:    scratch_load_b128 v[116:119], off, s33 offset:228
+; CHECK-NEXT:    scratch_load_b128 v[120:123], off, s33 offset:244
+; CHECK-NEXT:    scratch_load_b128 v[124:127], off, s33 offset:260
+; CHECK-NEXT:    scratch_load_b128 v[128:131], off, s33 offset:276
+; CHECK-NEXT:    scratch_load_b128 v[132:135], off, s33 offset:292
+; CHECK-NEXT:    scratch_load_b128 v[136:139], off, s33 offset:308
+; CHECK-NEXT:    scratch_load_b128 v[140:143], off, s33 offset:324
 ; CHECK-NEXT:    s_wait_loadcnt 0x4
-; CHECK-NEXT:    scratch_store_b128 off, v[10:13], s33 offset:276 ; 16-byte Folded Spill
+; CHECK-NEXT:    v_dual_mov_b32 v127, v25 :: v_dual_mov_b32 v126, v24
+; CHECK-NEXT:    v_dual_mov_b32 v125, v23 :: v_dual_mov_b32 v124, v22
+; CHECK-NEXT:    v_dual_mov_b32 v123, v21 :: v_dual_mov_b32 v122, v20
+; CHECK-NEXT:    v_dual_mov_b32 v121, v19 :: v_dual_mov_b32 v120, v18
+; CHECK-NEXT:    v_dual_mov_b32 v119, v17 :: v_dual_mov_b32 v118, v16
+; CHECK-NEXT:    v_dual_mov_b32 v117, v15 :: v_dual_mov_b32 v116, v14
+; CHECK-NEXT:    v_dual_mov_b32 v115, v13 :: v_dual_mov_b32 v114, v12
+; CHECK-NEXT:    v_dual_mov_b32 v113, v11 :: v_dual_mov_b32 v112, v10
 ; CHECK-NEXT:    s_wait_loadcnt 0x3
-; CHECK-NEXT:    scratch_store_b128 off, v[14:17], s33 offset:292 ; 16-byte Folded Spill
+; CHECK-NEXT:    v_dual_mov_b32 v131, v29 :: v_dual_mov_b32 v130, v28
+; CHECK-NEXT:    v_dual_mov_b32 v129, v27 :: v_dual_mov_b32 v128, v26
+; CHECK-NEXT:    s_clause 0x4 ; 80-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[112:115], s33 offset:212
+; CHECK-NEXT:    scratch_store_b128 off, v[116:119], s33 offset:228
+; CHECK-NEXT:    scratch_store_b128 off, v[120:123], s33 offset:244
+; CHECK-NEXT:    scratch_store_b128 off, v[124:127], s33 offset:260
+; CHECK-NEXT:    scratch_store_b128 off, v[128:131], s33 offset:276
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
-; CHECK-NEXT:    scratch_store_b128 off, v[18:21], s33 offset:308 ; 16-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[132:135], s33 offset:292 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_loadcnt 0x1
-; CHECK-NEXT:    scratch_store_b128 off, v[22:25], s33 offset:324 ; 16-byte Folded Spill
+; CHECK-NEXT:    scratch_store_b128 off, v[136:139], s33 offset:308 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    s_clause 0x3 ; 64-byte Folded Spill
-; CHECK-NEXT:    scratch_store_b128 off, v[26:29], s33 offset:340
-; CHECK-NEXT:    scratch_store_b128 off, v[30:33], s33 offset:356
-; CHECK-NEXT:    scratch_store_b128 off, v[34:37], s33 offset:372
-; CHECK-NEXT:    scratch_store_b128 off, v[38:41], s33 offset:388
+; CHECK-NEXT:    scratch_store_b128 off, v[140:143], s33 offset:324 ; 16-byte Folded Spill
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_clause 0x7 ; 128-byte Folded Reload
-; CHECK-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:276 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:292 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:308 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:324 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[16:19], off, s33 offset:340 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:356 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[24:27], off, s33 offset:372 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[28:31], off, s33 offset:388 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:212 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:228 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:244 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:260 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[16:19], off, s33 offset:276 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[20:23], off, s33 offset:292 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[24:27], off, s33 offset:308 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[28:31], off, s33 offset:324 th:TH_LOAD_LU
 ; CHECK-NEXT:    s_getpc_b64 s[0:1]
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_sext_i32_i16 s1, s1
@@ -492,17 +543,17 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_wait_loadcnt 0x3
 ; CHECK-NEXT:    scratch_store_b32 off, v19, s32 offset:128
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
-; CHECK-NEXT:    scratch_load_b128 v[19:22], off, s33 offset:148 th:TH_LOAD_LU ; 16-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b128 v[19:22], off, s33 offset:340 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
-; CHECK-NEXT:    scratch_load_b128 v[23:26], off, s33 offset:164 th:TH_LOAD_LU ; 16-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b128 v[23:26], off, s33 offset:356 th:TH_LOAD_LU ; 16-byte Folded Reload
 ; CHECK-NEXT:    s_wait_loadcnt 0x2
 ; CHECK-NEXT:    s_clause 0x5 ; 96-byte Folded Reload
-; CHECK-NEXT:    scratch_load_b128 v[27:30], off, s33 offset:180 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[31:34], off, s33 offset:196 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[35:38], off, s33 offset:212 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[39:42], off, s33 offset:228 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[43:46], off, s33 offset:244 th:TH_LOAD_LU
-; CHECK-NEXT:    scratch_load_b128 v[47:50], off, s33 offset:260 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[27:30], off, s33 offset:372 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[31:34], off, s33 offset:388 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[35:38], off, s33 offset:404 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[39:42], off, s33 offset:420 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[43:46], off, s33 offset:436 th:TH_LOAD_LU
+; CHECK-NEXT:    scratch_load_b128 v[47:50], off, s33 offset:452 th:TH_LOAD_LU
 ; CHECK-NEXT:    s_clause 0x3
 ; CHECK-NEXT:    scratch_store_b128 off, v[15:18], s32 offset:112
 ; CHECK-NEXT:    scratch_store_b128 off, v[11:14], s32 offset:96
@@ -547,44 +598,60 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; CHECK-NEXT:    s_clause 0x1f ; 128-byte Folded Reload
-; CHECK-NEXT:    scratch_load_b32 v111, off, s33
-; CHECK-NEXT:    scratch_load_b32 v110, off, s33 offset:4
-; CHECK-NEXT:    scratch_load_b32 v109, off, s33 offset:8
-; CHECK-NEXT:    scratch_load_b32 v108, off, s33 offset:12
-; CHECK-NEXT:    scratch_load_b32 v107, off, s33 offset:16
-; CHECK-NEXT:    scratch_load_b32 v106, off, s33 offset:20
-; CHECK-NEXT:    scratch_load_b32 v105, off, s33 offset:24
-; CHECK-NEXT:    scratch_load_b32 v104, off, s33 offset:28
-; CHECK-NEXT:    scratch_load_b32 v92, off, s33 offset:32
-; CHECK-NEXT:    scratch_load_b32 v91, off, s33 offset:36
-; CHECK-NEXT:    scratch_load_b32 v90, off, s33 offset:40
-; CHECK-NEXT:    scratch_load_b32 v89, off, s33 offset:44
-; CHECK-NEXT:    scratch_load_b32 v88, off, s33 offset:48
-; CHECK-NEXT:    scratch_load_b32 v79, off, s33 offset:52
-; CHECK-NEXT:    scratch_load_b32 v78, off, s33 offset:56
-; CHECK-NEXT:    scratch_load_b32 v77, off, s33 offset:60
-; CHECK-NEXT:    scratch_load_b32 v76, off, s33 offset:64
-; CHECK-NEXT:    scratch_load_b32 v75, off, s33 offset:68
-; CHECK-NEXT:    scratch_load_b32 v74, off, s33 offset:72
-; CHECK-NEXT:    scratch_load_b32 v73, off, s33 offset:76
-; CHECK-NEXT:    scratch_load_b32 v72, off, s33 offset:80
-; CHECK-NEXT:    scratch_load_b32 v63, off, s33 offset:84
-; CHECK-NEXT:    scratch_load_b32 v62, off, s33 offset:88
-; CHECK-NEXT:    scratch_load_b32 v61, off, s33 offset:92
-; CHECK-NEXT:    scratch_load_b32 v60, off, s33 offset:96
-; CHECK-NEXT:    scratch_load_b32 v59, off, s33 offset:100
-; CHECK-NEXT:    scratch_load_b32 v58, off, s33 offset:104
-; CHECK-NEXT:    scratch_load_b32 v57, off, s33 offset:108
-; CHECK-NEXT:    scratch_load_b32 v56, off, s33 offset:112
-; CHECK-NEXT:    scratch_load_b32 v47, off, s33 offset:116
-; CHECK-NEXT:    scratch_load_b32 v46, off, s33 offset:120
-; CHECK-NEXT:    scratch_load_b32 v45, off, s33 offset:124
-; CHECK-NEXT:    s_clause 0x4 ; 20-byte Folded Reload
-; CHECK-NEXT:    scratch_load_b32 v44, off, s33 offset:128
-; CHECK-NEXT:    scratch_load_b32 v43, off, s33 offset:132
-; CHECK-NEXT:    scratch_load_b32 v42, off, s33 offset:136
-; CHECK-NEXT:    scratch_load_b32 v41, off, s33 offset:140
-; CHECK-NEXT:    scratch_load_b32 v40, off, s33 offset:144
+; CHECK-NEXT:    scratch_load_b32 v143, off, s33
+; CHECK-NEXT:    scratch_load_b32 v142, off, s33 offset:4
+; CHECK-NEXT:    scratch_load_b32 v141, off, s33 offset:8
+; CHECK-NEXT:    scratch_load_b32 v140, off, s33 offset:12
+; CHECK-NEXT:    scratch_load_b32 v139, off, s33 offset:16
+; CHECK-NEXT:    scratch_load_b32 v138, off, s33 offset:20
+; CHECK-NEXT:    scratch_load_b32 v137, off, s33 offset:24
+; CHECK-NEXT:    scratch_load_b32 v136, off, s33 offset:28
+; CHECK-NEXT:    scratch_load_b32 v127, off, s33 offset:32
+; CHECK-NEXT:    scratch_load_b32 v126, off, s33 offset:36
+; CHECK-NEXT:    scratch_load_b32 v125, off, s33 offset:40
+; CHECK-NEXT:    scratch_load_b32 v124, off, s33 offset:44
+; CHECK-NEXT:    scratch_load_b32 v123, off, s33 offset:48
+; CHECK-NEXT:    scratch_load_b32 v122, off, s33 offset:52
+; CHECK-NEXT:    scratch_load_b32 v121, off, s33 offset:56
+; CHECK-NEXT:    scratch_load_b32 v120, off, s33 offset:60
+; CHECK-NEXT:    scratch_load_b32 v111, off, s33 offset:64
+; CHECK-NEXT:    scratch_load_b32 v110, off, s33 offset:68
+; CHECK-NEXT:    scratch_load_b32 v109, off, s33 offset:72
+; CHECK-NEXT:    scratch_load_b32 v108, off, s33 offset:76
+; CHECK-NEXT:    scratch_load_b32 v107, off, s33 offset:80
+; CHECK-NEXT:    scratch_load_b32 v106, off, s33 offset:84
+; CHECK-NEXT:    scratch_load_b32 v105, off, s33 offset:88
+; CHECK-NEXT:    scratch_load_b32 v104, off, s33 offset:92
+; CHECK-NEXT:    scratch_load_b32 v92, off, s33 offset:96
+; CHECK-NEXT:    scratch_load_b32 v91, off, s33 offset:100
+; CHECK-NEXT:    scratch_load_b32 v90, off, s33 offset:104
+; CHECK-NEXT:    scratch_load_b32 v89, off, s33 offset:108
+; CHECK-NEXT:    scratch_load_b32 v88, off, s33 offset:112
+; CHECK-NEXT:    scratch_load_b32 v79, off, s33 offset:116
+; CHECK-NEXT:    scratch_load_b32 v78, off, s33 offset:120
+; CHECK-NEXT:    scratch_load_b32 v77, off, s33 offset:124
+; CHECK-NEXT:    s_clause 0x14 ; 84-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v76, off, s33 offset:128
+; CHECK-NEXT:    scratch_load_b32 v75, off, s33 offset:132
+; CHECK-NEXT:    scratch_load_b32 v74, off, s33 offset:136
+; CHECK-NEXT:    scratch_load_b32 v73, off, s33 offset:140
+; CHECK-NEXT:    scratch_load_b32 v72, off, s33 offset:144
+; CHECK-NEXT:    scratch_load_b32 v63, off, s33 offset:148
+; CHECK-NEXT:    scratch_load_b32 v62, off, s33 offset:152
+; CHECK-NEXT:    scratch_load_b32 v61, off, s33 offset:156
+; CHECK-NEXT:    scratch_load_b32 v60, off, s33 offset:160
+; CHECK-NEXT:    scratch_load_b32 v59, off, s33 offset:164
+; CHECK-NEXT:    scratch_load_b32 v58, off, s33 offset:168
+; CHECK-NEXT:    scratch_load_b32 v57, off, s33 offset:172
+; CHECK-NEXT:    scratch_load_b32 v56, off, s33 offset:176
+; CHECK-NEXT:    scratch_load_b32 v47, off, s33 offset:180
+; CHECK-NEXT:    scratch_load_b32 v46, off, s33 offset:184
+; CHECK-NEXT:    scratch_load_b32 v45, off, s33 offset:188
+; CHECK-NEXT:    scratch_load_b32 v44, off, s33 offset:192
+; CHECK-NEXT:    scratch_load_b32 v43, off, s33 offset:196
+; CHECK-NEXT:    scratch_load_b32 v42, off, s33 offset:200
+; CHECK-NEXT:    scratch_load_b32 v41, off, s33 offset:204
+; CHECK-NEXT:    scratch_load_b32 v40, off, s33 offset:208
 ; CHECK-NEXT:    v_readlane_b32 s30, v93, 12
 ; CHECK-NEXT:    v_readlane_b32 s31, v93, 13
 ; CHECK-NEXT:    v_readlane_b32 s53, v93, 11
@@ -602,7 +669,7 @@ define <8 x half> @baz() nounwind {
 ; CHECK-NEXT:    s_mov_b32 s32, s33
 ; CHECK-NEXT:    v_readlane_b32 s0, v93, 14
 ; CHECK-NEXT:    s_or_saveexec_b32 s1, -1
-; CHECK-NEXT:    scratch_load_b32 v93, off, s33 offset:404 ; 4-byte Folded Reload
+; CHECK-NEXT:    scratch_load_b32 v93, off, s33 offset:468 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; CHECK-NEXT:    s_mov_b32 exec_lo, s1
 ; CHECK-NEXT:    s_mov_b32 s33, s0
