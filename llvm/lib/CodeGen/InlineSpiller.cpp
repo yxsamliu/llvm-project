@@ -225,7 +225,8 @@ private:
   bool coalesceStackAccess(MachineInstr *MI, Register Reg);
   bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
-  void insertReload(Register VReg, SlotIndex, MachineBasicBlock::iterator MI);
+  SlotIndex insertReload(Register VReg, SlotIndex,
+                         MachineBasicBlock::iterator MI);
   void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI);
 
   void spillAroundUses(Register Reg);
@@ -1244,9 +1245,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   return true;
 }
 
-void InlineSpiller::insertReload(Register NewVReg,
-                                 SlotIndex Idx,
-                                 MachineBasicBlock::iterator MI) {
+SlotIndex InlineSpiller::insertReload(Register NewVReg, SlotIndex Idx,
+                                      MachineBasicBlock::iterator MI) {
   MachineBasicBlock &MBB = *MI->getParent();
 
   MachineInstrSpan MIS(MI, &MBB);
@@ -1258,6 +1258,7 @@ void InlineSpiller::insertReload(Register NewVReg,
   LLVM_DEBUG(dumpMachineInstrRangeWithSlotIndex(MIS.begin(), MI, LIS, "reload",
                                                 NewVReg));
   ++NumReloads;
+  return LIS.getInstructionIndex(*MIS.begin()).getBaseIndex();
 }
 
 /// Check if \p Def fully defines a VReg with an undefined value.
@@ -1378,32 +1379,59 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     if (foldMemoryOperand(Ops))
       continue;
 
+    bool HasLiveDef = any_of(Ops, [](const auto &OpPair) {
+      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+      return MO.isDef() && !MO.isDead();
+    });
+    bool PreserveSplitLanes = false;
+    // Split siblings share a stack slot, but a partial split copy only defines
+    // the lanes that are live in this sibling. A full-width spill must preserve
+    // the other lanes in the slot: they can still be needed by another sibling.
+    if (MI.getFlag(MachineInstr::LRSplit) && HasLiveDef) {
+      LaneBitmask DefLanes = LaneBitmask::getNone();
+      for (const auto &OpPair : Ops) {
+        const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+        if (MO.isDef())
+          DefLanes |= MO.getSubReg()
+                          ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                          : MRI.getMaxLaneMaskForVReg(Reg);
+      }
+      if (DefLanes != MRI.getMaxLaneMaskForVReg(Reg)) {
+        PreserveSplitLanes = true;
+        RI.Reads = true;
+        for (const auto &OpPair : Ops) {
+          MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+          if (MO.isDef())
+            MO.setIsUndef(false);
+        }
+      }
+    }
+
     // Create a new virtual register for spill/fill.
     // FIXME: Infer regclass from instruction alone.
     Register NewVReg = Edit->createFrom(Reg);
 
-    if (RI.Reads)
-      insertReload(NewVReg, Idx, &MI);
+    if (RI.Reads) {
+      SlotIndex ReloadIdx = insertReload(NewVReg, Idx, &MI);
+      if (PreserveSplitLanes)
+        StackInt->addSegment(
+            LiveRange::Segment(ReloadIdx, Idx, StackInt->getValNumInfo(0)));
+    }
 
     // Rewrite instruction operands.
-    bool hasLiveDef = false;
     for (const auto &OpPair : Ops) {
       MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
       MO.setReg(NewVReg);
       if (MO.isUse()) {
         if (!OpPair.first->isRegTiedToDefOperand(OpPair.second))
           MO.setIsKill();
-      } else {
-        if (!MO.isDead())
-          hasLiveDef = true;
       }
     }
     LLVM_DEBUG(dbgs() << "\trewrite: " << Idx << '\t' << MI << '\n');
 
     // FIXME: Use a second vreg if instruction has no tied ops.
-    if (RI.Writes)
-      if (hasLiveDef)
-        insertSpill(NewVReg, true, &MI);
+    if (HasLiveDef)
+      insertSpill(NewVReg, true, &MI);
   }
 }
 
