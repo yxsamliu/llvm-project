@@ -468,8 +468,8 @@ const uint32_t *SIRegisterInfo::getNoPreservedMask() const {
   return CSR_AMDGPU_NoRegs_RegMask;
 }
 
-bool SIRegisterInfo::isChainScratchRegister(Register VGPR) {
-  return VGPR >= AMDGPU::VGPR0 && VGPR < AMDGPU::VGPR8;
+bool SIRegisterInfo::isChainScratchRegister(Register Reg) {
+  return Reg >= AMDGPU::VGPR0 && Reg < AMDGPU::VGPR8;
 }
 
 const TargetRegisterClass *
@@ -754,11 +754,6 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   // wwm-regalloc and it would be empty otherwise.
   BitVector PerLaneVGPRMask = MFI->getPerLaneVGPRMask();
   if (!PerLaneVGPRMask.empty()) {
-    // WWM live-range splitting can widen VGPR classes to AV classes. Keep
-    // those fragments in the WWM VGPR pool instead of allocating AGPRs that
-    // are subsequently reused by the per-lane allocator.
-    for (MCPhysReg Reg : AMDGPU::AGPR_32RegClass)
-      reserveRegisterTuples(Reserved, Reg);
     for (unsigned RegI = AMDGPU::VGPR0, RegE = AMDGPU::VGPR0 + MaxNumVGPRs;
          RegI < RegE; ++RegI) {
       if (PerLaneVGPRMask.test(RegI))

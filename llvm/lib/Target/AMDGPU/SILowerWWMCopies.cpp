@@ -38,7 +38,7 @@ public:
 
 private:
   bool isSCCLiveAtMI(const MachineInstr &MI);
-  void addToWWMSpills(MachineFunction &MF, Register Reg);
+  void reserveWWMRegister(Register Reg);
 
   LiveIntervals *LIS;
   SlotIndexes *Indexes;
@@ -92,17 +92,18 @@ bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   return LR.liveAt(Idx);
 }
 
-// If \p Reg is assigned with a physical VGPR, add the latter into wwm-spills
-// for preserving its entire lanes at function prolog/epilog.
-void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
-  if (Reg.isPhysical())
-    return;
+// Record the physical register assigned to a WWM copy destination. It remains
+// owned by the WWM allocation after the temporary allocation mask is cleared.
+// PEI creates any required spill slot after finalizing the register assignment.
+void SILowerWWMCopies::reserveWWMRegister(Register Reg) {
+  Register PhysReg = Reg;
+  if (Reg.isVirtual()) {
+    assert(VRM && "expected VirtRegMap after WWM register allocation");
+    PhysReg = VRM->getPhys(Reg);
+    assert(PhysReg && "should have allocated a physical register");
+  }
 
-  // FIXME: VRM may be null here.
-  MCRegister PhysReg = VRM->getPhys(Reg);
-  assert(PhysReg && "should have allocated a physical register");
-
-  MFI->allocateWWMSpill(MF, PhysReg);
+  MFI->reserveWWMRegister(PhysReg);
 }
 
 bool SILowerWWMCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -159,7 +160,7 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
       TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
                                  isSCCLiveAtMI(MI), Indexes);
       TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
-      addToWWMSpills(MF, MI.getOperand(0).getReg());
+      reserveWWMRegister(MI.getOperand(0).getReg());
       LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
 
       // Lower WWM_COPY back to COPY

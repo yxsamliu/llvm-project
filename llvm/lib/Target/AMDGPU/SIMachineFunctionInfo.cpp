@@ -295,10 +295,10 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
   return &Regs;
 }
 
-void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
+void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register Reg,
                                              uint64_t Size, Align Alignment) {
   // Skip if it is an entry function or the register is already added.
-  if (isEntryFunction() || WWMSpills.count(VGPR))
+  if (isEntryFunction() || WWMSpills.count(Reg))
     return;
 
   // Skip if this is a function with the amdgpu_cs_chain or
@@ -311,12 +311,12 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
   // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
   // when entering the function).
   if (isChainFunction() &&
-      (SIRegisterInfo::isChainScratchRegister(VGPR) ||
+      (SIRegisterInfo::isChainScratchRegister(Reg) ||
        !MF.getFrameInfo().hasTailCall() || hasInitWholeWave()))
     return;
 
   WWMSpills.insert(std::make_pair(
-      VGPR, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
+      Reg, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
 }
 
 // Separate out the callee-saved and scratch registers.
