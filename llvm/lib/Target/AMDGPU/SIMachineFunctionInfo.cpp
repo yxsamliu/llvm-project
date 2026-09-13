@@ -361,6 +361,21 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
+
+    // Keep any spill slot allocated before PEI associated with the register
+    // after compaction. Rebuild the MapVector to preserve spill/restore order.
+    if (WWMSpills.contains(Reg)) {
+      assert(!WWMSpills.contains(NewReg) &&
+             "replacement WWM register already has a spill slot");
+      auto Spills = WWMSpills.takeVector();
+      auto Spill = llvm::find_if(
+          Spills, [Reg](const auto &Entry) { return Entry.first == Reg; });
+      assert(Spill != Spills.end() && "missing WWM spill entry");
+      Spill->first = NewReg;
+      for (auto &Entry : Spills)
+        WWMSpills.insert(std::move(Entry));
+    }
+
     MRI.reserveReg(NewReg, TRI);
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free

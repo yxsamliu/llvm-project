@@ -1,5 +1,6 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=liveintervals,virtregmap,si-lower-wwm-copies -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=LOWER
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=liveintervals,virtregmap,si-lower-wwm-copies,virtregrewriter,prolog-epilog -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=PEI --implicit-check-not='$vgpr62'
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -run-pass=liveintervals,virtregmap,si-lower-wwm-copies,virtregrewriter,prolog-epilog -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=PEI,GFX90A --implicit-check-not='$vgpr62'
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=liveintervals,virtregmap,si-lower-wwm-copies,virtregrewriter,prolog-epilog -verify-machineinstrs -o - %s | FileCheck %s --check-prefixes=PEI,GFX908 --implicit-check-not='$vgpr62'
 
 # LOWER-LABEL: name: physical_wwm_copy_pei
 # LOWER: wwmReservedRegs:
@@ -8,9 +9,10 @@
 # LOWER: $agpr0 = COPY $vgpr63
 # LOWER: $vgpr62 = COPY $agpr0
 
-# PEI shifts the WWM VGPR down before creating its spill slot. The first two
-# objects preserve the final WWM registers; the third is the scavenging slot.
-# The implicit check also ensures the old $vgpr62 is not saved or restored.
+# PEI shifts the WWM VGPR down and migrates its existing spill entry. The first
+# two objects preserve the final WWM registers; the third is the scavenging
+# slot. The implicit check also ensures the old $vgpr62 is not saved or
+# restored.
 # PEI-LABEL: name: physical_wwm_copy_pei
 # PEI: stackSize: 12
 # PEI: stack:
@@ -22,11 +24,15 @@
 # PEI-DAG: - '$agpr0'
 # PEI-DAG: - '$vgpr0'
 # PEI: scavengeFI: '%stack.2'
-# PEI: BUFFER_STORE_DWORD_OFFSET $agpr0
+# GFX90A: BUFFER_STORE_DWORD_OFFSET $agpr0
+# GFX908: $vgpr63 = V_ACCVGPR_READ_B32_e64 $agpr0
+# GFX908-NEXT: BUFFER_STORE_DWORD_OFFSET $vgpr63
 # PEI: BUFFER_STORE_DWORD_OFFSET killed $vgpr0
 # PEI: $agpr0 = COPY $vgpr63
 # PEI: $vgpr0 = COPY $agpr0
-# PEI: $agpr0 = BUFFER_LOAD_DWORD_OFFSET
+# GFX90A: $agpr0 = BUFFER_LOAD_DWORD_OFFSET
+# GFX908: $vgpr63 = BUFFER_LOAD_DWORD_OFFSET
+# GFX908-NEXT: $agpr0 = V_ACCVGPR_WRITE_B32_e64 killed $vgpr63
 # PEI: $vgpr0 = BUFFER_LOAD_DWORD_OFFSET
 
 --- |
@@ -40,6 +46,8 @@ tracksRegLiveness: true
 noVRegs: false
 isSSA: false
 registers:
+  # Keep VRegFlags non-empty so si-lower-wwm-copies processes the physical
+  # WWM_COPY instructions below, as it does after WWM register allocation.
   - { id: 0, class: vgpr_32, flags: [ WWM_REG ] }
 frameInfo:
   maxAlignment: 4

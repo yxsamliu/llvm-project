@@ -14,10 +14,10 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-NEXT:    s_mov_b32 s33, s32
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[18:19], -1
-; GFX90A-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, -1
-; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword a32, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; GFX90A-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GFX90A-NEXT:    s_mov_b64 exec, s[18:19]
 ; GFX90A-NEXT:    v_writelane_b32 v40, s16, 4
 ; GFX90A-NEXT:    v_writelane_b32 v40, s28, 2
@@ -90,10 +90,10 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    v_readlane_b32 s28, v40, 2
 ; GFX90A-NEXT:    v_readlane_b32 s29, v40, 3
 ; GFX90A-NEXT:    s_xor_saveexec_b64 s[6:7], -1
-; GFX90A-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, -1
-; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword a32, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; GFX90A-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_mov_b32 s33, s4
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)

@@ -38,7 +38,7 @@ public:
 
 private:
   bool isSCCLiveAtMI(const MachineInstr &MI);
-  void reserveWWMRegister(Register Reg);
+  void reserveWWMRegister(MachineFunction &MF, Register Reg);
 
   LiveIntervals *LIS;
   SlotIndexes *Indexes;
@@ -94,8 +94,7 @@ bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
 
 // Record the physical register assigned to a WWM copy destination. It remains
 // owned by the WWM allocation after the temporary allocation mask is cleared.
-// PEI creates any required spill slot after finalizing the register assignment.
-void SILowerWWMCopies::reserveWWMRegister(Register Reg) {
+void SILowerWWMCopies::reserveWWMRegister(MachineFunction &MF, Register Reg) {
   Register PhysReg = Reg;
   if (Reg.isVirtual()) {
     assert(VRM && "expected VirtRegMap after WWM register allocation");
@@ -104,6 +103,9 @@ void SILowerWWMCopies::reserveWWMRegister(Register Reg) {
   }
 
   MFI->reserveWWMRegister(PhysReg);
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(PhysReg);
+  MFI->allocateWWMSpill(MF, PhysReg, TRI->getSpillSize(*RC),
+                        TRI->getSpillAlign(*RC));
 }
 
 bool SILowerWWMCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -160,7 +162,7 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
       TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
                                  isSCCLiveAtMI(MI), Indexes);
       TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
-      reserveWWMRegister(MI.getOperand(0).getReg());
+      reserveWWMRegister(MF, MI.getOperand(0).getReg());
       LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
 
       // Lower WWM_COPY back to COPY
