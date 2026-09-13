@@ -108,7 +108,8 @@ body:             |
 # CHECK-NEXT: undef [[SPLIT1:%[0-9]+]].sub2_sub3:av_512_align2 = lr-split COPY [[SPLIT0]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT1]].sub0:av_512_align2 = lr-split COPY [[SPLIT0]].sub0
 # CHECK-NEXT: }
-# CHECK-NEXT: undef [[SPLIT2:%[0-9]+]].sub2_sub3:av_512_align2 = lr-split COPY [[SPLIT1]].sub2_sub3 {
+# CHECK-NEXT: [[SPLIT2:%[0-9]+]]:av_512_align2 = SI_SPILL_AV512_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s512) from %stack.1, align 4, addrspace 5)
+# CHECK-NEXT: [[SPLIT2]].sub2_sub3:av_512_align2 = lr-split COPY [[SPLIT1]].sub2_sub3 {
 # CHECK-NEXT: internal [[SPLIT2]].sub0:av_512_align2 = lr-split COPY [[SPLIT1]].sub0
 # CHECK-NEXT: }
 # CHECK-NEXT: SI_SPILL_AV512_SAVE [[SPLIT2]], %stack.1, $sgpr32, 0, implicit $exec :: (store (s512) into %stack.1, align 4, addrspace 5)
