@@ -1341,6 +1341,13 @@ findBranchWithoutUniformityProfile(const DenseSet<Region *> &Regions) {
   return nullptr;
 }
 
+static SelectInst *findBooleanSelect(const DenseSet<SelectInst *> &Selects) {
+  for (SelectInst *SI : Selects)
+    if (SI->getType()->isIntegerTy(1))
+      return SI;
+  return nullptr;
+}
+
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
@@ -1348,9 +1355,25 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
     // look strongly biased even when every wave executes both paths. Avoid
     // applying CHR to such a scope because duplicating its control flow may
     // increase live ranges and register pressure without eliminating control
-    // flow for the wave. Select-only scopes are unaffected because branch
-    // uniformity profile describes only conditional branches.
+    // flow for the wave.
     if (HasUniformityProfile) {
+      // Boolean selects can lower to cheap mask operations. Avoid replacing
+      // them with control flow and extending predicate live ranges when GPU
+      // uniformity profile data is available.
+      SelectInst *BooleanSelect = findBooleanSelect(Scope->TrueBiasedSelects);
+      if (!BooleanSelect)
+        BooleanSelect = findBooleanSelect(Scope->FalseBiasedSelects);
+      if (BooleanSelect) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE,
+                                          "BooleanSelectWithUniformityProfile",
+                                          BooleanSelect)
+                 << "drop scope containing a boolean select with uniformity "
+                    "profile";
+        });
+        continue;
+      }
+
       Instruction *BranchWithoutUniformityProfile =
           findBranchWithoutUniformityProfile(Scope->TrueBiasedRegions);
       if (!BranchWithoutUniformityProfile)
@@ -1370,10 +1393,10 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
     // Filter out the ones with only one region and no subs.
     if (!hasAtLeastTwoBiasedBranches(Scope)) {
       CHR_DEBUG(dbgs() << "Filtered out by biased branches truthy-regions "
-                << Scope->TrueBiasedRegions.size()
-                << " falsy-regions " << Scope->FalseBiasedRegions.size()
-                << " true-selects " << Scope->TrueBiasedSelects.size()
-                << " false-selects " << Scope->FalseBiasedSelects.size() << "\n");
+                       << Scope->TrueBiasedRegions.size() << " falsy-regions "
+                       << Scope->FalseBiasedRegions.size() << " true-selects "
+                       << Scope->TrueBiasedSelects.size() << " false-selects "
+                       << Scope->FalseBiasedSelects.size() << "\n");
       ORE.emit([&]() {
         return OptimizationRemarkMissed(
             DEBUG_TYPE,
