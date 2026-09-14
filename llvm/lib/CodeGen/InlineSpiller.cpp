@@ -213,7 +213,10 @@ private:
   bool isRegToSpill(Register Reg) { return is_contained(RegsToSpill, Reg); }
 
   bool isSibling(Register Reg);
-  bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
+  LaneBitmask getLanesRequiredByFutureValues(const LiveInterval::SubRange &SR,
+                                             SlotIndex Idx);
+  bool spillSiblingValue(LiveInterval &SpillLI, MachineInstr &CopyMI,
+                         LaneBitmask RequiredLanes);
   void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
 
   void markValueUsed(LiveInterval*, VNInfo*);
@@ -420,11 +423,71 @@ bool InlineSpiller::isSibling(Register Reg) {
   return Reg.isVirtual() && VRM.getOriginal(Reg) == Original;
 }
 
-/// It is beneficial to spill to earlier place in the same BB in case
-/// as follows:
-/// There is an alternative def earlier in the same MBB.
-/// Hoist the spill as far as possible in SpillMBB. This can ease
-/// register pressure:
+/// Return lanes whose values at \p Idx may contribute to future values in
+/// \p SR.
+LaneBitmask
+InlineSpiller::getLanesRequiredByFutureValues(const LiveInterval::SubRange &SR,
+                                              SlotIndex Idx) {
+  LaneBitmask RequiredLanes = LaneBitmask::getNone();
+  SmallPtrSet<const VNInfo *, 4> CheckedValues;
+  // A later segment on any control-flow path can require the shared value.
+  for (LiveRange::const_iterator I = SR.find(Idx), E = SR.end(); I != E; ++I) {
+    const VNInfo *VNI = I->valno;
+    if (!CheckedValues.insert(VNI).second)
+      continue;
+
+    if (VNI->def <= Idx || VNI->isPHIDef()) {
+      RequiredLanes |= SR.LaneMask;
+      continue;
+    }
+
+    MachineInstr *DefMI = LIS.getInstructionFromIndex(VNI->def);
+    if (!DefMI) {
+      RequiredLanes |= MRI.getMaxLaneMaskForVReg(Original);
+      continue;
+    }
+
+    MachineInstr &DefBundle = *getBundleStart(DefMI->getIterator());
+    LaneBitmask PreservedLanes = LaneBitmask::getNone();
+    LaneBitmask DefLanes = LaneBitmask::getNone();
+    LaneBitmask ReadLanes = LaneBitmask::getNone();
+    for (const MachineOperand &MO : const_mi_bundle_ops(DefBundle)) {
+      if (!MO.isReg() || !MO.getReg().isVirtual() ||
+          VRM.getOriginal(MO.getReg()) != Original)
+        continue;
+
+      LaneBitmask OpMaxLanes = MRI.getMaxLaneMaskForVReg(MO.getReg());
+      LaneBitmask OpLanes = MO.getSubReg()
+                                ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                                : OpMaxLanes;
+      if (MO.isDef()) {
+        DefLanes |= OpLanes;
+        if (!MO.isUndef())
+          PreservedLanes |= OpMaxLanes & ~OpLanes;
+      } else if (MO.readsReg()) {
+        ReadLanes |= OpLanes;
+      }
+    }
+    // A future definition can move a value between lanes. Preserve the input
+    // lanes it reads, not the lane receiving the new value.
+    RequiredLanes |= ReadLanes;
+    if ((SR.LaneMask & ~DefLanes).any() || (SR.LaneMask & PreservedLanes).any())
+      RequiredLanes |= SR.LaneMask;
+
+    int FI;
+    for (const MachineInstr &MI :
+         make_range(getBundleStart(DefBundle.getIterator()),
+                    getBundleEnd(DefBundle.getIterator())))
+      if (TII.isLoadFromStackSlot(MI, FI) && FI == StackSlot)
+        RequiredLanes |= SR.LaneMask;
+  }
+
+  return RequiredLanes;
+}
+
+/// Spill the value copied into \p SpillLI. Prefer placing the spill after the
+/// source definition when the copy kills the source. This can ease register
+/// pressure:
 ///
 ///   x = def
 ///   y = use x
@@ -437,10 +500,11 @@ bool InlineSpiller::isSibling(Register Reg) {
 ///   spill x
 ///   y = use killed x
 ///
-/// This hoist only helps when the copy kills its source.
-///
-bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
-                                       MachineInstr &CopyMI) {
+/// If a partial copy must preserve other lanes, spill the source at the copy
+/// instead when those lanes are unavailable at its definition.
+bool InlineSpiller::spillSiblingValue(LiveInterval &SpillLI,
+                                      MachineInstr &CopyMI,
+                                      LaneBitmask RequiredLanes) {
   SlotIndex Idx = LIS.getInstructionIndex(CopyMI);
 #ifndef NDEBUG
   VNInfo *VNI = SpillLI.getVNInfoAt(Idx.getRegSlot());
@@ -452,25 +516,63 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   VNInfo *SrcVNI = SrcLI.getVNInfoAt(Idx);
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
   MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(SrcVNI->def);
-  if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
-    return false;
+  bool HoistToDef = DefMBB == CopyMI.getParent() && SrcQ.isKill();
 
-  MachineBasicBlock *MBB = DefMBB;
-  MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
-    MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
-    MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
-    assert(DefMI && "Defining instruction disappeared");
-    MII = DefMI;
-    ++MII;
+  MachineBasicBlock *MBB = CopyMI.getParent();
+  MachineBasicBlock::iterator MII = CopyMI.getIterator();
+  if (HoistToDef) {
+    MBB = DefMBB;
+    if (SrcVNI->isPHIDef())
+      MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
+    else {
+      MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
+      assert(DefMI && "Defining instruction disappeared");
+      MII = std::next(DefMI->getIterator());
+    }
+  } else if (RequiredLanes.none()) {
+    return false;
+  }
+
+  // Siblings share a spill slot. Do not overwrite lanes that the partial copy
+  // needs to preserve unless they are known live in the source at the hoist
+  // point. Without subranges there is no lane-level proof, so leave this to the
+  // normal spill path.
+  if (RequiredLanes.any()) {
+    if (!SrcLI.hasSubRanges()) {
+      LLVM_DEBUG(dbgs() << "\tcannot spill partial-copy source without lane "
+                           "liveness\n");
+      return false;
+    }
+    auto GetLiveLanes = [&](SlotIndex At) {
+      LaneBitmask SrcLanes = LaneBitmask::getNone();
+      for (const LiveInterval::SubRange &SR : SrcLI.subranges())
+        if (SR.liveAt(At))
+          SrcLanes |= SR.LaneMask;
+      return SrcLanes;
+    };
+    SlotIndex InsertIdx = MII == MBB->end()
+                              ? LIS.getMBBEndIdx(MBB).getPrevSlot()
+                              : LIS.getInstructionIndex(*MII).getBaseIndex();
+    LaneBitmask SrcLanes = GetLiveLanes(InsertIdx);
+    if (HoistToDef && (RequiredLanes & ~SrcLanes).any()) {
+      HoistToDef = false;
+      MBB = CopyMI.getParent();
+      MII = CopyMI.getIterator();
+      InsertIdx = Idx;
+      SrcLanes = GetLiveLanes(InsertIdx);
+    }
+    if ((RequiredLanes & ~SrcLanes).any()) {
+      LLVM_DEBUG(dbgs() << "\tcannot spill partial-copy source with missing "
+                           "preserved lanes\n");
+      return false;
+    }
   }
 
   // When the def is a PHI, the store may be inserted after the prologue
   // instructions. In that case, the segment may need to be extended to the
   // store (see below). Do not hoist if there is an interference between the end
   // of the segment and the insertion point.
-  if (SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
+  if (HoistToDef && SrcVNI->isPHIDef() && Matrix && VRM.hasPhys(SrcReg)) {
     // Here, MII points to the instruction before which the store will be
     // inserted. Using that instruction's base index is a safe upper bound for
     // the interference check.
@@ -493,24 +595,26 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   LLVM_DEBUG(dbgs() << "\tmerged orig valno " << OrigVNI->id << ": "
                     << *StackInt << '\n');
 
-  // We are going to spill SrcVNI immediately after its def, so clear out
-  // any later spills of the same value.
-  eliminateRedundantSpills(SrcLI, SrcVNI);
+  // A spill immediately after the definition dominates all uses of SrcVNI, so
+  // any other spills of the same value are redundant. A spill at the copy does
+  // not necessarily dominate them.
+  if (HoistToDef)
+    eliminateRedundantSpills(SrcLI, SrcVNI);
 
   MachineInstrSpan MIS(MII, MBB);
-  // Insert spill without kill flag immediately after def.
+  // Insert the spill at the selected point without a kill flag.
   TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
                           MRI.getRegClass(SrcReg), Register());
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
   --MII; // Point to store instruction.
-  LLVM_DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
+  LLVM_DEBUG(dbgs() << "\tinserted sibling spill: " << *MII);
 
   // When the def is a PHI, SkipPHIsLabelsAndDebug may place the store past
   // prologue instructions. Therefore if that copy was the end of a segment
   // we need to extend it to the store.
-  if (SrcVNI->isPHIDef()) {
+  if (HoistToDef && SrcVNI->isPHIDef()) {
     SlotIndex StoreUseIdx = LIS.getInstructionIndex(*MII).getRegSlot(true);
     SrcLI.extendInBlock(LIS.getMBBStartIdx(MBB), StoreUseIdx);
   }
@@ -1316,6 +1420,8 @@ void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
 void InlineSpiller::spillAroundUses(Register Reg) {
   LLVM_DEBUG(dbgs() << "spillAroundUses " << printReg(Reg) << '\n');
   LiveInterval &OldLI = LIS.getInterval(Reg);
+  LaneBitmask MaxLanes = MRI.getMaxLaneMaskForVReg(Reg);
+  const LiveInterval &OriginalLI = LIS.getInterval(Original);
 
   // Iterate over instructions using Reg.
   for (MachineInstr &MI : llvm::make_early_inc_range(MRI.reg_bundles(Reg))) {
@@ -1351,6 +1457,27 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       if (SlotIndex::isSameInstr(Idx, VNI->def))
         Idx = VNI->def;
 
+    bool HasLiveDef = any_of(Ops, [](const auto &OpPair) {
+      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+      return MO.isDef() && !MO.isDead();
+    });
+    LaneBitmask MissingLanes = LaneBitmask::getNone();
+    // Split siblings share a stack slot, but a partial split copy only defines
+    // the lanes that are live in this sibling. A full-width spill must preserve
+    // lanes whose existing values may be read later because another sibling
+    // may still need them.
+    if (MI.getFlag(MachineInstr::LRSplit) && HasLiveDef) {
+      LaneBitmask RequiredLanes = MaxLanes;
+      if (OriginalLI.hasSubRanges()) {
+        RequiredLanes = LaneBitmask::getNone();
+        for (const LiveInterval::SubRange &SR : OriginalLI.subranges())
+          RequiredLanes |= getLanesRequiredByFutureValues(SR, Idx);
+      }
+      LaneBitmask DefLanes =
+          AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI).second & MaxLanes;
+      MissingLanes = RequiredLanes & MaxLanes & ~DefLanes;
+    }
+
     // Check for a sibling copy.
     Register SibReg = isCopyOfBundle(MI, Reg, TII);
     if (SibReg && isSibling(SibReg)) {
@@ -1361,7 +1488,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
         continue;
       }
       if (RI.Writes) {
-        if (hoistSpillInsideBB(OldLI, MI)) {
+        if (spillSiblingValue(OldLI, MI, MissingLanes)) {
           // This COPY is now dead, the value is already in the stack slot.
           MI.getOperand(0).setIsDead();
           DeadDefs.push_back(&MI);
@@ -1379,31 +1506,13 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     if (foldMemoryOperand(Ops))
       continue;
 
-    bool HasLiveDef = any_of(Ops, [](const auto &OpPair) {
-      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-      return MO.isDef() && !MO.isDead();
-    });
-    bool PreserveSplitLanes = false;
-    // Split siblings share a stack slot, but a partial split copy only defines
-    // the lanes that are live in this sibling. A full-width spill must preserve
-    // the other lanes in the slot: they can still be needed by another sibling.
-    if (MI.getFlag(MachineInstr::LRSplit) && HasLiveDef) {
-      LaneBitmask DefLanes = LaneBitmask::getNone();
+    bool PreserveSplitLanes = MissingLanes.any();
+    if (PreserveSplitLanes) {
+      RI.Reads = true;
       for (const auto &OpPair : Ops) {
-        const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+        MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
         if (MO.isDef())
-          DefLanes |= MO.getSubReg()
-                          ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
-                          : MRI.getMaxLaneMaskForVReg(Reg);
-      }
-      if (DefLanes != MRI.getMaxLaneMaskForVReg(Reg)) {
-        PreserveSplitLanes = true;
-        RI.Reads = true;
-        for (const auto &OpPair : Ops) {
-          MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-          if (MO.isDef())
-            MO.setIsUndef(false);
-        }
+          MO.setIsUndef(false);
       }
     }
 
