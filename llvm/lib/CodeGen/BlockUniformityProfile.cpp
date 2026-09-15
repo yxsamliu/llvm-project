@@ -29,17 +29,8 @@ void BlockUniformityProfile::compute(const MachineFunction &MF) {
   DivergentBlocks.clear();
   DivergentBlocks.resize(NumBlockIDs);
 
-  // Conservative behavior: if profile exists for the function but we
-  // cannot classify a particular (Machine)basic block, treat it as divergent.
-  for (const MachineBasicBlock &MBB : MF) {
-    const unsigned Num = MBB.getNumber();
-    bool IsUniform = false;
-    if (const BasicBlock *BB = MBB.getBasicBlock()) {
-      IsUniform = hasIRBlockUniformityProfile(*BB);
-    }
-    if (Num < DivergentBlocks.size() && !IsUniform)
-      DivergentBlocks.set(Num);
-  }
+  // Presence-only metadata identifies uniform blocks but cannot identify
+  // divergent blocks. Do not infer divergence from missing annotations.
 }
 
 void BlockUniformityProfile::print(raw_ostream &OS,
@@ -62,7 +53,11 @@ void BlockUniformityProfile::print(raw_ostream &OS,
       OS << ": uniform\n";
       continue;
     }
-    OS << ": no PGO annotation (treated divergent for spill placement)\n";
+    if (isDivergent(MBB)) {
+      OS << ": divergent\n";
+      continue;
+    }
+    OS << ": no PGO annotation (unknown)\n";
   }
 }
 
