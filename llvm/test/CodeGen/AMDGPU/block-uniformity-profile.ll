@@ -6,8 +6,8 @@
 ;
 ; Function metadata indicates that uniformity profile is available. Terminator
 ; metadata indicates that a basic block was executed uniformly (all lanes
-; together). Missing terminator metadata in a profiled function is
-; conservatively treated as divergent.
+; together). Missing terminator metadata in a profiled function means that the
+; block's uniformity is unknown.
 ;
 ; The analysis is consumed by SpillPlacement to flatten block frequencies for
 ; divergent blocks, preventing PGO from causing regressions on divergent code paths.
@@ -23,7 +23,7 @@ entry:
 
 ; CHECK-LABEL: BlockUniformityProfile for function: @divergent_blocks
 ; CHECK-NEXT: HasProfile: true
-; CHECK-DAG: %bb.{{[0-9]+}} (%if.then): no PGO annotation (treated divergent for spill placement)
+; CHECK-DAG: %bb.{{[0-9]+}} (%if.then): no PGO annotation (unknown)
 ; CHECK-DAG: %bb.{{[0-9]+}} (%if.else): uniform
 define amdgpu_kernel void @divergent_blocks(ptr addrspace(1) %out, i32 %tid) #0 !uniformity.profile !0 {
 entry:
@@ -41,7 +41,7 @@ if.else:
 
 ; CHECK-LABEL: BlockUniformityProfile for function: @missing_metadata
 ; CHECK-NEXT: HasProfile: true
-; CHECK-DAG: %bb.{{[0-9]+}} (%if.then): no PGO annotation (treated divergent for spill placement)
+; CHECK-DAG: %bb.{{[0-9]+}} (%if.then): no PGO annotation (unknown)
 ; CHECK-DAG: %bb.{{[0-9]+}} (%if.else): uniform
 define amdgpu_kernel void @missing_metadata(ptr addrspace(1) %out, i32 %cond) #0 !uniformity.profile !0 {
 entry:
@@ -59,8 +59,8 @@ if.else:
 
 ; CHECK-LABEL: BlockUniformityProfile for function: @loop_blocks
 ; CHECK-NEXT: HasProfile: true
-; CHECK-DAG: %bb.{{[0-9]+}} (%loop.header): no PGO annotation (treated divergent for spill placement)
-; CHECK-DAG: %bb.{{[0-9]+}} (%loop.body): no PGO annotation (treated divergent for spill placement)
+; CHECK-DAG: %bb.{{[0-9]+}} (%loop.header): no PGO annotation (unknown)
+; CHECK-DAG: %bb.{{[0-9]+}} (%loop.body): no PGO annotation (unknown)
 ; CHECK-DAG: %bb.{{[0-9]+}} (%exit): uniform
 define amdgpu_kernel void @loop_blocks(ptr addrspace(1) %out, i32 %n) #0 !uniformity.profile !0 {
 entry:

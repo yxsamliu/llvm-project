@@ -11,6 +11,7 @@
 // The source of truth is IR metadata attached during PGO use:
 //   - Metadata on the function means uniformity profile is available.
 //   - Metadata on a terminator means the block is uniform.
+//   - Missing metadata on a terminator means the block is unclassified.
 //   - Metadata name: "block.uniformity.profile".
 //
 // This is intentionally target-agnostic: any backend that produces
@@ -41,9 +42,8 @@ public:
 
   bool hasProfile() const { return HasProfile; }
 
-  // Returns true if the block is considered divergent. If profile exists for
-  // the function but a block has no explicit annotation, it is treated as
-  // divergent (conservative).
+  // Returns true if the block is known to be divergent. Missing block metadata
+  // means uniformity is unknown and does not imply divergence.
   LLVM_ABI bool isDivergent(const MachineBasicBlock &MBB) const;
 
   LLVM_ABI void print(raw_ostream &OS, const MachineFunction &MF) const;
