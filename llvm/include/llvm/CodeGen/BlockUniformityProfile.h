@@ -11,7 +11,8 @@
 // The source of truth is IR metadata attached during PGO use:
 //   - Metadata on the function means uniformity profile is available.
 //   - Metadata on a terminator means the block is uniform.
-//   - Missing metadata on a terminator means the block is unclassified.
+//   - Missing metadata on a terminator falls back to static control-flow
+//     divergence analysis.
 //   - Metadata name: "block.uniformity.profile".
 //
 // This is intentionally target-agnostic: any backend that produces
@@ -24,6 +25,7 @@
 #define LLVM_CODEGEN_BLOCKUNIFORMITYPROFILE_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachinePassManager.h"
@@ -38,12 +40,12 @@ class raw_ostream;
 
 class BlockUniformityProfile {
 public:
-  LLVM_ABI void compute(const MachineFunction &MF);
+  LLVM_ABI void compute(const MachineFunction &MF, const UniformityInfo &UI);
 
   bool hasProfile() const { return HasProfile; }
 
-  // Returns true if the block is known to be divergent. Missing block metadata
-  // means uniformity is unknown and does not imply divergence.
+  // Returns true if the block lacks a profiled-uniform annotation and static
+  // analysis says it may be reached through divergent control flow.
   LLVM_ABI bool isDivergent(const MachineBasicBlock &MBB) const;
 
   LLVM_ABI void print(raw_ostream &OS, const MachineFunction &MF) const;

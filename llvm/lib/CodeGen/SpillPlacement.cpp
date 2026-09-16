@@ -28,6 +28,7 @@
 
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -60,6 +61,7 @@ char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
 INITIALIZE_PASS_BEGIN(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
+INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
@@ -67,6 +69,7 @@ void SpillPlacementWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredTransitive<EdgeBundlesWrapperLegacy>();
+  AU.addRequired<UniformityInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -201,9 +204,11 @@ struct SpillPlacement::Node {
 bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
+  const UniformityInfo &UI =
+      getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   BlockUniformityProfile Profile;
-  Profile.compute(MF);
+  Profile.compute(MF, UI);
   Impl.run(MF, Bundles, MBFI, &Profile);
   return false;
 }
