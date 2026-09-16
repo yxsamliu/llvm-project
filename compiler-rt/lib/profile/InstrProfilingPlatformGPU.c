@@ -43,6 +43,14 @@ COMPILER_RT_VISIBILITY void INSTR_PROF_INSTRUMENT_GPU_FUNC(uint64_t *counter,
   }
 }
 
+COMPILER_RT_VISIBILITY void
+__llvm_profile_instrument_gpu_wave(uint64_t *counter) {
+  uint64_t mask = __gpu_lane_mask();
+  if (__gpu_is_first_in_lane(mask))
+    __scoped_atomic_fetch_add(counter, 1, __ATOMIC_RELAXED,
+                              __MEMORY_SCOPE_DEVICE);
+}
+
 // Block-level sampling for offload PGO. For GPU kernels with stationary
 // behavior (where all thread blocks execute the same code paths regardless of
 // block ID), partial sampling significantly reduces instrumentation overhead

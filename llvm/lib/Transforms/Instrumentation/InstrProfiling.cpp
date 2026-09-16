@@ -301,6 +301,7 @@ private:
     GlobalVariable *DataVar = nullptr;
     GlobalVariable *RegionBitmaps = nullptr;
     uint32_t NumBitmapBytes = 0;
+    uint32_t NumWaveCounters = 0;
 
     PerFunctionProfileData() = default;
   };
@@ -373,6 +374,9 @@ private:
 
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
+  void lowerWaveIncrement(InstrProfIncrementWaveInst *Inc);
+  void emitGPUProfileCall(InstrProfCntrInstBase *Inc, FunctionCallee Callee,
+                          ArrayRef<Value *> Args);
 
   /// Force emitting of name vars for unused functions.
   void lowerCoverageData(GlobalVariable *CoverageNamesVar);
@@ -892,7 +896,10 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
 
   for (auto *Instr : InstrProfInsts) {
     doSampling(Instr);
-    if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(Instr)) {
+    if (auto *IPW = dyn_cast<InstrProfIncrementWaveInst>(Instr)) {
+      lowerWaveIncrement(IPW);
+      MadeChange = true;
+    } else if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(Instr)) {
       lowerIncrement(IPIS);
       MadeChange = true;
     } else if (auto *IPI = dyn_cast<InstrProfIncrementInst>(Instr)) {
@@ -1029,6 +1036,7 @@ static bool containsProfilingIntrinsics(Module &M) {
   return containsIntrinsic(Intrinsic::instrprof_cover) ||
          containsIntrinsic(Intrinsic::instrprof_increment) ||
          containsIntrinsic(Intrinsic::instrprof_increment_step) ||
+         containsIntrinsic(Intrinsic::instrprof_increment_wave) ||
          containsIntrinsic(Intrinsic::instrprof_timestamp) ||
          containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
@@ -1056,11 +1064,23 @@ bool InstrLowerer::lower() {
     InstrProfCntrInstBase *FirstProfInst = nullptr;
     for (BasicBlock &BB : F) {
       for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
+        if (auto *Wave = dyn_cast<InstrProfIncrementWaveInst>(I)) {
+          if (ProfileCorrelate != InstrProfCorrelator::NONE ||
+              isSamplingEnabled())
+            report_fatal_error("wave counts do not support profile correlation "
+                               "or lane-level instrumentation sampling");
+          auto &PD = ProfileDataMap[Wave->getName()];
+          uint32_t Count = Wave->getNumWaveCounters()->getZExtValue();
+          if (PD.NumWaveCounters && PD.NumWaveCounters != Count)
+            report_fatal_error("inconsistent wave counter counts");
+          PD.NumWaveCounters = Count;
+        }
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
           computeNumValueSiteCounts(Ind);
         else {
           if (FirstProfInst == nullptr &&
-              (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I)))
+              (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I) ||
+               isa<InstrProfIncrementWaveInst>(I)))
             FirstProfInst = dyn_cast<InstrProfCntrInstBase>(I);
           // If the MCDCBitmapParameters intrinsic seen, create the bitmaps.
           if (const auto &Params = dyn_cast<InstrProfMCDCBitmapParameters>(I))
@@ -1224,8 +1244,11 @@ Value *InstrLowerer::getCounterAddress(InstrProfCntrInstBase *I) {
   if (isa<InstrProfTimestampInst>(I))
     Counters->setAlignment(Align(8));
 
-  auto *Addr = Builder.CreateConstInBoundsGEP2_32(
-      Counters->getValueType(), Counters, 0, I->getIndex()->getZExtValue());
+  uint32_t Index = I->getIndex()->getZExtValue();
+  if (isa<InstrProfIncrementWaveInst>(I))
+    Index += I->getNumCounters()->getZExtValue();
+  auto *Addr = Builder.CreateConstInBoundsGEP2_32(Counters->getValueType(),
+                                                  Counters, 0, Index);
 
   if (!isRuntimeCounterRelocationEnabled())
     return Addr;
@@ -1329,6 +1352,49 @@ InstrLowerer::getOrCreateGPUInvariants(Function *F) {
   return Inv;
 }
 
+void InstrLowerer::emitGPUProfileCall(InstrProfCntrInstBase *Inc,
+                                      FunctionCallee Callee,
+                                      ArrayRef<Value *> Args) {
+  IRBuilder<> Builder(Inc);
+  if (OffloadPGOSampling > 0) {
+    Function *F = Inc->getFunction();
+    auto &Inv = getOrCreateGPUInvariants(F);
+    BasicBlock *CurBB = Inc->getParent();
+    BasicBlock *ContBB =
+        CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "po_cont");
+    BasicBlock *ThenBB = BasicBlock::Create(M.getContext(), "po_then", F);
+    CurBB->getTerminator()->eraseFromParent();
+    IRBuilder<> HeadBuilder(CurBB);
+    HeadBuilder.CreateCondBr(Inv.Matched, ThenBB, ContBB);
+    IRBuilder<> ThenBuilder(ThenBB);
+    auto *Call = ThenBuilder.CreateCall(Callee, Args);
+    if (isa<InstrProfIncrementWaveInst>(Inc)) {
+      Call->setConvergent();
+      Call->addFnAttr(Attribute::NoDuplicate);
+    }
+    ThenBuilder.CreateBr(ContBB);
+  } else {
+    auto *Call = Builder.CreateCall(Callee, Args);
+    if (isa<InstrProfIncrementWaveInst>(Inc)) {
+      Call->setConvergent();
+      Call->addFnAttr(Attribute::NoDuplicate);
+    }
+  }
+  Inc->eraseFromParent();
+}
+
+void InstrLowerer::lowerWaveIncrement(InstrProfIncrementWaveInst *Inc) {
+  assert(isGPUProfTarget(M) && "wave profiling requires a GPU target");
+  IRBuilder<> Builder(Inc);
+  auto *PtrTy = PointerType::getUnqual(M.getContext());
+  Value *Addr = Builder.CreatePointerBitCastOrAddrSpaceCast(
+      getCounterAddress(Inc), PtrTy);
+  FunctionCallee Callee = M.getOrInsertFunction(
+      "__llvm_profile_instrument_gpu_wave",
+      FunctionType::get(Builder.getVoidTy(), {PtrTy}, false));
+  emitGPUProfileCall(Inc, Callee, {Addr});
+}
+
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
   IRBuilder<> Builder(Inc);
   if (isGPUProfTarget(M)) {
@@ -1394,23 +1460,7 @@ void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {
                                   RTLIB::impl___llvm_profile_instrument_gpu),
                               CalleeTy);
 
-    if (OffloadPGOSampling > 0) {
-      BasicBlock *CurBB = Builder.GetInsertBlock();
-      BasicBlock *ContBB =
-          CurBB->splitBasicBlock(BasicBlock::iterator(Inc), "po_cont");
-      BasicBlock *ThenBB = BasicBlock::Create(Context, "po_then", F);
-
-      CurBB->getTerminator()->eraseFromParent();
-      IRBuilder<> HeadBuilder(CurBB);
-      HeadBuilder.CreateCondBr(Inv.Matched, ThenBB, ContBB);
-
-      IRBuilder<> ThenBuilder(ThenBB);
-      ThenBuilder.CreateCall(Callee, {CastAddr, UniformAddrArg, StepI64});
-      ThenBuilder.CreateBr(ContBB);
-    } else {
-      Builder.CreateCall(Callee, {CastAddr, UniformAddrArg, StepI64});
-    }
-    Inc->eraseFromParent();
+    emitGPUProfileCall(Inc, Callee, {CastAddr, UniformAddrArg, StepI64});
     return;
   }
 
@@ -1919,7 +1969,8 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
 GlobalVariable *
 InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
                                    GlobalValue::LinkageTypes Linkage) {
-  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue() +
+                         ProfileDataMap[Inc->getName()].NumWaveCounters;
   auto &Ctx = M.getContext();
   GlobalVariable *GV;
   if (isa<InstrProfCoverInst>(Inc)) {
@@ -2098,7 +2149,9 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
         ValuesVar, PointerType::get(Fn->getContext(), 0));
   }
 
-  uint64_t NumCounters = Inc->getNumCounters()->getZExtValue();
+  uint32_t NumWaveCounters = PD.NumWaveCounters;
+  uint64_t NumCounters =
+      Inc->getNumCounters()->getZExtValue() + NumWaveCounters;
 
   Constant *CounterPtr = PD.RegionCounters;
   Constant *UniformCounterPtr = PD.UniformCounters;

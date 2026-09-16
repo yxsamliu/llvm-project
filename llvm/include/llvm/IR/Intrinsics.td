@@ -1112,6 +1112,13 @@ def int_instrprof_increment_step : Intrinsic<[],
                                      [llvm_ptr_ty, llvm_i64_ty,
                                       llvm_i32_ty, llvm_i32_ty, llvm_i64_ty]>;
 
+// A GPU wave visit. Arguments: name, hash, lane counter count, wave index,
+// and wave counter count.
+def int_instrprof_increment_wave : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+    [IntrConvergent, IntrNoDuplicate, ImmArg<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
+
 // Callsite instrumentation for contextual profiling
 def int_instrprof_callsite : Intrinsic<[],
                                [llvm_ptr_ty, llvm_i64_ty,

@@ -986,14 +986,24 @@ static void writeInstrProfile(StringRef OutputFilename,
   if (EC)
     exitWithErrorCode(EC, OutputFilename);
 
+  auto HandleWriteError = [&](Error E) {
+    // Unsupported formats cannot represent the profile at all. Preserve the
+    // existing warning behavior for recoverable profile-data errors.
+    warn(handleErrors(std::move(E), [&](const InstrProfError &IPE) -> Error {
+      if (IPE.get() == instrprof_error::unsupported_version)
+        exitWithError(IPE.message(), OutputFilename);
+      return make_error<InstrProfError>(IPE.get(), IPE.getMessage());
+    }));
+  };
+
   if (OutputFormat == PF_Text) {
     if (Error E = Writer.writeText(Output))
-      warn(std::move(E));
+      HandleWriteError(std::move(E));
   } else {
     if (Output.is_displayed())
       exitWithError("cannot write a non-text format profile to the terminal");
     if (Error E = Writer.write(Output))
-      warn(std::move(E));
+      HandleWriteError(std::move(E));
   }
 }
 
@@ -3024,6 +3034,13 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
           OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
+
+        if (!Func.WaveCounts.empty()) {
+          OS << "    Block wave counts: [";
+          for (size_t I = 0, E = Func.WaveCounts.size(); I < E; ++I)
+            OS << (I ? ", " : "") << Func.WaveCounts[I];
+          OS << "]\n";
+        }
 
         // Show uniformity bits if present
         if (!Func.UniformityBits.empty()) {
