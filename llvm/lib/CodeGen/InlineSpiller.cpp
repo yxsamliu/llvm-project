@@ -517,6 +517,8 @@ bool InlineSpiller::spillSiblingValue(LiveInterval &SpillLI,
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
   MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(SrcVNI->def);
   bool HoistToDef = DefMBB == CopyMI.getParent() && SrcQ.isKill();
+  if (!HoistToDef)
+    return false;
 
   MachineBasicBlock *MBB = CopyMI.getParent();
   MachineBasicBlock::iterator MII = CopyMI.getIterator();
@@ -527,7 +529,8 @@ bool InlineSpiller::spillSiblingValue(LiveInterval &SpillLI,
     else {
       MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
       assert(DefMI && "Defining instruction disappeared");
-      MII = std::next(DefMI->getIterator());
+      MII = DefMI;
+      ++MII;
     }
   } else if (RequiredLanes.none()) {
     return false;
