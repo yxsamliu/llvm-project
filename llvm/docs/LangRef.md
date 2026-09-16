@@ -15751,6 +15751,38 @@ The last argument specifies the value of the increment of the counter variable.
 ##### Semantics:
 See description of '`llvm.instrprof.increment`' intrinsic.
 
+#### '`llvm.instrprof.increment.wave`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.instrprof.increment.wave(ptr <name>, i64 <hash>,
+                                           i32 <num-lane-counters>,
+                                           i32 <wave-index>,
+                                           i32 <num-wave-counters>)
+```
+
+##### Semantics:
+
+On GPU targets, increment the selected wave counter by one per executing
+wave, regardless of the number of active lanes. This is a convergent,
+non-duplicable operation. The name must refer to a global variable; all other
+arguments must be constants. Both counter counts must be positive, their sum
+must fit in an unsigned 32-bit integer, and the wave index must be less than
+the wave counter count. Intrinsics for the same profile name must agree on
+the hash and both counter counts.
+
+Wave counters are independent of the lane counters addressed by
+`llvm.instrprof.increment`. In particular, counts on divergent successors
+need not sum to the count on their predecessor. They must not be used for
+ordinary edge-count reconstruction.
+
+The experimental IR PGO producer assigns wave indices in function block
+order after instrumented edges have been split. The lowering pass appends
+wave counters to the lane counter array and applies the same workgroup
+sampling predicate as lane instrumentation. Only sampled wave visits are
+recorded; no extrapolation is performed.
+
 #### '`llvm.instrprof.callsite`' Intrinsic
 
 ##### Syntax:

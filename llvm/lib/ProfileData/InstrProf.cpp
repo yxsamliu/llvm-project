@@ -1002,6 +1002,11 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     Warn(instrprof_error::count_mismatch);
     return;
   }
+  // Reject partial wave profiles rather than mixing different populations.
+  if (WaveCounts.size() != Other.WaveCounts.size()) {
+    Warn(instrprof_error::count_mismatch);
+    return;
+  }
 
   computeBlockUniformity();
   Other.computeBlockUniformity();
@@ -1062,6 +1067,19 @@ void InstrProfRecord::merge(InstrProfRecord &Other, uint64_t Weight,
     mergeUniformityBits(UniformityBits, Other.UniformityBits);
   }
 
+  for (size_t I = 0, E = WaveCounts.size(); I < E; ++I) {
+    bool Overflowed;
+    uint64_t Value = SaturatingMultiplyAdd(Other.WaveCounts[I], Weight,
+                                           WaveCounts[I], &Overflowed);
+    if (Value > getInstrMaxCountValue()) {
+      Value = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    WaveCounts[I] = Value;
+    if (Overflowed)
+      Warn(instrprof_error::counter_overflow);
+  }
+
   // If the number of bitmap bytes doesn't match we either have bad data
   // or a hash collision.
   if (BitmapBytes.size() != Other.BitmapBytes.size()) {
@@ -1099,6 +1117,16 @@ void InstrProfRecord::scale(uint64_t N, uint64_t D,
       Warn(instrprof_error::counter_overflow);
   }
   for (auto &Count : this->UniformCounts) {
+    bool Overflowed;
+    Count = SaturatingMultiply(Count, N, &Overflowed) / D;
+    if (Count > getInstrMaxCountValue()) {
+      Count = getInstrMaxCountValue();
+      Overflowed = true;
+    }
+    if (Overflowed)
+      Warn(instrprof_error::counter_overflow);
+  }
+  for (auto &Count : WaveCounts) {
     bool Overflowed;
     Count = SaturatingMultiply(Count, N, &Overflowed) / D;
     if (Count > getInstrMaxCountValue()) {
@@ -1799,7 +1827,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
       IndexedInstrProf::ProfVersion::CurrentVersion)
     return make_error<InstrProfError>(instrprof_error::unsupported_version);
 
-  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
+  static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version15,
                 "Please update the reader as needed when a new field is added "
                 "or when indexed profile version gets bumped.");
 
@@ -1832,10 +1860,11 @@ size_t Header::size() const {
     // of the header, and byte offset of existing fields shouldn't change when
     // indexed profile version gets incremented.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version14,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version15,
         "Please update the size computation below if a new field has "
         "been added to the header; for a version bump without new "
         "fields, add a case statement to fall through to the latest version.");
+  case 15ull: // Wave counts added in record data, no header change
   case 14ull: // UniformityBits added in record data, no header change
   case 13ull:
   case 12ull:

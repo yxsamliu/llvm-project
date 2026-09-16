@@ -6201,6 +6201,23 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   switch (ID) {
   default:
     break;
+  case Intrinsic::instrprof_increment_wave: {
+    Check(Call.getModule()->getTargetTriple().isGPU(),
+          "wave profiling requires a GPU target", Call);
+    Check(isa<GlobalVariable>(Call.getArgOperand(0)->stripPointerCasts()),
+          "wave profiling requires a global name", Call);
+    auto *NumLane = dyn_cast<ConstantInt>(Call.getArgOperand(2));
+    auto *Index = dyn_cast<ConstantInt>(Call.getArgOperand(3));
+    auto *NumWave = dyn_cast<ConstantInt>(Call.getArgOperand(4));
+    Check(NumLane && Index && NumWave,
+          "wave profiling requires constant counter operands", Call);
+    Check(!NumLane->isZero() && !NumWave->isZero() &&
+              NumLane->getZExtValue() + NumWave->getZExtValue() <= UINT32_MAX,
+          "invalid wave profiling counter counts", Call);
+    Check(Index->getZExtValue() < NumWave->getZExtValue(),
+          "wave profiling index out of bounds", Call);
+    break;
+  }
   case Intrinsic::assume: {
     if (Call.hasOperandBundles()) {
       auto *Cond = dyn_cast<ConstantInt>(Call.getArgOperand(0));

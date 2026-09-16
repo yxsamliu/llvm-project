@@ -1,5 +1,29 @@
 # Instrumentation Profile Format
 
+## Experimental GPU wave counters
+
+Raw format version 12 appends a `uint32_t NumWaveCounters` field to each
+profile data record. `NumCounters` is the total number of 64-bit lane and
+wave counters addressed by `CounterPtr`; its final `NumWaveCounters` entries
+are wave visits. The uniform-counter array still has only
+`NumCounters - NumWaveCounters` entries. A nonempty wave tail must leave at
+least one lane counter. This changes the raw record layout and requires a
+matching compiler and profiling runtime.
+
+Indexed format version 15 stores a little-endian 64-bit wave-counter count
+followed by that many 64-bit values after the padded uniformity vector and
+before value-profile data. Zero indicates no wave profile. Readers expose
+the tail separately from the lane-flow counter vector. Merging requires
+matching wave-vector lengths; weighted merging and scaling use saturating
+arithmetic, as for ordinary counters. Text and previous-version export of
+wave profiles is currently unsupported and diagnosed.
+
+These counts represent direct block visits by sampled GPU waves, not lane
+flow. Both sides of a divergent branch may execute once per wave; therefore
+wave counts must not participate in scalar flow reconstruction. Existing
+lane counts, uniformity classification, and optimization consumers retain
+their previous meaning.
+
 
 ## Overview
 

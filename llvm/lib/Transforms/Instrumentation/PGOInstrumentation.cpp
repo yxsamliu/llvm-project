@@ -128,6 +128,10 @@
 #include <vector>
 
 using namespace llvm;
+
+static cl::opt<bool> OffloadPGOWaveCounts(
+    "offload-pgo-wave-counts", cl::Hidden, cl::init(false),
+    cl::desc("Collect per-block GPU wave execution counts"));
 using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
 #define DEBUG_TYPE "pgo-instrumentation"
@@ -940,6 +944,11 @@ void FunctionInstrumenter::instrument() {
   }
 
   const bool IsCtxProf = InstrumentationType == PGOInstrumentationType::CTXPROF;
+  if (OffloadPGOWaveCounts && isGPUProfTarget(M) &&
+      (PGOBlockCoverage || PGOFunctionEntryCoverage ||
+       PGOTemporalInstrumentation ||
+       InstrumentationType != PGOInstrumentationType::FDO))
+    report_fatal_error("wave counts require ordinary IR PGO instrumentation");
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
       F, TLI, ComdatMembers, /*CreateGlobalVar=*/!IsCtxProf, BPI, BFI, LI,
       InstrumentationType == PGOInstrumentationType::CSFDO,
@@ -1040,6 +1049,22 @@ void FunctionInstrumenter::instrument() {
   FuncInfo.SIVisitor.instrumentSelects(&I, NumCounters, Name,
                                        FuncInfo.FunctionHash);
   assert(I == NumCounters);
+
+  if (OffloadPGOWaveCounts && isGPUProfTarget(M)) {
+    if (F.size() > UINT32_MAX - NumCounters)
+      report_fatal_error("too many wave profiling counters");
+    uint32_t NumWaveCounters = F.size();
+    uint32_t WaveIndex = 0;
+    for (BasicBlock &BB : F) {
+      if (BB.getFirstInsertionPt() == BB.end() || BB.isEHPad())
+        report_fatal_error("wave profiling does not support EH blocks");
+      IRBuilder<> Builder(&BB, BB.getFirstInsertionPt());
+      Builder.CreateIntrinsic(
+          Intrinsic::instrprof_increment_wave,
+          {NormalizedNamePtr, CFGHash, Builder.getInt32(NumCounters),
+           Builder.getInt32(WaveIndex++), Builder.getInt32(NumWaveCounters)});
+    }
+  }
 
   if (isValueProfilingDisabled())
     return;

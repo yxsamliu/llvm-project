@@ -19,7 +19,7 @@ attributes #0 = { "target-cpu"="gfx1100" }
 ;; Per-function comdat counters + uniform counters
 ; CHECK: @__profc_kernel_w32 = linkonce_odr protected addrspace(1) global [1 x i64]
 ; CHECK: @__llvm_prf_unifcnt_kernel_w32 = linkonce_odr protected addrspace(1) global [1 x i64]
-; CHECK: @__profd_kernel_w32 = linkonce_odr protected addrspace(1) global { {{.*}} i16 0, i32 0 }
+; CHECK: @__profd_kernel_w32 = linkonce_odr protected addrspace(1) global { {{.*}} i16 0, i32 0, i32 0 }
 
 ;; Check wave size stored via intrinsic
 ; CHECK: %wavesize.i16 = trunc i32 %{{.*}} to i16
