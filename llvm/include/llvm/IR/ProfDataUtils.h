@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_PROFDATAUTILS_H
 #define LLVM_IR_PROFDATAUTILS_H
 
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
@@ -34,6 +35,40 @@ struct MDProfLabels {
 };
 
 extern LLVM_ABI cl::opt<bool> ProfcheckDisableMetadataFixes;
+
+/// Attach direct wave visits to stable block identities. These counts do not
+/// obey scalar flow conservation.
+LLVM_ABI void setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts);
+
+/// Attach direct wave visits and identify which blocks have measured counts.
+/// Unmeasured blocks use a zero placeholder in \p Counts and must be ignored by
+/// consumers.
+LLVM_ABI void setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts,
+                                 const BitVector &HasCounts);
+
+/// Remove direct wave visits and their block identities.
+LLVM_ABI void clearBlockWaveCounts(Function &F);
+
+/// Extract wave visits in current function block order when every recorded
+/// block identity and control-flow edge still matches. If \p HasCounts is
+/// provided, it identifies measured blocks; otherwise profiles containing an
+/// unmeasured block are rejected. Clear outputs and return false for missing,
+/// stale, or unsupported metadata.
+LLVM_ABI bool extractBlockWaveCounts(const Function &F,
+                                     SmallVectorImpl<uint64_t> &Counts,
+                                     BitVector *HasCounts = nullptr);
+
+/// Extract wave visits for the subset of current blocks whose recorded
+/// identity and local control flow remain unambiguous. Missing, duplicated, or
+/// redirected blocks are returned as unmeasured instead of rejecting the
+/// complete function profile. \p EntryCount remains valid as the function
+/// invocation count even if the original entry block no longer exists. It is
+/// separate from the current entry block's mapped count and is required to
+/// normalize the other block counts.
+LLVM_ABI bool extractMappedBlockWaveCounts(const Function &F,
+                                           SmallVectorImpl<uint64_t> &Counts,
+                                           BitVector &HasCounts,
+                                           uint64_t &EntryCount);
 
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.

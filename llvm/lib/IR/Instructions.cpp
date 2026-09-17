@@ -1257,12 +1257,36 @@ CondBrInst::CondBrInst(const CondBrInst &BI)
   SubclassOptionalData = BI.SubclassOptionalData;
 }
 
+static void swapBlockWaveCountSuccessors(CondBrInst &BI) {
+  MDNode *BlockMD = BI.getMetadata(LLVMContext::MD_wave_profile_block);
+  if (!BlockMD || BlockMD->getNumOperands() != 6)
+    return;
+
+  const auto *Version =
+      mdconst::dyn_extract_or_null<ConstantInt>(BlockMD->getOperand(0));
+  const auto *TrueSucc =
+      mdconst::dyn_extract_or_null<ConstantInt>(BlockMD->getOperand(4));
+  const auto *FalseSucc =
+      mdconst::dyn_extract_or_null<ConstantInt>(BlockMD->getOperand(5));
+  if (!Version || !TrueSucc || !FalseSucc ||
+      !Version->getType()->isIntegerTy(64) ||
+      !TrueSucc->getType()->isIntegerTy(64) ||
+      !FalseSucc->getType()->isIntegerTy(64) || Version->getZExtValue() != 2)
+    return;
+
+  SmallVector<Metadata *> Ops(BlockMD->op_begin(), BlockMD->op_end());
+  std::swap(Ops[4], Ops[5]);
+  BI.setMetadata(LLVMContext::MD_wave_profile_block,
+                 MDNode::get(BI.getContext(), Ops));
+}
+
 void CondBrInst::swapSuccessors() {
   Op<-1>().swap(Op<-2>());
 
   // Update profile metadata if present and it matches our structural
   // expectations.
   swapProfMetadata();
+  swapBlockWaveCountSuccessors(*this);
 }
 
 //===----------------------------------------------------------------------===//

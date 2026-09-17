@@ -32,6 +32,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/TrackingMDRef.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
@@ -71,6 +72,40 @@ static cl::opt<bool>
     RelaxedUniformRegions("structurizecfg-relaxed-uniform-regions", cl::Hidden,
                           cl::desc("Allow relaxed uniform region checks"),
                           cl::init(true));
+
+struct SavedWaveProfileBlock {
+  WeakTrackingVH Block;
+  TrackingMDNodeRef Metadata;
+};
+
+static bool captureWaveProfile(Function &F,
+                               SmallVectorImpl<SavedWaveProfileBlock> &Blocks) {
+  SmallVector<uint64_t> Counts;
+  BitVector HasCounts;
+  uint64_t EntryCount;
+  if (!extractMappedBlockWaveCounts(F, Counts, HasCounts, EntryCount))
+    return false;
+  for (BasicBlock &BB : F) {
+    MDNode *MD =
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
+    if (MD)
+      Blocks.push_back({&BB, TrackingMDNodeRef(MD)});
+  }
+  return true;
+}
+
+static void refreshWaveProfile(Function &F,
+                               ArrayRef<SavedWaveProfileBlock> SavedBlocks) {
+  for (BasicBlock &BB : F)
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    nullptr);
+  for (const SavedWaveProfileBlock &Saved : SavedBlocks) {
+    Value *V = Saved.Block;
+    if (auto *BB = dyn_cast_or_null<BasicBlock>(V))
+      BB->getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                       Saved.Metadata.get());
+  }
+}
 
 // Definition of the complex types used in this pass.
 
@@ -1419,6 +1454,9 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   this->TTI = TTI;
   Func = R->getEntry()->getParent();
 
+  SmallVector<SavedWaveProfileBlock> SavedWaveBlocks;
+  bool PreserveWaveProfile = captureWaveProfile(*Func, SavedWaveBlocks);
+
   ParentRegion = R;
 
   orderNodes();
@@ -1439,6 +1477,9 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   for (auto [BB, MD] : BlockUniformityProfiles)
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
                                      MD);
+
+  if (PreserveWaveProfile)
+    refreshWaveProfile(*Func, SavedWaveBlocks);
 
   // Cleanup
   BlockUniformityProfiles.clear();

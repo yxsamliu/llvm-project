@@ -12,9 +12,12 @@
 
 #include "llvm/IR/ProfDataUtils.h"
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StableHashing.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
@@ -27,6 +30,284 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
+static uint64_t getWaveProfileFunctionId(const Function &F) {
+  return stable_hash_name(F.getName());
+}
+
+void llvm::clearBlockWaveCounts(Function &F) {
+  F.setMetadata(LLVMContext::MD_wave_profile, nullptr);
+  for (BasicBlock &BB : F)
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    nullptr);
+}
+
+void llvm::setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts) {
+  BitVector HasCounts(Counts.size(), true);
+  setBlockWaveCounts(F, Counts, HasCounts);
+}
+
+void llvm::setBlockWaveCounts(Function &F, ArrayRef<uint64_t> Counts,
+                              const BitVector &HasCounts) {
+  assert(Counts.size() == F.size() && "one wave counter per IR block");
+  assert(HasCounts.size() == F.size() &&
+         "one wave-count validity bit per IR block");
+  assert(!Counts.empty() && HasCounts.test(0) &&
+         "entry wave count must be measured");
+  clearBlockWaveCounts(F);
+
+  MDBuilder MDB(F.getContext());
+  Type *CountTy = Type::getInt64Ty(F.getContext());
+  const uint64_t FunctionId = getWaveProfileFunctionId(F);
+  SmallVector<Metadata *> Ops{
+      MDB.createConstant(ConstantInt::get(CountTy, 2)),
+      MDB.createConstant(ConstantInt::get(CountTy, FunctionId))};
+  for (uint64_t Count : Counts)
+    Ops.push_back(MDB.createConstant(ConstantInt::get(CountTy, Count)));
+
+  DenseMap<const BasicBlock *, unsigned> BlockIndices;
+  for (const BasicBlock &BB : F)
+    BlockIndices.try_emplace(&BB, BlockIndices.size());
+  for (BasicBlock &BB : F) {
+    unsigned BlockIndex = BlockIndices.lookup(&BB);
+    SmallVector<Metadata *> BlockOps{
+        MDB.createConstant(ConstantInt::get(CountTy, 2)),
+        MDB.createConstant(ConstantInt::get(CountTy, FunctionId)),
+        MDB.createConstant(ConstantInt::get(CountTy, BlockIndex)),
+        MDB.createConstant(ConstantInt::get(CountTy, HasCounts[BlockIndex]))};
+    for (const BasicBlock *Succ : successors(&BB))
+      BlockOps.push_back(MDB.createConstant(
+          ConstantInt::get(CountTy, BlockIndices.lookup(Succ))));
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    MDNode::get(F.getContext(), BlockOps));
+  }
+  F.setMetadata(LLVMContext::MD_wave_profile, MDNode::get(F.getContext(), Ops));
+}
+
+bool llvm::extractBlockWaveCounts(const Function &F,
+                                  SmallVectorImpl<uint64_t> &Counts,
+                                  BitVector *HasCounts) {
+  Counts.clear();
+  if (HasCounts)
+    HasCounts->clear();
+  auto Fail = [&]() {
+    Counts.clear();
+    if (HasCounts)
+      HasCounts->clear();
+    return false;
+  };
+  const MDNode *MD = F.getMetadata(LLVMContext::MD_wave_profile);
+  if (!MD || F.isDeclaration() || MD->getNumOperands() != F.size() + 2)
+    return Fail();
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+    if (!CI || !CI->getType()->isIntegerTy(64))
+      return Fail();
+  }
+  const uint64_t FunctionId =
+      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+  if (mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue() != 2 ||
+      FunctionId != getWaveProfileFunctionId(F))
+    return Fail();
+
+  SmallVector<const BasicBlock *> BlocksById(F.size());
+  SmallVector<const MDNode *> BlockMDs;
+  for (const BasicBlock &BB : F) {
+    const MDNode *BlockMD =
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
+    if (!BlockMD || BlockMD->getNumOperands() < 4)
+      return Fail();
+    for (const MDOperand &Op : BlockMD->operands()) {
+      const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+      if (!CI || !CI->getType()->isIntegerTy(64))
+        return Fail();
+    }
+    if (mdconst::extract<ConstantInt>(BlockMD->getOperand(0))->getZExtValue() !=
+            2 ||
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(1))->getZExtValue() !=
+            FunctionId)
+      return Fail();
+    uint64_t BlockId =
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(2))->getZExtValue();
+    if (BlockId >= BlocksById.size() || BlocksById[BlockId])
+      return Fail();
+    if (mdconst::extract<ConstantInt>(BlockMD->getOperand(3))->getZExtValue() >
+        1)
+      return Fail();
+    BlocksById[BlockId] = &BB;
+    BlockMDs.push_back(BlockMD);
+  }
+  if (BlocksById[0] != &F.getEntryBlock())
+    return Fail();
+
+  BitVector ExtractedHasCounts;
+  for (auto [BB, BlockMD] : zip(F, BlockMDs)) {
+    if (BlockMD->getNumOperands() != BB.getTerminator()->getNumSuccessors() + 4)
+      return Fail();
+    unsigned SuccIndex = 4;
+    for (const BasicBlock *Succ : successors(&BB)) {
+      uint64_t ExpectedId =
+          mdconst::extract<ConstantInt>(BlockMD->getOperand(SuccIndex++))
+              ->getZExtValue();
+      if (ExpectedId >= BlocksById.size() || BlocksById[ExpectedId] != Succ)
+        return Fail();
+    }
+    uint64_t BlockId =
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(2))->getZExtValue();
+    Counts.push_back(mdconst::extract<ConstantInt>(MD->getOperand(BlockId + 2))
+                         ->getZExtValue());
+    ExtractedHasCounts.push_back(
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(3))->isOne());
+  }
+  if (!HasCounts && ExtractedHasCounts.count() != ExtractedHasCounts.size())
+    return Fail();
+  if (!ExtractedHasCounts.test(0))
+    return Fail();
+  if (HasCounts)
+    *HasCounts = std::move(ExtractedHasCounts);
+  return true;
+}
+
+bool llvm::extractMappedBlockWaveCounts(const Function &F,
+                                        SmallVectorImpl<uint64_t> &Counts,
+                                        BitVector &HasCounts,
+                                        uint64_t &EntryCount) {
+  Counts.assign(F.size(), 0);
+  HasCounts.clear();
+  HasCounts.resize(F.size());
+  EntryCount = 0;
+  auto Fail = [&]() {
+    Counts.clear();
+    HasCounts.clear();
+    EntryCount = 0;
+    return false;
+  };
+
+  const MDNode *MD = F.getMetadata(LLVMContext::MD_wave_profile);
+  if (!MD || F.isDeclaration() || MD->getNumOperands() < 3)
+    return Fail();
+  for (const MDOperand &Op : MD->operands()) {
+    const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+    if (!CI || !CI->getType()->isIntegerTy(64))
+      return Fail();
+  }
+  const uint64_t FunctionId =
+      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
+  if (mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue() != 2 ||
+      FunctionId != getWaveProfileFunctionId(F))
+    return Fail();
+  EntryCount = mdconst::extract<ConstantInt>(MD->getOperand(2))->getZExtValue();
+
+  const unsigned NumProfileBlocks = MD->getNumOperands() - 2;
+  SmallVector<const MDNode *> BlockMDs(F.size());
+  SmallVector<unsigned> BlockIds(F.size(), NumProfileBlocks);
+  SmallVector<const BasicBlock *> BlocksById(NumProfileBlocks);
+  BitVector DuplicateIds(NumProfileBlocks);
+  DenseMap<const BasicBlock *, unsigned> CurrentIndices;
+  for (auto [Index, BB] : enumerate(F)) {
+    CurrentIndices.try_emplace(&BB, Index);
+    const MDNode *BlockMD =
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
+    if (!BlockMD)
+      continue;
+    if (BlockMD->getNumOperands() < 4)
+      return Fail();
+    for (const MDOperand &Op : BlockMD->operands()) {
+      const auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
+      if (!CI || !CI->getType()->isIntegerTy(64))
+        return Fail();
+    }
+    if (mdconst::extract<ConstantInt>(BlockMD->getOperand(0))->getZExtValue() !=
+            2 ||
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(1))->getZExtValue() !=
+            FunctionId)
+      return Fail();
+    uint64_t BlockId =
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(2))->getZExtValue();
+    if (BlockId >= NumProfileBlocks ||
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(3))->getZExtValue() >
+            1)
+      return Fail();
+    BlockMDs[Index] = BlockMD;
+    BlockIds[Index] = BlockId;
+    if (BlocksById[BlockId])
+      DuplicateIds.set(BlockId);
+    else
+      BlocksById[BlockId] = &BB;
+  }
+
+  for (auto [Index, BB] : enumerate(F)) {
+    const MDNode *BlockMD = BlockMDs[Index];
+    if (!BlockMD || DuplicateIds.test(BlockIds[Index]))
+      continue;
+    Counts[Index] =
+        mdconst::extract<ConstantInt>(MD->getOperand(BlockIds[Index] + 2))
+            ->getZExtValue();
+    HasCounts[Index] =
+        mdconst::extract<ConstantInt>(BlockMD->getOperand(3))->isOne();
+  }
+
+  // A changed edge makes the source count and both the old and new target
+  // counts ambiguous. Invalidate that local neighborhood while retaining
+  // independent blocks whose recorded execution event still matches.
+  auto Invalidate = [&](const BasicBlock *BB) {
+    auto It = CurrentIndices.find(BB);
+    if (It != CurrentIndices.end())
+      HasCounts.reset(It->second);
+  };
+  for (auto [Index, BB] : enumerate(F)) {
+    const MDNode *BlockMD = BlockMDs[Index];
+    if (!BlockMD || DuplicateIds.test(BlockIds[Index])) {
+      for (const BasicBlock *Succ : successors(&BB))
+        Invalidate(Succ);
+      continue;
+    }
+
+    if (BlockMD->getNumOperands() !=
+        BB.getTerminator()->getNumSuccessors() + 4) {
+      HasCounts.reset(Index);
+      for (const BasicBlock *Succ : successors(&BB))
+        Invalidate(Succ);
+      for (unsigned I = 4, E = BlockMD->getNumOperands(); I != E; ++I) {
+        uint64_t OldSuccId =
+            mdconst::extract<ConstantInt>(BlockMD->getOperand(I))
+                ->getZExtValue();
+        if (OldSuccId < BlocksById.size() && !DuplicateIds.test(OldSuccId))
+          Invalidate(BlocksById[OldSuccId]);
+      }
+      continue;
+    }
+
+    unsigned SuccIndex = 4;
+    for (const BasicBlock *Succ : successors(&BB)) {
+      auto Current = CurrentIndices.find(Succ);
+      unsigned SuccId = Current == CurrentIndices.end()
+                            ? NumProfileBlocks
+                            : BlockIds[Current->second];
+      uint64_t OldSuccId =
+          mdconst::extract<ConstantInt>(BlockMD->getOperand(SuccIndex++))
+              ->getZExtValue();
+      if (SuccId < NumProfileBlocks && !DuplicateIds.test(SuccId) &&
+          OldSuccId == SuccId)
+        continue;
+
+      HasCounts.reset(Index);
+      Invalidate(Succ);
+      if (OldSuccId < BlocksById.size() && !DuplicateIds.test(OldSuccId))
+        Invalidate(BlocksById[OldSuccId]);
+    }
+  }
+
+  if (DuplicateIds.test(0))
+    return Fail();
+  if (const BasicBlock *OriginalEntry = BlocksById[0]) {
+    unsigned EntryIndex = CurrentIndices.lookup(OriginalEntry);
+    if (!mdconst::extract<ConstantInt>(BlockMDs[EntryIndex]->getOperand(3))
+             ->isOne())
+      return Fail();
+  }
+  return true;
 }
 
 // MD_prof nodes have the following layout
