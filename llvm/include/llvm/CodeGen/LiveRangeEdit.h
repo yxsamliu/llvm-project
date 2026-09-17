@@ -61,6 +61,10 @@ public:
     /// Called after cloning a virtual register.
     /// This is used for new registers representing connected components of Old.
     virtual void LRE_DidCloneVirtReg(Register New, Register Old) {}
+
+    /// Called after splitting a virtual register into connected components.
+    virtual void LRE_DidSplitComponents(ArrayRef<Register> Regs,
+                                        unsigned OriginalSize) {}
   };
 
 private:
@@ -165,6 +169,11 @@ public:
   }
 
   Register create() { return createFrom(getReg()); }
+
+  void didSplitComponents(ArrayRef<Register> Regs, unsigned OriginalSize) {
+    if (TheDelegate)
+      TheDelegate->LRE_DidSplitComponents(Regs, OriginalSize);
+  }
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
