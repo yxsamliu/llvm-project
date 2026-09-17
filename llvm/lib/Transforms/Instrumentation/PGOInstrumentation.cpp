@@ -1232,6 +1232,8 @@ public:
   // Annotate per-block uniformity info for offload profiling.
   void setBlockUniformityAttribute();
 
+  void setWaveCounts();
+
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
 
@@ -1856,6 +1858,21 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   });
 }
 
+void PGOUseFunc::setWaveCounts() {
+  if (ProfileRecord.WaveCounts.empty() || !isGPUProfTarget(*M))
+    return;
+  // readCounters has already reproduced the generation-side edge splits.
+  if (ProfileRecord.WaveCounts.size() != F.size()) {
+    F.getContext().diagnose(DiagnosticInfoPGOProfile(
+        M->getName().data(),
+        Twine("Inconsistent number of wave counts in ") + F.getName() +
+            "; ignoring wave profile",
+        DS_Warning));
+    return;
+  }
+  setBlockWaveCounts(F, ProfileRecord.WaveCounts);
+}
+
 void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
   Module *M = F.getParent();
   IRBuilder<> Builder(&SI);
@@ -2318,6 +2335,9 @@ static bool annotateAllFunctions(
 
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
+    // A replacement profile must not leave an earlier wave mapping live when
+    // its record is absent, mismatched, or contains only lane counts.
+    clearBlockWaveCounts(F);
     if (skipPGOUse(F))
       continue;
     TargetLibraryInfo &TLI = LookupTLI(F);
@@ -2367,6 +2387,7 @@ static bool annotateAllFunctions(
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
     Func.setBlockUniformityAttribute();
+    Func.setWaveCounts();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);

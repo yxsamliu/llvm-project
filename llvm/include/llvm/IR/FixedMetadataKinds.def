@@ -70,3 +70,5 @@ LLVM_FIXED_MD_KIND(MD_metadata_section_kind, "metadata_section_kind", 55)
 LLVM_FIXED_MD_KIND(MD_branch_uniformity_profile, "branch.uniformity.profile",
                    56)
 LLVM_FIXED_MD_KIND(MD_uniformity_profile, "uniformity.profile", 57)
+LLVM_FIXED_MD_KIND(MD_wave_profile, "wave.profile", 58)
+LLVM_FIXED_MD_KIND(MD_wave_profile_block, "wave.profile.block", 59)

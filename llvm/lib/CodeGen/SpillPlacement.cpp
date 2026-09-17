@@ -28,6 +28,10 @@
 
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/EdgeBundles.h"
@@ -36,10 +40,15 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/Support/ScaledNumber.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -49,10 +58,13 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-static cl::opt<bool> DisableProfiledSpill(
-    "disable-profiled-spill", cl::Hidden, cl::init(false));
-static cl::opt<bool> ReportProfiledSpill(
-    "report-profiled-spill", cl::Hidden, cl::init(false));
+static cl::opt<bool> DisableProfiledSpill("disable-profiled-spill", cl::Hidden,
+                                          cl::init(false));
+static cl::opt<bool> ReportProfiledSpill("report-profiled-spill", cl::Hidden,
+                                         cl::init(false));
+static cl::opt<bool> EnableWaveProfiledSpill(
+    "enable-wave-profiled-spill", cl::Hidden, cl::init(false),
+    cl::desc("Use validated GPU wave counts for spill placement"));
 
 char SpillPlacementWrapperLegacy::ID = 0;
 
@@ -247,6 +259,30 @@ void SpillPlacement::releaseMemory() {
   TodoList.clear();
 }
 
+static bool hasMatchingWaveProfileBlock(
+    const MachineBasicBlock &MBB, const MachineFunction &MF,
+    const DenseMap<const BasicBlock *, const MachineBasicBlock *> &UniqueMBBs) {
+  const Function &F = MF.getFunction();
+  const BasicBlock *BB = MBB.getBasicBlock();
+  if (!BB || BB->getParent() != &F || UniqueMBBs.lookup(BB) != &MBB)
+    return false;
+
+  auto HasMatchingEdges = [&](auto IRBlocks, auto MachineBlocks) {
+    SmallPtrSet<const BasicBlock *, 4> Expected(from_range, IRBlocks);
+    if (llvm::range_size(MachineBlocks) != Expected.size())
+      return false;
+    for (const MachineBasicBlock *MachineBlock : MachineBlocks) {
+      const BasicBlock *IRBlock = MachineBlock->getBasicBlock();
+      if (!IRBlock || UniqueMBBs.lookup(IRBlock) != MachineBlock ||
+          !Expected.erase(IRBlock))
+        return false;
+    }
+    return Expected.empty();
+  };
+  return HasMatchingEdges(predecessors(BB), MBB.predecessors()) &&
+         HasMatchingEdges(successors(BB), MBB.successors());
+}
+
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                          MachineBlockFrequencyInfo *MBFI,
                          const BlockUniformityProfile *Profile) {
@@ -259,15 +295,60 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
-  const bool HasProfile = !DisableProfiledSpill && Profile && Profile->hasProfile();
+  const bool HasProfile =
+      !DisableProfiledSpill && Profile && Profile->hasProfile();
   unsigned DivergentBlocks = 0, ChangedFrequencies = 0;
+
+  SmallVector<uint64_t> WaveCounts;
+  BitVector HasWaveCount;
+  uint64_t EntryWaveCount = 0;
+  DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
+  bool HasWaveProfile =
+      EnableWaveProfiledSpill && !DisableProfiledSpill &&
+      mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
+      extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
+                                   EntryWaveCount) &&
+      EntryWaveCount;
+  if (HasWaveProfile) {
+    DenseMap<const BasicBlock *, const MachineBasicBlock *> UniqueMBBs;
+    for (const MachineBasicBlock &MBB : mf) {
+      const BasicBlock *BB = MBB.getBasicBlock();
+      if (!BB || BB->getParent() != &mf.getFunction())
+        continue;
+      auto [It, Inserted] = UniqueMBBs.try_emplace(BB, &MBB);
+      if (!Inserted)
+        It->second = nullptr;
+    }
+
+    unsigned Index = 0;
+    for (const BasicBlock &BB : mf.getFunction()) {
+      uint64_t Count = WaveCounts[Index];
+      if (!HasWaveCount[Index++] || !UniqueMBBs.lookup(&BB) ||
+          !hasMatchingWaveProfileBlock(*UniqueMBBs.lookup(&BB), mf, UniqueMBBs))
+        continue;
+      uint64_t Freq = ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
+                          .scale(MBFI->getEntryFreq().getFrequency());
+      WaveFrequencies[&BB] =
+          BlockFrequency(Count ? std::max(Freq, uint64_t(1)) : 0);
+    }
+  }
+  unsigned WaveBlocks = 0, ChangedWaveFrequencies = 0;
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
   setThreshold(MBFI->getEntryFreq());
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
-    if (HasProfile && Profile->isDivergent(I)) {
+    auto Wave = WaveFrequencies.find(I.getBasicBlock());
+    if (Wave != WaveFrequencies.end()) {
+      BlockFrequencies[Num] = Wave->second;
+      ++WaveBlocks;
+      ChangedWaveFrequencies += Wave->second != MBFI->getBlockFreq(&I);
+      LLVM_DEBUG(dbgs() << "Wave spill frequency " << mf.getName() << " "
+                        << printMBBReference(I) << " = "
+                        << Wave->second.getFrequency() << " (entry "
+                        << MBFI->getEntryFreq().getFrequency() << ")\n");
+    } else if (HasProfile && Profile->isDivergent(I)) {
       ++DivergentBlocks;
       ChangedFrequencies += MBFI->getBlockFreq(&I) != MBFI->getEntryFreq();
       BlockFrequencies[Num] = MBFI->getEntryFreq();
@@ -277,9 +358,12 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   }
   if (ReportProfiledSpill)
     errs() << "PROFILED_SPILL\t" << mf.getName() << "\t"
-           << (Profile && Profile->hasProfile()) << "\t" << HasProfile
-           << "\t" << mf.size() << "\t" << DivergentBlocks
-           << "\t" << ChangedFrequencies << "\n";
+           << (Profile && Profile->hasProfile()) << "\t" << HasProfile << "\t"
+           << mf.size() << "\t" << DivergentBlocks << "\t" << ChangedFrequencies
+           << "\n";
+  if (ReportProfiledSpill && EnableWaveProfiledSpill)
+    errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
+           << "\t" << WaveBlocks << "\t" << ChangedWaveFrequencies << "\n";
 }
 
 /// activate - mark node n as active if it wasn't already.
@@ -406,7 +490,7 @@ void SpillPlacement::iterate() {
   // Update the network energy starting at this new frontier.
   // The call to ::update will add the nodes that changed into the todolist.
   unsigned Limit = bundles->getNumBundles() * 10;
-  while(Limit-- > 0 && !TodoList.empty()) {
+  while (Limit-- > 0 && !TodoList.empty()) {
     unsigned n = TodoList.pop_back_val();
     if (!update(n))
       continue;
@@ -424,8 +508,7 @@ void SpillPlacement::prepare(BitVector &RegBundles) {
   ActiveNodes->resize(bundles->getNumBundles());
 }
 
-bool
-SpillPlacement::finish() {
+bool SpillPlacement::finish() {
   assert(ActiveNodes && "Call prepare() first");
 
   // Write preferences back to ActiveNodes.
@@ -441,20 +524,23 @@ SpillPlacement::finish() {
 
 void SpillPlacement::BlockConstraint::print(raw_ostream &OS) const {
   auto toString = [](BorderConstraint C) -> StringRef {
-    switch(C) {
-    case DontCare: return "DontCare";
-    case PrefReg: return "PrefReg";
-    case PrefSpill: return "PrefSpill";
-    case PrefBoth: return "PrefBoth";
-    case MustSpill: return "MustSpill";
+    switch (C) {
+    case DontCare:
+      return "DontCare";
+    case PrefReg:
+      return "PrefReg";
+    case PrefSpill:
+      return "PrefSpill";
+    case PrefBoth:
+      return "PrefBoth";
+    case MustSpill:
+      return "MustSpill";
     };
     llvm_unreachable("uncovered switch");
   };
 
-  dbgs() << "{" << Number << ", "
-         << toString(Entry) << ", "
-         << toString(Exit) << ", "
-         << (ChangesValue ? "changes" : "no change") << "}";
+  dbgs() << "{" << Number << ", " << toString(Entry) << ", " << toString(Exit)
+         << ", " << (ChangesValue ? "changes" : "no change") << "}";
 }
 
 void SpillPlacement::BlockConstraint::dump() const {

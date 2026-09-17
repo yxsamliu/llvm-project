@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
@@ -27,6 +29,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -456,6 +459,22 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   assert(L->contains(NewHeader) && !L->contains(Exit) &&
          "Unable to determine loop header and exit blocks");
 
+  SmallVector<uint64_t> SavedWaveCounts;
+  BitVector SavedHasWaveCount;
+  bool HasWaveProfile = extractBlockWaveCounts(
+      *OrigHeader->getParent(), SavedWaveCounts, &SavedHasWaveCount);
+  SmallVector<WeakTrackingVH> SavedWaveBlocks;
+  DenseMap<const BasicBlock *, unsigned> SavedWaveIndices;
+  if (HasWaveProfile) {
+    for (BasicBlock &BB : *OrigHeader->getParent()) {
+      SavedWaveIndices.try_emplace(&BB, SavedWaveIndices.size());
+      SavedWaveBlocks.push_back(&BB);
+    }
+  }
+  unsigned OrigPreheaderWaveIndex = SavedWaveIndices.lookup(OrigPreheader);
+  unsigned OrigHeaderWaveIndex = SavedWaveIndices.lookup(OrigHeader);
+  unsigned NewHeaderWaveIndex = SavedWaveIndices.lookup(NewHeader);
+
   // This code assumes that the new header has exactly one predecessor.
   // Remove any single-entry PHI nodes in it.
   assert(NewHeader->getSinglePredecessor() &&
@@ -822,6 +841,50 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   bool DidMerge = MergeBlockIntoPredecessor(OrigHeader, &DTU, LI, MSSAU);
   if (DidMerge)
     RemoveRedundantDbgInstrs(PredBB);
+
+  if (HasWaveProfile) {
+    bool CanPreserve = !HasConditionalPreHeader && DidMerge &&
+                       PredBB == NewHeader &&
+                       SavedHasWaveCount[OrigPreheaderWaveIndex] &&
+                       SavedHasWaveCount[OrigHeaderWaveIndex] &&
+                       SavedHasWaveCount[NewHeaderWaveIndex] &&
+                       SavedWaveCounts[OrigHeaderWaveIndex] >=
+                           SavedWaveCounts[OrigPreheaderWaveIndex] &&
+                       SavedWaveCounts[OrigHeaderWaveIndex] -
+                               SavedWaveCounts[OrigPreheaderWaveIndex] ==
+                           SavedWaveCounts[NewHeaderWaveIndex];
+
+    DenseMap<const BasicBlock *, unsigned> CurrentIndices;
+    for (const BasicBlock &BB : *NewHeader->getParent())
+      CurrentIndices.try_emplace(&BB, CurrentIndices.size());
+    SmallVector<uint64_t> CurrentWaveCounts(CurrentIndices.size());
+    BitVector CurrentHasWaveCount(CurrentIndices.size());
+    SmallPtrSet<const BasicBlock *, 16> RestoredBlocks;
+    for (auto [Index, Block] : enumerate(SavedWaveBlocks)) {
+      if (Index == OrigHeaderWaveIndex)
+        continue;
+      Value *V = Block;
+      const auto *BB = dyn_cast_or_null<BasicBlock>(V);
+      if (!BB) {
+        CanPreserve = false;
+        continue;
+      }
+      auto Current = CurrentIndices.find(BB);
+      if (Current == CurrentIndices.end() ||
+          !RestoredBlocks.insert(BB).second) {
+        CanPreserve = false;
+        continue;
+      }
+      CurrentWaveCounts[Current->second] = SavedWaveCounts[Index];
+      CurrentHasWaveCount[Current->second] = SavedHasWaveCount[Index];
+    }
+    CanPreserve &= RestoredBlocks.size() == CurrentIndices.size();
+    if (CanPreserve)
+      setBlockWaveCounts(*NewHeader->getParent(), CurrentWaveCounts,
+                         CurrentHasWaveCount);
+    else
+      clearBlockWaveCounts(*NewHeader->getParent());
+  }
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();

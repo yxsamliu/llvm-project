@@ -7897,6 +7897,48 @@ section is not marked as readable or writable and it uses the section flag
 !0 = !{}
 ```
 
+(md_wave_profile)=
+
+#### '`wave.profile`' Metadata
+
+`wave.profile` is experimental profiling metadata on a function definition.
+It records directly measured GPU wave visits, not lane counts or branch
+probabilities. A divergent wave can visit both successors and reconverge once;
+these counts must not be used in scalar control-flow reconstruction.
+
+The function node contains only `i64` operands: a format version, an opaque
+function identity, and one unsigned wave count per profiled basic block. The
+first count describes the original function entry and must be measured. Each
+block's terminator also has `wave.profile.block` metadata containing the format
+version, function identity, block identity, a zero-or-one flag indicating
+whether its count was measured, and the identities of its successors in order.
+A zero count with a set flag is an observed zero, not missing data. A clear flag
+marks a compiler-synthesized block whose placeholder count must not be consumed.
+
+Version 2 is produced and read by `setBlockWaveCounts` and
+`extractBlockWaveCounts`. The block identities allow instruction changes and
+block reordering while rejecting missing or duplicated identities and changed
+control-flow edges. A CFG transform may explicitly rebuild the complete
+identity and successor snapshot while retaining counts only for blocks whose
+execution events it preserves; newly synthesized blocks remain unmeasured.
+Consumers must use the extraction helper and ignore an unsupported version,
+mismatched function identity, incomplete block mapping, changed CFG, or an
+unmeasured block unless they have an explicit fallback. Stale metadata remains
+valid IR. Transforms may drop the metadata; they must not create or transfer
+measured counts to different execution events.
+
+This representation does not infer counts through inlining or cloning. A
+spill-cost consumer can normalize valid counts by the original entry wave count
+without changing ordinary branch probabilities. That normalization count
+remains the function invocation count if the original entry block is removed;
+it does not become the mapped count for the current entry block. Such a consumer
+must handle missing data, explicitly unmeasured blocks, and a zero entry count,
+and must not assume a count applies to every machine block generated from one IR
+block. The experimental spill-placement consumer requires a one-to-one
+IR-to-machine mapping and matching predecessor and successor sets for each block
+that uses a wave count; other blocks use the existing fallback. Wave visits
+alone do not measure memory traffic, occupancy, or the complete cost of a spill.
+
 (md_uniformity_profile)=
 
 #### '`uniformity.profile`' Metadata
