@@ -49,6 +49,11 @@ static cl::opt<bool>
                           cl::desc("Enable loop iv regalloc heuristic"),
                           cl::init(true));
 
+static cl::list<unsigned> SplitSpillForceHoistVRegs(
+    "split-spill-force-hoist-vreg", cl::Hidden,
+    cl::desc("Force complement-copy hoisting for listed virtual registers"),
+    cl::CommaSeparated);
+
 STATISTIC(NumFinished, "Number of splits finished");
 STATISTIC(NumSimple,   "Number of splits that were simple");
 STATISTIC(NumCopies,   "Number of copies inserted for splitting");
@@ -1138,8 +1143,24 @@ void SplitEditor::hoistCopies() {
     MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(ParentVNI->def);
     // Get a less loopy dominator than Dom.first.
     Dom.first = findShallowDominator(Dom.first, DefMBB);
-    if (SpillMode == SM_Speed &&
-        MBFI.getBlockFreq(Dom.first) > Costs[ParentVNI->id]) {
+    BlockFrequency DomFreq = MBFI.getBlockFreq(Dom.first);
+    bool ForceHoist =
+        Parent->reg().isVirtual() &&
+        llvm::is_contained(SplitSpillForceHoistVRegs,
+                           Parent->reg().virtRegIndex());
+    bool RejectForSpeed =
+        SpillMode == SM_Speed && !ForceHoist &&
+        DomFreq > Costs[ParentVNI->id];
+    LLVM_DEBUG(dbgs() << "Complement hoist for " << printReg(Parent->reg())
+                      << " parent value " << ParentVNI->id << " to "
+                      << printMBBReference(*Dom.first) << ": mode="
+                      << (SpillMode == SM_Speed ? "speed" : "size")
+                      << ", dom-freq=" << DomFreq
+                      << ", back-copy-cost=" << Costs[ParentVNI->id]
+                      << ", decision="
+                      << (RejectForSpeed ? "reject" : "hoist")
+                      << (ForceHoist ? " (forced)" : "") << '\n');
+    if (RejectForSpeed) {
       NotToHoistSet.insert(ParentVNI->id);
       continue;
     }
