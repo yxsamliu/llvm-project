@@ -72,6 +72,8 @@ public:
       // canEvictInterferenceBasedOnCost().
       unsigned Cascade = 0;
 
+      unsigned SplitGroupSize = 0;
+
       RegInfo() = default;
     };
 
@@ -125,6 +127,15 @@ public:
       if (!Cascade)
         Cascade = NextCascade;
       return Cascade;
+    }
+
+    unsigned getSplitGroupSize(Register Reg) const {
+      return Info[Reg].SplitGroupSize;
+    }
+
+    void setSplitGroupSize(Register Reg, unsigned Size) {
+      Info.grow(Reg.id());
+      Info[Reg].SplitGroupSize = Size;
     }
 
     template <typename Iterator>
@@ -308,6 +319,7 @@ private:
   bool LRE_CanEraseVirtReg(Register) override;
   void LRE_WillShrinkVirtReg(Register) override;
   void LRE_DidCloneVirtReg(Register, Register) override;
+  void LRE_DidSplitComponents(ArrayRef<Register>, unsigned) override;
   void enqueue(PQueue &CurQueue, const LiveInterval *LI);
   const LiveInterval *dequeue(PQueue &CurQueue);
 
