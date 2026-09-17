@@ -18,9 +18,14 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static cl::opt<bool> DisableStaticUniformityFallback(
+    "disable-static-uniformity-fallback", cl::Hidden, cl::init(false),
+    cl::desc("Treat blocks without uniformity metadata as unclassified"));
 
 static bool hasIRBlockUniformityProfile(const BasicBlock &BB) {
   return BB.getTerminator()->getMetadata(
@@ -58,6 +63,9 @@ void BlockUniformityProfile::compute(const MachineFunction &MF,
   NumBlockIDs = MF.getNumBlockIDs();
   DivergentBlocks.clear();
   DivergentBlocks.resize(NumBlockIDs);
+
+  if (DisableStaticUniformityFallback)
+    return;
 
   for (const MachineBasicBlock &MBB : MF) {
     const unsigned Num = MBB.getNumber();

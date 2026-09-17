@@ -75,6 +75,11 @@ RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::init(false), cl::Hidden,
                        cl::desc("Restrict remat for statepoint operands"));
 
+static cl::opt<bool> EnableUnrestrictedSiblingSpill(
+    "enable-unrestricted-sibling-spill", cl::init(false), cl::Hidden,
+    cl::desc("Allow sibling spills that cannot initially hoist to the source "
+             "definition"));
+
 namespace {
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
@@ -517,7 +522,7 @@ bool InlineSpiller::spillSiblingValue(LiveInterval &SpillLI,
   LiveQueryResult SrcQ = SrcLI.Query(Idx);
   MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(SrcVNI->def);
   bool HoistToDef = DefMBB == CopyMI.getParent() && SrcQ.isKill();
-  if (!HoistToDef)
+  if (!HoistToDef && !EnableUnrestrictedSiblingSpill)
     return false;
 
   MachineBasicBlock *MBB = CopyMI.getParent();
