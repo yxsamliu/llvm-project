@@ -18,8 +18,10 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Transforms/Utils/BypassSlowDivision.h"
@@ -164,6 +166,99 @@ static DivRemWorklistTy getWorklist(Function &F) {
   return Worklist;
 }
 
+// Recognize a scalar value also represented by one lane of a vector. Look
+// through integer casts, but do not introduce a scalar cast's poison flags.
+static bool isScalarLane(Value *Scalar, Value *Vector, unsigned Lane,
+                         unsigned Depth = 0) {
+  if (Depth == 4)
+    return false;
+  if (Scalar == findScalarElement(Vector, Lane))
+    return true;
+  if (auto *Extract = dyn_cast<ExtractElementInst>(Scalar)) {
+    auto *Index = dyn_cast<ConstantInt>(Extract->getIndexOperand());
+    if (Extract->getVectorOperand() == Vector && Index &&
+        Index->getValue() == Lane)
+      return true;
+  }
+  auto *SC = dyn_cast<CastInst>(Scalar);
+  auto *VC = dyn_cast<CastInst>(Vector);
+  return SC && VC && SC->getOpcode() == VC->getOpcode() &&
+         SC->isIntegerCast() && !SC->hasPoisonGeneratingFlags() &&
+         SC->getType() == cast<VectorType>(VC->getType())->getElementType() &&
+         isScalarLane(SC->getOperand(0), VC->getOperand(0), Lane, Depth + 1);
+}
+
+// Vectorization can hide a scalar div/rem pair by packing just the remainder.
+// Expose the pair when the target cost model charges per-lane remainder costs.
+// The usual pair handling below then applies its poison and undef rules.
+static bool exposeScalarRemPairs(Function &F, const TargetTransformInfo &TTI,
+                                 const DominatorTree &DT) {
+  SmallVector<BinaryOperator *> Divs, Rems;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB) {
+      if ((I.getOpcode() == Instruction::UDiv ||
+           I.getOpcode() == Instruction::SDiv) &&
+          I.getType()->isIntegerTy())
+        Divs.push_back(cast<BinaryOperator>(&I));
+      else if ((I.getOpcode() == Instruction::URem ||
+                I.getOpcode() == Instruction::SRem) &&
+               isa<FixedVectorType>(I.getType()))
+        Rems.push_back(cast<BinaryOperator>(&I));
+    }
+  bool Changed = false;
+  for (BinaryOperator *Rem : Rems) {
+    auto *VT = cast<FixedVectorType>(Rem->getType());
+    Type *ST = VT->getElementType();
+    unsigned N = VT->getNumElements();
+    if (Divs.empty() || N > 16)
+      continue;
+    InstructionCost VectorCost = TTI.getArithmeticInstrCost(
+        Rem->getOpcode(), VT, TargetTransformInfo::TCK_RecipThroughput);
+    InstructionCost ScalarCost = TTI.getArithmeticInstrCost(
+        Rem->getOpcode(), ST, TargetTransformInfo::TCK_RecipThroughput);
+    if (!VectorCost.isValid() || !ScalarCost.isValid() ||
+        VectorCost < ScalarCost * N)
+      continue;
+    SmallVector<BinaryOperator *> Matches(N, nullptr);
+    bool Found = false;
+    for (unsigned Lane = 0; Lane < N; ++Lane)
+      for (BinaryOperator *Div : Divs) {
+        unsigned DivOpcode = Rem->getOpcode() == Instruction::URem
+                                 ? Instruction::UDiv
+                                 : Instruction::SDiv;
+        if (Div->getOpcode() != DivOpcode || Div->getType() != ST ||
+            !DT.dominates(Div, Rem) ||
+            !isScalarLane(Div->getOperand(0), Rem->getOperand(0), Lane) ||
+            !isScalarLane(Div->getOperand(1), Rem->getOperand(1), Lane))
+          continue;
+        Matches[Lane] = Div;
+        Found = true;
+        break;
+      }
+    if (!Found || !DebugCounter::shouldExecute(DRPCounter))
+      continue;
+    IRBuilder<> B(Rem);
+    Value *Result = PoisonValue::get(VT);
+    for (unsigned Lane = 0; Lane < N; ++Lane) {
+      Value *X, *Y;
+      if (auto *Div = Matches[Lane]) {
+        X = Div->getOperand(0);
+        Y = Div->getOperand(1);
+      } else {
+        X = B.CreateExtractElement(Rem->getOperand(0), Lane);
+        Y = B.CreateExtractElement(Rem->getOperand(1), Lane);
+      }
+      Value *ScalarRem =
+          B.CreateBinOp(Rem->getOpcode(), X, Y, Rem->getName() + ".scalar");
+      Result = B.CreateInsertElement(Result, ScalarRem, Lane);
+    }
+    Rem->replaceAllUsesWith(Result);
+    Rem->eraseFromParent();
+    Changed = true;
+  }
+  return Changed;
+}
+
 /// Find matching pairs of integer div/rem ops (they have the same numerator,
 /// denominator, and signedness). If they exist in different basic blocks, bring
 /// them together by hoisting or replace the common division operation that is
@@ -180,7 +275,7 @@ static DivRemWorklistTy getWorklist(Function &F) {
 /// that it doesn't quite match the stated objectives of those passes.
 static bool optimizeDivRem(Function &F, const TargetTransformInfo &TTI,
                            const DominatorTree &DT) {
-  bool Changed = false;
+  bool Changed = exposeScalarRemPairs(F, TTI, DT);
 
   // Get the matching pairs of div-rem instructions. We want this extra
   // indirection to avoid dealing with having to RAUW the keys of the maps.
