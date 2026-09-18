@@ -12,6 +12,7 @@
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GenericUniformityImpl.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -23,6 +24,7 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ConstantFolding.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -33,6 +35,7 @@
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
@@ -83,6 +86,26 @@ using namespace jumpthreading;
 STATISTIC(NumThreads, "Number of jumps threaded");
 STATISTIC(NumFolds,   "Number of terminators folded");
 STATISTIC(NumDupes,   "Number of branch blocks duplicated to eliminate phi");
+
+enum class DivergentThreadingPolicy { Disabled, Profile, Uniform, UniformWave };
+static cl::opt<DivergentThreadingPolicy> DivergentThreading(
+    "jump-threading-divergent-policy", cl::Hidden,
+    cl::init(DivergentThreadingPolicy::Disabled),
+    cl::values(clEnumValN(DivergentThreadingPolicy::Disabled, "disabled",
+                          "Keep the target gate"),
+               clEnumValN(DivergentThreadingPolicy::Profile, "profile",
+                          "Require branch uniformity profile"),
+               clEnumValN(DivergentThreadingPolicy::Uniform, "uniform",
+                          "Accept static or profiled branch uniformity"),
+               clEnumValN(DivergentThreadingPolicy::UniformWave, "uniform-wave",
+                          "Also require a mapped nonzero wave count")));
+static cl::opt<bool> ReportUniformThreading("report-uniform-jump-threading",
+                                            cl::Hidden, cl::init(false));
+
+static cl::opt<bool> RequireDisjointWaves(
+    "jump-threading-require-disjoint-waves", cl::Hidden, cl::init(false),
+    cl::desc(
+        "Only thread divergent targets with proven disjoint incoming waves"));
 
 static cl::opt<unsigned>
 BBDuplicateThreshold("jump-threading-threshold",
@@ -240,8 +263,10 @@ static void updatePredecessorProfileMetadata(PHINode *PN, BasicBlock *BB) {
 PreservedAnalyses JumpThreadingPass::run(Function &F,
                                          FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
-  // Jump Threading has no sense for the targets with divergent CF
-  if (TTI.hasBranchDivergence(&F))
+  // Keep the target-wide divergence gate unless the narrow experiment is
+  // enabled.
+  if (TTI.hasBranchDivergence(&F) &&
+      DivergentThreading == DivergentThreadingPolicy::Disabled)
     return PreservedAnalyses::all();
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &LVI = AM.getResult<LazyValueAnalysis>(F);
@@ -323,6 +348,14 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   if (!ThreadAcrossLoopHeaders)
     findLoopHeaders(*F);
 
+  UniformityGuided = TTI->hasBranchDivergence(F) &&
+                     DivergentThreading != DivergentThreadingPolicy::Disabled;
+  if (UniformityGuided) {
+    bool Changed = runUniformityGuided();
+    LoopHeaders.clear();
+    return Changed;
+  }
+
   bool EverChanged = false;
   bool Changed;
   do {
@@ -381,6 +414,114 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     }
 
   LoopHeaders.clear();
+  return EverChanged;
+}
+
+// Experimental narrow path: only ordinary edge threading. Keep select
+// unfolding, load PRE, guard duplication and two-block threading out of scope.
+// Uniformity is a profitability hint; LVI still proves every redirected edge.
+bool JumpThreadingPass::runUniformityGuided() {
+  bool EverChanged = false;
+  for (unsigned Round = 0; Round != 32; ++Round) {
+    DTU->flush();
+    CycleInfo CI;
+    CI.compute(*F);
+    UniformityInfo UI(DTU->getDomTree(), CI, TTI);
+    UI.compute();
+    SmallVector<uint64_t> Counts;
+    BitVector HasCounts;
+    uint64_t EntryCount = 0;
+    bool HasWaves =
+        extractMappedBlockWaveCounts(*F, Counts, HasCounts, EntryCount);
+    bool Changed = false;
+    unsigned Index = 0;
+    for (BasicBlock &BB : *F) {
+      unsigned I = Index++;
+      if (Unreachable.contains(&BB) || pred_empty(&BB))
+        continue;
+      auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
+      if (!Br)
+        continue;
+      bool ProfileUniform =
+          F->getMetadata(LLVMContext::MD_uniformity_profile) &&
+          Br->getMetadata(LLVMContext::MD_branch_uniformity_profile);
+      bool StaticUniform = UI.isUniformTerminator(Br);
+      bool Eligible =
+          ProfileUniform ||
+          (DivergentThreading != DivergentThreadingPolicy::Profile &&
+           StaticUniform);
+      bool HasWave = HasWaves && I < HasCounts.size() && HasCounts[I];
+      if (ReportUniformThreading)
+        errs() << "JT_UNIFORM\t" << F->getName() << '\t' << BB.getName()
+               << "\tstatic=" << StaticUniform << "\tprofile=" << ProfileUniform
+               << "\twaves="
+               << (HasWave ? std::to_string(Counts[I]) : "missing")
+               << "\teligible=" << Eligible << '\n';
+      if (!Eligible ||
+          (DivergentThreading == DivergentThreadingPolicy::UniformWave &&
+           (!HasWave || !Counts[I])))
+        continue;
+
+      // Static uniformity along all predecessor ancestry lets wave visits use
+      // scalar flow here. A profile hint alone must not establish this proof.
+      auto HasUniformAncestors = [&](BasicBlock *Block) {
+        SmallVector<BasicBlock *> Worklist(predecessors(Block));
+        SmallPtrSet<BasicBlock *, 16> Seen;
+        while (!Worklist.empty()) {
+          BasicBlock *Pred = Worklist.pop_back_val();
+          if (!Seen.insert(Pred).second)
+            continue;
+          if (UI.isDivergentTerminator(Pred->getTerminator()))
+            return false;
+          append_range(Worklist, predecessors(Pred));
+        }
+        return true;
+      };
+      DisjointIncomingWaves = HasUniformAncestors(&BB);
+      // Divergent guards inside opposite arms of a statically uniform fork
+      // can leave partial waves, but cannot send the same wave down both arms.
+      // Restrict this proof to two acyclic predecessors dominated by distinct
+      // successors; arbitrary reconverged or looping populations need more
+      // work.
+      if (!DisjointIncomingWaves && BB.hasNPredecessors(2) &&
+          !CI.getCycle(&BB)) {
+        auto It = pred_begin(&BB);
+        BasicBlock *P0 = *It++;
+        BasicBlock *P1 = *It;
+        DominatorTree &DT = DTU->getDomTree();
+        BasicBlock *Fork = DT.findNearestCommonDominator(P0, P1);
+        auto *ForkBr =
+            Fork ? dyn_cast<CondBrInst>(Fork->getTerminator()) : nullptr;
+        if (ForkBr && !CI.getCycle(P0) && !CI.getCycle(P1) &&
+            !CI.getCycle(Fork) && UI.isUniformTerminator(ForkBr) &&
+            HasUniformAncestors(Fork)) {
+          BasicBlock *S0 = ForkBr->getSuccessor(0);
+          BasicBlock *S1 = ForkBr->getSuccessor(1);
+          DisjointIncomingWaves =
+              (DT.dominates(S0, P0) && DT.dominates(S1, P1)) ||
+              (DT.dominates(S1, P0) && DT.dominates(S0, P1));
+        }
+      }
+      if (ReportUniformThreading)
+        errs() << "JT_WAVE_DISJOINT\t" << F->getName() << '\t' << BB.getName()
+               << '\t' << DisjointIncomingWaves << '\n';
+      BlockWaveCountPreserver Preserve(*F);
+      GuidedWavePreserver = &Preserve;
+      Changed =
+          processThreadableEdges(Br->getCondition(), &BB, WantInteger, Br);
+      GuidedWavePreserver = nullptr;
+      if (Changed) {
+        Preserve.restore();
+        EverChanged = ChangedSinceLastAnalysisUpdate = true;
+        if (ReportUniformThreading)
+          errs() << "JT_CHANGED\t" << F->getName() << '\t' << BB.getName()
+                 << '\n';
+        break; // Recompute uniformity, cycles and wave validity after mutation.
+      }
+    }
+    if (!Changed)
+      break;
+  }
   return EverChanged;
 }
 
@@ -1582,7 +1723,7 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
                                        CxtI)) {
     // We don't have known values in predecessors.  See if we can thread through
     // BB and its sole predecessor.
-    return maybethreadThroughTwoBasicBlocks(BB, Cond);
+    return !UniformityGuided && maybethreadThroughTwoBasicBlocks(BB, Cond);
   }
 
   assert(!PredValues.empty() &&
@@ -1676,6 +1817,8 @@ bool JumpThreadingPass::processThreadableEdges(Value *Cond, BasicBlock *BB,
       Instruction *Term = BB->getTerminator();
       Instruction *NewBI = UncondBrInst::Create(OnlyDest, Term->getIterator());
       NewBI->setDebugLoc(Term->getDebugLoc());
+      if (UniformityGuided)
+        NewBI->copyMetadata(*Term, {LLVMContext::MD_block_uniformity_profile});
       ++NumFolds;
       Term->eraseFromParent();
       DTU->applyUpdatesPermissive(Updates);
@@ -2389,8 +2532,21 @@ bool JumpThreadingPass::tryThreadEdge(
     return false;
   }
 
+  // Factoring several incoming wave populations needs a separate model.
+  if (UniformityGuided && (PredBBs.size() != 1 || BB->isEHPad()))
+    return false;
+
+  // A uniform outgoing decision alone does not make its incoming waves
+  // disjoint. Allow experiments that reject population-changing duplication.
+  if (UniformityGuided && RequireDisjointWaves && !DisjointIncomingWaves)
+    return false;
+
   unsigned JumpThreadCost = getJumpThreadDuplicationCost(
       TTI, BB, BB->getTerminator(), BBDupThreshold);
+  if (ReportUniformThreading && UniformityGuided)
+    errs() << "JT_COST\t" << F->getName() << '\t' << BB->getName()
+           << "\tcost=" << JumpThreadCost << "\tbudget=" << BBDupThreshold
+           << '\n';
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -2411,6 +2567,26 @@ void JumpThreadingPass::threadEdge(BasicBlock *BB,
 
   assert(!LoopHeaders.count(BB) && !LoopHeaders.count(SuccBB) &&
          "Don't thread across loop headers");
+
+  if (UniformityGuided) {
+    assert(GuidedWavePreserver);
+    SmallVector<BasicBlock *> Worklist{BB};
+    SmallPtrSet<BasicBlock *, 16> Seen;
+    while (!Worklist.empty()) {
+      BasicBlock *Changed = Worklist.pop_back_val();
+      if (!Seen.insert(Changed).second)
+        continue;
+      GuidedWavePreserver->invalidate(*Changed);
+      Changed->getTerminator()->setMetadata(
+          LLVMContext::MD_block_uniformity_profile, nullptr);
+      Changed->getTerminator()->setMetadata(
+          LLVMContext::MD_branch_uniformity_profile, nullptr);
+      // Without a static wave-population proof, threading can change downstream
+      // reconvergence. Conservatively invalidate those observations as well.
+      if (!DisjointIncomingWaves)
+        append_range(Worklist, successors(Changed));
+    }
+  }
 
   // Build BPI/BFI before any changes are made to IR.
   bool HasProfile = doesBlockHaveProfileData(BB);
