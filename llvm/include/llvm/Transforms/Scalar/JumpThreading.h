@@ -31,6 +31,7 @@ namespace llvm {
 class AAResults;
 class BasicBlock;
 class BinaryOperator;
+class BlockWaveCountPreserver;
 class CondBrInst;
 class CmpInst;
 class Constant;
@@ -88,6 +89,10 @@ class JumpThreadingPass : public OptionalPassInfoMixin<JumpThreadingPass> {
   BranchProbabilityInfo *BPI = nullptr;
   bool ChangedSinceLastAnalysisUpdate = false;
   bool HasGuards = false;
+  bool UniformityGuided = false;
+  bool DisjointIncomingWaves = false;
+  BlockWaveCountPreserver *GuidedWavePreserver = nullptr;
+  bool runUniformityGuided();
 #ifndef LLVM_ENABLE_ABI_BREAKING_CHECKS
   SmallSet<AssertingVH<const BasicBlock>, 16> LoopHeaders;
 #else
