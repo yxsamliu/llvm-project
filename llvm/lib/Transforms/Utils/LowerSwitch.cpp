@@ -25,6 +25,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
@@ -179,6 +180,14 @@ class SwitchProfile {
   }
 
 public:
+  bool hasHotDefault() const {
+    return !PrefixWeights.empty() && DefaultWeight && !PrefixWeights.back();
+  }
+
+  void setDefaultGuardMetadata(CondBrInst &Br) const {
+    setFittedBranchWeights(Br, {0, DefaultWeight}, IsExpected);
+  }
+
   explicit SwitchProfile(const SwitchInst &SI)
       : Lower(APInt::getSignedMinValue(
             SI.getCondition()->getType()->getIntegerBitWidth())),
@@ -235,6 +244,73 @@ public:
                            /*ElideAllZero=*/true);
   }
 };
+
+// A heavily used default can otherwise require walking the comparison tree.
+// Test membership in a small case set first, retaining the tree for case
+// values. The guard is exact: profile observations only decide whether it is
+// profitable.
+bool peelHotDefault(SwitchInst *SI, const SwitchProfile &Profile) {
+  if (!Profile.hasHotDefault() || SI->getNumCases() < 4)
+    return false;
+
+  BasicBlock *Orig = SI->getParent();
+  BasicBlock *Default = SI->getDefaultDest();
+  APInt Low = SI->case_begin()->getCaseValue()->getValue();
+  APInt High = Low;
+  for (auto Case : SI->cases()) {
+    if (Case.getCaseSuccessor() == Default)
+      return false;
+    Low = APIntOps::smin(Low, Case.getCaseValue()->getValue());
+    High = APIntOps::smax(High, Case.getCaseValue()->getValue());
+  }
+  APInt Span = High - Low;
+  if (Span.uge(64))
+    return false;
+
+  IRBuilder<> Builder(SI);
+  Value *Offset = Builder.CreateSub(SI->getCondition(),
+                                    ConstantInt::get(SI->getContext(), Low),
+                                    "switch.offset");
+  Value *InRange = Builder.CreateICmpULE(
+      Offset, ConstantInt::get(SI->getContext(), Span), "switch.range");
+  Value *InCases = InRange;
+  if (SI->getNumCases() != Span.getZExtValue() + 1) {
+    uint64_t Mask = 0;
+    for (auto Case : SI->cases())
+      Mask |=
+          uint64_t(1) << (Case.getCaseValue()->getValue() - Low).getZExtValue();
+    IntegerType *MaskTy =
+        Span.ult(32) ? Builder.getInt32Ty() : Builder.getInt64Ty();
+    Value *Shift = Builder.CreateZExtOrTrunc(Offset, MaskTy);
+    Value *Bit = Builder.CreateTrunc(
+        Builder.CreateLShr(ConstantInt::get(MaskTy, Mask), Shift),
+        Builder.getInt1Ty());
+    // Suppress poison from an out-of-range shift when the value is outside
+    // the case range. An 'and' would propagate it into the branch condition.
+    InCases =
+        Builder.CreateSelect(InRange, Bit, Builder.getFalse(), "switch.member");
+  }
+
+  Function *F = Orig->getParent();
+  BasicBlock *Cold = BasicBlock::Create(SI->getContext(), "switch.cold", F);
+  BasicBlock *Dead =
+      BasicBlock::Create(SI->getContext(), "switch.unreachable", F);
+  new UnreachableInst(SI->getContext(), Dead);
+  CondBrInst *Guard = Builder.CreateCondBr(InCases, Cold, Default);
+  Profile.setDefaultGuardMetadata(*Guard);
+
+  SmallPtrSet<BasicBlock *, 16> Seen;
+  for (auto Case : SI->cases())
+    if (Seen.insert(Case.getCaseSuccessor()).second)
+      Case.getCaseSuccessor()->replacePhiUsesWith(Orig, Cold);
+  SI->removeFromParent();
+  SI->insertInto(Cold, Cold->end());
+  SI->setDefaultDest(Dead);
+  SI->setMetadata(LLVMContext::MD_prof, nullptr);
+  SI->setMetadata(LLVMContext::MD_wave_profile_block, nullptr);
+  SI->setMetadata(LLVMContext::MD_block_uniformity_profile, nullptr);
+  return true;
+}
 
 /// Create a new leaf block for the binary lookup tree. It checks if the
 /// switch's value == the case's value. If not, then it jumps to the default
@@ -454,6 +530,12 @@ void ProcessSwitchInst(SwitchInst *SI,
       OrigBlock->getSinglePredecessor() == OrigBlock) {
     DeleteList.insert(OrigBlock);
     return;
+  }
+
+  if (peelHotDefault(SI, Profile)) {
+    LVI->eraseBlock(OrigBlock);
+    OrigBlock = SI->getParent();
+    Default = SI->getDefaultDest();
   }
 
   // Prepare cases vector.
