@@ -310,6 +310,76 @@ bool llvm::extractMappedBlockWaveCounts(const Function &F,
   return true;
 }
 
+BlockWaveCountPreserver::BlockWaveCountPreserver(Function &F) : F(F) {
+  SmallVector<uint64_t> Counts;
+  BitVector HasCounts;
+  uint64_t EntryCount;
+  if (!extractMappedBlockWaveCounts(F, Counts, HasCounts, EntryCount))
+    return;
+  Profile.reset(F.getMetadata(LLVMContext::MD_wave_profile));
+  unsigned NumIds = Profile->getNumOperands() - 2;
+  for (auto [Index, BB] : enumerate(F)) {
+    const MDNode *MD =
+        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
+    unsigned Id =
+        MD ? mdconst::extract<ConstantInt>(MD->getOperand(2))->getZExtValue()
+           : NumIds;
+    Blocks.push_back({&BB, Id, HasCounts[Index]});
+  }
+}
+
+void BlockWaveCountPreserver::invalidate(const BasicBlock &BB) {
+  for (BlockProfile &Block : Blocks)
+    if (Block.Block == &BB)
+      Block.HasCount = false;
+}
+
+void BlockWaveCountPreserver::restore() {
+  if (!Profile)
+    return;
+
+  DenseMap<const BasicBlock *, const BlockProfile *> Saved;
+  for (const BlockProfile &Block : Blocks) {
+    Value *V = Block.Block;
+    if (auto *BB = dyn_cast_or_null<BasicBlock>(V))
+      Saved.try_emplace(BB, &Block);
+  }
+
+  SmallVector<Metadata *> Counts(Profile->op_begin(), Profile->op_end());
+  unsigned NumOriginalIds = Counts.size() - 2;
+  BitVector UsedIds(NumOriginalIds);
+  DenseMap<const BasicBlock *, unsigned> Ids;
+  auto IntMD = [&](uint64_t V) -> Metadata * {
+    return ConstantAsMetadata::get(
+        ConstantInt::get(Type::getInt64Ty(F.getContext()), V));
+  };
+  for (const BasicBlock &BB : F) {
+    const BlockProfile *Block = Saved.lookup(&BB);
+    unsigned Id = Block ? Block->Id : NumOriginalIds;
+    // ID zero owns the normalization count. An invalid current block must not
+    // turn that anchor into an unmeasured count.
+    if (Id >= NumOriginalIds || UsedIds[Id] || (Id == 0 && !Block->HasCount)) {
+      Id = Counts.size() - 2;
+      Counts.push_back(IntMD(0));
+    } else {
+      UsedIds.set(Id);
+    }
+    Ids[&BB] = Id;
+  }
+
+  for (BasicBlock &BB : F) {
+    const BlockProfile *Block = Saved.lookup(&BB);
+    SmallVector<Metadata *> Ops{Counts[0], Counts[1], IntMD(Ids.lookup(&BB)),
+                                IntMD(Block && Block->HasCount)};
+    for (const BasicBlock *Succ : successors(&BB))
+      Ops.push_back(IntMD(Ids.lookup(Succ)));
+    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
+                                    MDNode::get(F.getContext(), Ops));
+  }
+  F.setMetadata(LLVMContext::MD_wave_profile,
+                MDNode::get(F.getContext(), Counts));
+}
+
 // MD_prof nodes have the following layout
 //
 // In general:

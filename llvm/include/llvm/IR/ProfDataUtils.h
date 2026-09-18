@@ -19,6 +19,8 @@
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/TrackingMDRef.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include <cstddef>
@@ -69,6 +71,28 @@ LLVM_ABI bool extractMappedBlockWaveCounts(const Function &F,
                                            SmallVectorImpl<uint64_t> &Counts,
                                            BitVector &HasCounts,
                                            uint64_t &EntryCount);
+
+/// Preserve validated wave counts across a CFG rewrite that retains the
+/// execution events of existing blocks. Call invalidate() for a surviving
+/// block whose executions change, then restore() after completing the rewrite.
+/// New blocks acquire unmeasured identities; previously invalid counts are
+/// never made valid. The original normalization count and identity space remain
+/// intact, including when the original entry has disappeared.
+class LLVM_ABI BlockWaveCountPreserver {
+  struct BlockProfile {
+    WeakVH Block;
+    unsigned Id;
+    bool HasCount;
+  };
+  Function &F;
+  TrackingMDNodeRef Profile;
+  SmallVector<BlockProfile> Blocks;
+
+public:
+  explicit BlockWaveCountPreserver(Function &F);
+  void invalidate(const BasicBlock &BB);
+  void restore();
+};
 
 /// Profile-based loop metadata that should be accessed only by using
 /// \c llvm::getLoopEstimatedTripCount and \c llvm::setLoopEstimatedTripCount.
