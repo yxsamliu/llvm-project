@@ -7919,8 +7919,13 @@ Version 2 is produced and read by `setBlockWaveCounts` and
 `extractBlockWaveCounts`. The block identities allow instruction changes and
 block reordering while rejecting missing or duplicated identities and changed
 control-flow edges. A CFG transform may explicitly rebuild the complete
-identity and successor snapshot while retaining counts only for blocks whose
-execution events it preserves; newly synthesized blocks remain unmeasured.
+successor snapshot while retaining counts only for blocks whose execution
+events it preserves. Original identities and the normalization count remain
+stable; newly synthesized blocks receive fresh, unmeasured identities. A
+transform must validate the incoming mapping before refreshing it, so previously
+ambiguous counts do not become valid merely because the new graph is recorded.
+A surviving block reused as a loop header must lose its count if it gains
+backedge executions.
 Consumers must use the extraction helper and ignore an unsupported version,
 mismatched function identity, incomplete block mapping, changed CFG, or an
 unmeasured block unless they have an explicit fallback. Stale metadata remains

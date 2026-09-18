@@ -319,4 +319,126 @@ TEST_F(WaveProfileTest, RejectUnsupportedOrMalformedMetadata) {
   EXPECT_TRUE(Counts.empty());
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
+TEST_F(WaveProfileTest, TransferAcrossEdgeSplit) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BlockWaveCountPreserver Profile(F);
+  auto *Br = cast<CondBrInst>(F.getEntryBlock().getTerminator());
+  BasicBlock *Left = Br->getSuccessor(0);
+  BasicBlock *Edge = BasicBlock::Create(Context, "edge", &F);
+  UncondBrInst::Create(Left, Edge);
+  Br->setSuccessor(0, Edge);
+  Profile.restore();
+
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 80, 60, 100, 0}));
+  EXPECT_EQ(Valid, makeBitVector(5, {0, 1, 2, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  MDNode *Table = F.getMetadata(LLVMContext::MD_wave_profile);
+  BlockWaveCountPreserver Again(F);
+  Again.restore();
+  EXPECT_EQ(Table, F.getMetadata(LLVMContext::MD_wave_profile));
+}
+
+TEST_F(WaveProfileTest, TransferDoesNotResurrectInvalidCounts) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  auto *Br = cast<CondBrInst>(F.getEntryBlock().getTerminator());
+  BasicBlock *Left = Br->getSuccessor(0);
+  BasicBlock *Edge = BasicBlock::Create(Context, "edge", &F);
+  UncondBrInst::Create(Left, Edge);
+  Br->setSuccessor(0, Edge);
+
+  // Capture after an unsupported rewrite has invalidated the entry and left.
+  BlockWaveCountPreserver Profile(F);
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(5, {2, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferInvalidatesChangedExecutionEvent) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BlockWaveCountPreserver Profile(F);
+  Profile.invalidate(F.getEntryBlock());
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(4, {1, 2, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferDoesNotResurrectDuplicatedCounts) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  auto *Br = cast<CondBrInst>(F.getEntryBlock().getTerminator());
+  BasicBlock *Left = Br->getSuccessor(0);
+  BasicBlock *Copy = BasicBlock::Create(Context, "copy", &F);
+  UncondBrInst *CopyBr = UncondBrInst::Create(Left->getSingleSuccessor(), Copy);
+  CopyBr->setMetadata(
+      LLVMContext::MD_wave_profile_block,
+      Left->getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+  BlockWaveCountPreserver Profile(F);
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(5, {2}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferAfterRemovingOriginalEntry) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BlockWaveCountPreserver Profile(F);
+  F.getEntryBlock().eraseFromParent();
+  Profile.restore();
+  BlockWaveCountPreserver Again(F);
+  Again.restore();
+
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{80, 60, 100}));
+  EXPECT_EQ(Valid, makeBitVector(3, {0, 1, 2}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferDoesNotFollowReplacedBlock) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 80, 60, 100});
+  BlockWaveCountPreserver Profile(F);
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Replacement = BasicBlock::Create(Context, "replacement", &F);
+  UncondBrInst::Create(Left->getSingleSuccessor(), Replacement);
+  Left->replaceAllUsesWith(Replacement);
+  Left->eraseFromParent();
+  Profile.restore();
+
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 60, 100, 0}));
+  EXPECT_EQ(Valid, makeBitVector(4, {0, 1, 2}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
 } // namespace

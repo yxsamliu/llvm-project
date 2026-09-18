@@ -73,40 +73,6 @@ static cl::opt<bool>
                           cl::desc("Allow relaxed uniform region checks"),
                           cl::init(true));
 
-struct SavedWaveProfileBlock {
-  WeakTrackingVH Block;
-  TrackingMDNodeRef Metadata;
-};
-
-static bool captureWaveProfile(Function &F,
-                               SmallVectorImpl<SavedWaveProfileBlock> &Blocks) {
-  SmallVector<uint64_t> Counts;
-  BitVector HasCounts;
-  uint64_t EntryCount;
-  if (!extractMappedBlockWaveCounts(F, Counts, HasCounts, EntryCount))
-    return false;
-  for (BasicBlock &BB : F) {
-    MDNode *MD =
-        BB.getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block);
-    if (MD)
-      Blocks.push_back({&BB, TrackingMDNodeRef(MD)});
-  }
-  return true;
-}
-
-static void refreshWaveProfile(Function &F,
-                               ArrayRef<SavedWaveProfileBlock> SavedBlocks) {
-  for (BasicBlock &BB : F)
-    BB.getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
-                                    nullptr);
-  for (const SavedWaveProfileBlock &Saved : SavedBlocks) {
-    Value *V = Saved.Block;
-    if (auto *BB = dyn_cast_or_null<BasicBlock>(V))
-      BB->getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
-                                       Saved.Metadata.get());
-  }
-}
-
 // Definition of the complex types used in this pass.
 
 using BBValuePair = std::pair<BasicBlock *, Value *>;
@@ -128,8 +94,10 @@ using MaybeCondBranchWeights = std::optional<class CondBranchWeights>;
 class CondBranchWeights {
   uint32_t TrueWeight;
   uint32_t FalseWeight;
+  bool IsExpected;
 
-  CondBranchWeights(uint32_t T, uint32_t F) : TrueWeight(T), FalseWeight(F) {}
+  CondBranchWeights(uint32_t T, uint32_t F, bool E)
+      : TrueWeight(T), FalseWeight(F), IsExpected(E) {}
 
 public:
   static MaybeCondBranchWeights tryParse(const CondBrInst &Br) {
@@ -137,7 +105,7 @@ public:
     if (!extractBranchWeights(Br, T, F))
       return std::nullopt;
 
-    return CondBranchWeights(T, F);
+    return CondBranchWeights(T, F, hasBranchWeightOrigin(Br));
   }
 
   static void setMetadata(CondBrInst &Br,
@@ -145,17 +113,18 @@ public:
     if (!Weights)
       return;
     uint32_t Arr[] = {Weights->TrueWeight, Weights->FalseWeight};
-    setBranchWeights(Br, Arr, false);
+    setBranchWeights(Br, Arr, Weights->IsExpected);
   }
 
   CondBranchWeights invert() const {
-    return CondBranchWeights{FalseWeight, TrueWeight};
+    return CondBranchWeights{FalseWeight, TrueWeight, IsExpected};
   }
 };
 
 struct PredInfo {
   Value *Pred;
   MaybeCondBranchWeights Weights;
+  MDNode *Uniformity = nullptr;
 };
 
 using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
@@ -316,6 +285,7 @@ class StructurizeCFG {
   const TargetTransformInfo *TTI;
   Function *Func;
   Region *ParentRegion;
+  BlockWaveCountPreserver *WaveProfile = nullptr;
 
   UniformityInfo *UA = nullptr;
   DominatorTree *DT;
@@ -323,6 +293,7 @@ class StructurizeCFG {
   SmallVector<RegionNode *, 8> Order;
   BBSet Visited;
   BBSet FlowSet;
+  BBSet ChangedExecutionBlocks;
 
   // The terminator carries a profile of the block's execution, independently
   // of its branch condition. Keep it when replacing the terminator of the
@@ -620,7 +591,8 @@ PredInfo StructurizeCFG::buildCondition(CondBrInst *Term, unsigned Idx,
     if (Weights)
       Weights = Weights->invert();
   }
-  return {Cond, Weights};
+  return {Cond, Weights,
+          Term->getMetadata(LLVMContext::MD_branch_uniformity_profile)};
 }
 
 /// Analyze the predecessors of each block and build up predicates
@@ -737,7 +709,11 @@ void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
 
     if (ParentInfo.Pred) {
       Term->setCondition(ParentInfo.Pred);
-      CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
+      if (!ChangedExecutionBlocks.contains(Parent)) {
+        CondBranchWeights::setMetadata(*Term, ParentInfo.Weights);
+        Term->setMetadata(LLVMContext::MD_branch_uniformity_profile,
+                          ParentInfo.Uniformity);
+      }
     } else {
       if (!Dominator.resultIsRememberedBlock())
         PhiInserter.AddAvailableValue(Variable, Dominator.result(), Default);
@@ -1147,8 +1123,11 @@ std::pair<BasicBlock *, DebugLoc> StructurizeCFG::needPrefix(bool NeedEmpty) {
     if (!NeedEmpty || Entry->getFirstInsertionPt() == Entry->end()) {
       // An empty prefix reused as a loop header also executes on backedges.
       // Its old execution profile does not describe those additional visits.
-      if (NeedEmpty)
+      if (NeedEmpty) {
         BlockUniformityProfiles.erase(Entry);
+        WaveProfile->invalidate(*Entry);
+        ChangedExecutionBlocks.insert(Entry);
+      }
       return {Entry, DL};
     }
   }
@@ -1454,8 +1433,8 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   this->TTI = TTI;
   Func = R->getEntry()->getParent();
 
-  SmallVector<SavedWaveProfileBlock> SavedWaveBlocks;
-  bool PreserveWaveProfile = captureWaveProfile(*Func, SavedWaveBlocks);
+  BlockWaveCountPreserver SavedWaveProfile(*Func);
+  WaveProfile = &SavedWaveProfile;
 
   ParentRegion = R;
 
@@ -1478,8 +1457,8 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
                                      MD);
 
-  if (PreserveWaveProfile)
-    refreshWaveProfile(*Func, SavedWaveBlocks);
+  SavedWaveProfile.restore();
+  WaveProfile = nullptr;
 
   // Cleanup
   BlockUniformityProfiles.clear();
@@ -1493,6 +1472,7 @@ bool StructurizeCFG::run(Region *R, DominatorTree *DT,
   LoopPreds.clear();
   LoopConds.clear();
   FlowSet.clear();
+  ChangedExecutionBlocks.clear();
 
   return true;
 }
