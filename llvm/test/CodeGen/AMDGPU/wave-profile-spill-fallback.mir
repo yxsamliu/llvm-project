@@ -1,0 +1,50 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -enable-wave-profiled-spill -report-profiled-spill -filetype=null %s 2>&1 | FileCheck %s --check-prefix=WAVE
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -run-pass=spill-code-placement -report-profiled-spill -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LEGACY
+
+# A uniformity profile is not an execution-frequency profile. Without usable
+# wave counts, preserve MBFI for the cold synthetic block. The static heuristic
+# classifies synthetic blocks as divergent because they have no IR counterpart.
+# The legacy mode remains available for comparing the old frequency heuristic.
+# WAVE: PROFILED_SPILL cold 1 1 5 0 0
+# WAVE-NEXT: WAVE_PROFILED_SPILL cold 0 0 0
+# LEGACY: PROFILED_SPILL cold 1 1 5 1 1
+
+--- |
+  target triple = "amdgcn-amd-amdhsa"
+  declare i32 @llvm.amdgcn.workitem.id.x()
+  define amdgpu_kernel void @cold(ptr addrspace(1) %out) !uniformity.profile !0 {
+  entry:
+    %id = call i32 @llvm.amdgcn.workitem.id.x()
+    %cond = icmp eq i32 %id, 0
+    br i1 %cond, label %rare, label %hot, !prof !1
+  rare:
+    store volatile i32 1, ptr addrspace(1) %out
+    br label %exit
+  hot:
+    store volatile i32 2, ptr addrspace(1) %out
+    br label %exit
+  exit:
+    ret void
+  }
+  !0 = !{}
+  !1 = !{!"branch_weights", i32 1, i32 10000}
+...
+---
+name: cold
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x000346dc), %bb.2(0x7ffcb924)
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+  bb.1.rare:
+    successors: %bb.4(0x80000000)
+    S_BRANCH %bb.4
+  bb.2.hot:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+  bb.3.exit:
+    S_ENDPGM 0
+  bb.4:
+    successors: %bb.3(0x80000000)
+    S_BRANCH %bb.3
+...
