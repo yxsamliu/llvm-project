@@ -146,7 +146,7 @@ static cl::opt<bool> GreedyUseSplitGroupPriority(
 
 static cl::opt<bool> GreedyPreserveSplitGroupSpillDecision(
     "greedy-preserve-split-group-spill-decision", cl::Hidden,
-    cl::desc("Do not evict interference for split-group spill candidates"));
+    cl::desc("Preserve spill decisions for local split-group copy fragments"));
 
 static cl::opt<unsigned> SplitThresholdForRegWithHint(
     "split-threshold-for-reg-with-hint",
@@ -540,6 +540,28 @@ const LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
 //                            Direct Assignment
 //===----------------------------------------------------------------------===//
 
+bool RAGreedy::shouldPreserveSplitGroupSpill(const LiveInterval &LI) const {
+  if (!GreedyPreserveSplitGroupSpillDecision ||
+      !ExtraInfo->getSplitGroupSize(LI.reg()) ||
+      ExtraInfo->getStage(LI) != RS_Spill)
+    return false;
+
+  // Restrict preservation to local copy fragments. Evicting an allocated
+  // interval for one of these fragments can undo the earlier split decision
+  // and move spilling to a more expensive interval. Extending preservation to
+  // fragments with real computations or uses in multiple blocks can instead
+  // prevent profitable eviction.
+  const MachineBasicBlock *Block = nullptr;
+  for (const MachineInstr &MI : MRI->reg_nodbg_instructions(LI.reg())) {
+    if (!MI.isCopy() && !MI.isImplicitDef())
+      return false;
+    if (Block && Block != MI.getParent())
+      return false;
+    Block = MI.getParent();
+  }
+  return Block != nullptr;
+}
+
 /// tryAssign - Try to assign VirtReg to an available register.
 MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
                                AllocationOrder &Order,
@@ -559,6 +581,7 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
     return PhysReg;
 
   // PhysReg is available, but there may be a better choice.
+  bool PreserveSplitGroupSpill = shouldPreserveSplitGroupSpill(VirtReg);
 
   // If we missed a simple hint, try to cheaply evict interference from the
   // preferred register.
@@ -567,16 +590,13 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
       MCRegister PhysHint = Hint.asMCReg();
       LLVM_DEBUG(dbgs() << "missed hint " << printReg(PhysHint, TRI) << '\n');
 
-      bool AvoidHintEviction = GreedyPreserveSplitGroupSpillDecision &&
-                               ExtraInfo->getSplitGroupSize(VirtReg.reg()) &&
-                               ExtraInfo->getStage(VirtReg) == RS_Spill;
-      if (!AvoidHintEviction && EvictAdvisor->canEvictHintInterference(
-                                    VirtReg, PhysHint, FixedRegisters)) {
+      if (!PreserveSplitGroupSpill && EvictAdvisor->canEvictHintInterference(
+                                          VirtReg, PhysHint, FixedRegisters)) {
         evictInterference(VirtReg, PhysHint, NewVRegs);
         return PhysHint;
       }
 
-      if (AvoidHintEviction)
+      if (PreserveSplitGroupSpill)
         return PhysReg;
 
       // We can also split the virtual register in cold blocks.
@@ -592,7 +612,7 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
   uint8_t Cost = RegCosts[PhysReg.id()];
 
   // Most registers have 0 additional cost.
-  if (!Cost)
+  if (!Cost || PreserveSplitGroupSpill)
     return PhysReg;
 
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << " is available at cost "
@@ -2700,9 +2720,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     return MCRegister();
 
   LiveRangeStage Stage = ExtraInfo->getStage(VirtReg);
-  bool PreserveSplitGroupSpill = GreedyPreserveSplitGroupSpillDecision &&
-                                 ExtraInfo->getSplitGroupSize(VirtReg.reg()) &&
-                                 Stage == RS_Spill;
+  bool PreserveSplitGroupSpill = shouldPreserveSplitGroupSpill(VirtReg);
   LLVM_DEBUG(dbgs() << StageName[Stage] << " Cascade "
                     << ExtraInfo->getCascade(VirtReg.reg()) << '\n');
 

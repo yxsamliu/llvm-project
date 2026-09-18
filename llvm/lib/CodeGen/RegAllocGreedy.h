@@ -340,6 +340,8 @@ private:
                                   SmallLISet &RecoloringCandidates,
                                   const SmallVirtRegSet &FixedRegisters);
 
+  bool shouldPreserveSplitGroupSpill(const LiveInterval &) const;
+
   MCRegister tryAssign(const LiveInterval &, AllocationOrder &,
                        SmallVectorImpl<Register> &, const SmallVirtRegSet &);
   MCRegister tryEvict(const LiveInterval &, AllocationOrder &,

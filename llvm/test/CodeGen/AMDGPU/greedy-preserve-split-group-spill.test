@@ -1,0 +1,25 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -start-before=greedy,0 -stop-after=virtregrewriter,0 -simplify-mir -verify-machineinstrs -verify-regalloc -greedy-preserve-split-group-spill-decision=false -o - %S/infloop-subrange-spill.mir | FileCheck %s --check-prefix=DEFAULT
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -start-before=greedy,0 -stop-after=virtregrewriter,0 -simplify-mir -verify-machineinstrs -verify-regalloc -greedy-preserve-split-group-spill-decision -o - %S/infloop-subrange-spill.mir | FileCheck %s --check-prefix=LOCAL
+
+# Exercise preservation on the existing subrange-splitting fixture. Allowing a
+# local copy fragment to evict interference creates an SGPR spill slot. Keeping
+# the split decision instead rematerializes the load in bb.4 and avoids both the
+# spill slot and the pair of copies around the image instruction.
+
+# DEFAULT-LABEL: name: main
+# DEFAULT: stack:
+# DEFAULT-NEXT: type: spill-slot, size: 32
+# DEFAULT: bb.4:
+# DEFAULT: lr-split COPY
+# DEFAULT: IMAGE_SAMPLE_LZ_V1_V2
+# DEFAULT: lr-split COPY
+# DEFAULT-NEXT: S_BRANCH %bb.6
+
+# LOCAL-LABEL: name: main
+# LOCAL-NOT: type: spill-slot
+# LOCAL: body:
+# LOCAL: bb.4:
+# LOCAL-NOT: lr-split COPY
+# LOCAL: IMAGE_SAMPLE_LZ_V1_V2
+# LOCAL-NEXT: {{.*}} = S_LOAD_DWORDX16_IMM
+# LOCAL-NEXT: S_BRANCH %bb.6
