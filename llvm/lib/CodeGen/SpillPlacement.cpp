@@ -333,6 +333,11 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
     }
   }
   unsigned WaveBlocks = 0, ChangedWaveFrequencies = 0;
+  // The combined wave/static policy needs usable wave guidance. If mapping
+  // rejects every wave count, retain MBFI rather than silently switching to a
+  // static-only policy, whose divergent-block costs assume entry frequency.
+  const bool UseStaticFallback =
+      !EnableWaveProfiledSpill || !WaveFrequencies.empty();
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
@@ -348,7 +353,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                         << printMBBReference(I) << " = "
                         << Wave->second.getFrequency() << " (entry "
                         << MBFI->getEntryFreq().getFrequency() << ")\n");
-    } else if (HasProfile && Profile->isDivergent(I)) {
+    } else if (UseStaticFallback && HasProfile && Profile->isDivergent(I)) {
       ++DivergentBlocks;
       ChangedFrequencies += MBFI->getBlockFreq(&I) != MBFI->getEntryFreq();
       BlockFrequencies[Num] = MBFI->getEntryFreq();
