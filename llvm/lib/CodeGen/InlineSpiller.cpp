@@ -92,6 +92,12 @@ static cl::opt<bool>
     SafePartialSpillHoisting("experimental-partial-spill-safe-hoisting",
                              cl::init(false), cl::Hidden);
 
+static bool preservePartialSpillSlots(const TargetInstrInfo &TII,
+                                      const TargetRegisterClass *RC) {
+  return PartialSpillRMW ||
+         (NativePartialSpill && TII.supportsPartialSpill(RC));
+}
+
 namespace {
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
@@ -1501,10 +1507,17 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     // Analyze instruction.
     SmallVector<std::pair<MachineInstr*, unsigned>, 8> Ops;
     VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, Reg, &Ops);
-    LaneBitmask Defined = AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI).second;
-    bool PreserveSlot = (PartialSpillRMW || NativePartialSpill) && RI.Writes &&
-                        !RI.Reads && isRealSpill(MI) &&
-                        (MRI.getMaxLaneMaskForVReg(Reg) & ~Defined).any();
+    bool HasLiveDef = any_of(Ops, [](const auto &OpPair) {
+      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+      return MO.isDef() && !MO.isDead();
+    });
+    bool PreserveSlot = preservePartialSpillSlots(TII, MRI.getRegClass(Reg)) &&
+                        HasLiveDef && RI.Writes && !RI.Reads && isRealSpill(MI);
+    if (PreserveSlot) {
+      LaneBitmask Defined =
+          AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI).second;
+      PreserveSlot = (MaxLanes & ~Defined).any();
+    }
     if (PreserveSlot)
       HSpiller.markPartialWrite(StackSlot);
 
@@ -1515,10 +1528,6 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       if (SlotIndex::isSameInstr(Idx, VNI->def))
         Idx = VNI->def;
 
-    bool HasLiveDef = any_of(Ops, [](const auto &OpPair) {
-      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-      return MO.isDef() && !MO.isDead();
-    });
     LaneBitmask MissingLanes = LaneBitmask::getNone();
     // Split siblings share a stack slot, but a partial split copy only defines
     // the lanes that are live in this sibling. A full-width spill must preserve
@@ -1569,12 +1578,14 @@ void InlineSpiller::spillAroundUses(Register Reg) {
 
     // Do not introduce uses of dead definitions in a partial-copy bundle.
     LaneBitmask LiveDefined = LaneBitmask::getNone();
-    for (const auto &OpPair : Ops) {
-      const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
-      if (MO.isDef() && !MO.isDead())
-        LiveDefined |= MO.getSubReg()
-                           ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
-                           : MRI.getMaxLaneMaskForVReg(Reg);
+    if (NativePartialSpill && PreserveSlot) {
+      for (const auto &OpPair : Ops) {
+        const MachineOperand &MO = OpPair.first->getOperand(OpPair.second);
+        if (MO.isDef() && !MO.isDead())
+          LiveDefined |= MO.getSubReg()
+                             ? TRI.getSubRegIndexLaneMask(MO.getSubReg())
+                             : MaxLanes;
+      }
     }
 
     // Create a new virtual register for spill/fill.
@@ -1637,9 +1648,9 @@ void InlineSpiller::spillAll() {
     VRM.assignVirt2StackSlot(Edit->getReg(), StackSlot);
 
   // Reserve conservative spill handling before any sibling can be optimized.
-  // Both experiment modes use this policy, including slots that acquire a
-  // partial writer only during a later split.
-  if ((PartialSpillRMW || NativePartialSpill) &&
+  // Only opted-in classes can acquire native partial writers during a later
+  // split. Keep the broad read-modify-write mode as a separate diagnostic.
+  if (preservePartialSpillSlots(TII, MRI.getRegClass(Original)) &&
       TRI.getSpillSize(*MRI.getRegClass(Original)) > 4)
     HSpiller.markPartialSpillSlot(StackSlot);
 
@@ -1766,7 +1777,8 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
     LiveInterval &LI = LIS.getInterval(SibReg);
     if (!LI.getVNInfoAt(Idx))
       continue;
-    if (SafePartialSpillHoisting) {
+    if (SafePartialSpillHoisting &&
+        preservePartialSpillSlots(TII, MRI.getRegClass(OrigReg))) {
       if (TRI.getSpillSize(*MRI.getRegClass(SibReg)) !=
           TRI.getSpillSize(*MRI.getRegClass(OrigReg)))
         continue;
