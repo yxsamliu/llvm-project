@@ -1820,13 +1820,17 @@ void SIInstrInfo::storeRegToStackSlot(
                           false);
 }
 
+bool SIInstrInfo::supportsPartialSpill(const TargetRegisterClass *RC) const {
+  return RI.isSGPRClass(RC) && RI.getSpillSize(*RC) > 4;
+}
+
 bool SIInstrInfo::storeRegToStackSlotPartial(MachineBasicBlock &MBB,
                                              MachineBasicBlock::iterator MI,
                                              Register SrcReg, bool IsKill,
                                              int FrameIndex,
                                              const TargetRegisterClass *RC,
                                              LaneBitmask Lanes) const {
-  if (!RI.isSGPRClass(RC) || !SrcReg.isVirtual())
+  if (!supportsPartialSpill(RC) || !SrcReg.isVirtual())
     return false;
 
   MachineFunction &MF = *MBB.getParent();

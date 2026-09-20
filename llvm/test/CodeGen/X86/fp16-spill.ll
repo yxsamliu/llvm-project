@@ -2,6 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -verify-machineinstrs | FileCheck %s --check-prefixes=SSE2
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx -verify-machineinstrs | FileCheck %s --check-prefixes=AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -verify-machineinstrs | FileCheck %s --check-prefixes=AVX512
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f -experimental-native-partial-spill -experimental-partial-spill-safe-hoisting -verify-machineinstrs -verify-regalloc | FileCheck %s --check-prefixes=AVX512
 
 define half @test(float %f, ptr %p) nounwind {
 ; SSE2-LABEL: test:
