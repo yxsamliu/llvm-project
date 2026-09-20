@@ -1820,6 +1820,58 @@ void SIInstrInfo::storeRegToStackSlot(
                           false);
 }
 
+bool SIInstrInfo::storeRegToStackSlotPartial(MachineBasicBlock &MBB,
+                                             MachineBasicBlock::iterator MI,
+                                             Register SrcReg, bool IsKill,
+                                             int FrameIndex,
+                                             const TargetRegisterClass *RC,
+                                             LaneBitmask Lanes) const {
+  if (!RI.isSGPRClass(RC) || !SrcReg.isVirtual())
+    return false;
+
+  MachineFunction &MF = *MBB.getParent();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  ArrayRef<int16_t> Parts = RI.getRegSplitParts(RC, 4);
+  if (Parts.empty() ||
+      FrameInfo.getObjectSize(FrameIndex) < RI.getSpillSize(*RC))
+    return false;
+
+  SmallVector<unsigned, 8> Selected;
+  LaneBitmask Covered = LaneBitmask::getNone();
+  for (unsigned Part : Parts) {
+    LaneBitmask PartLanes = RI.getSubRegIndexLaneMask(Part);
+    if ((Lanes & PartLanes).none())
+      continue;
+    if ((Lanes & PartLanes) != PartLanes)
+      return false;
+    Selected.push_back(Part);
+    Covered |= PartLanes;
+  }
+  if (Selected.empty() || Covered != Lanes)
+    return false;
+
+  // Validate all pieces before inserting any instructions.
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  if (FrameInfo.getStackID(FrameIndex) == TargetStackID::SGPRSpill)
+    MFI->setHasSpilledSGPRs();
+  const DebugLoc &DL = MBB.findDebugLoc(MI);
+  for (unsigned Part : Selected) {
+    unsigned Offset = RI.getSubRegIdxOffset(Part) / 8;
+    MachineMemOperand *MMO = MF.getMachineMemOperand(
+        MachinePointerInfo::getFixedStack(MF, FrameIndex, Offset),
+        MachineMemOperand::MOStore, 4,
+        commonAlignment(FrameInfo.getObjectAlign(FrameIndex), Offset));
+    BuildMI(MBB, MI, DL, get(AMDGPU::SI_SPILL_S32_SAVE_partial))
+        .addReg(SrcReg, getKillRegState(IsKill && Part == Selected.back()),
+                Part)
+        .addFrameIndex(FrameIndex)
+        .addImm(Offset)
+        .addMemOperand(MMO)
+        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+  }
+  return true;
+}
+
 void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
                                          MachineBasicBlock::iterator MI,
                                          Register SrcReg, bool isKill,
@@ -10205,6 +10257,11 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                          int &FrameIndex,
                                          TypeSize &MemBytes) const {
   if (!MI.mayStore())
+    return Register();
+
+  // This query cannot describe a source subregister or a nonzero slot offset.
+  // Do not let whole-value coalescing/elimination consume a partial store.
+  if (MI.getOpcode() == AMDGPU::SI_SPILL_S32_SAVE_partial)
     return Register();
 
   if (isMUBUF(MI) || isVGPRSpill(MI))

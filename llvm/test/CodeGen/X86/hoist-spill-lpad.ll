@@ -1,4 +1,6 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -experimental-native-partial-spill -experimental-partial-spill-safe-hoisting -verify-machineinstrs -verify-regalloc < %s | FileCheck %s
+; RUN: llc -experimental-partial-spill-rmw -experimental-partial-spill-safe-hoisting -verify-machineinstrs -verify-regalloc < %s | FileCheck %s
 ;
 ; PR27612. The following spill is hoisted from two locations: the fall
 ; through succ block and the landingpad block of a call which may throw

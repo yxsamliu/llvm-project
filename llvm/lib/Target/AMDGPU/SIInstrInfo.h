@@ -349,6 +349,12 @@ public:
       bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
+  bool storeRegToStackSlotPartial(MachineBasicBlock &MBB,
+                                  MachineBasicBlock::iterator MI,
+                                  Register SrcReg, bool IsKill, int FrameIndex,
+                                  const TargetRegisterClass *RC,
+                                  LaneBitmask Lanes) const override;
+
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
