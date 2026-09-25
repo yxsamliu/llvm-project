@@ -119,6 +119,10 @@ static cl::opt<unsigned> TwoEntryPHINodeFoldingThreshold(
              "to speculatively execute to fold a 2-entry PHI node into a "
              "select (default = 4)"));
 
+static cl::opt<bool> SpeculateBranchUnanimityPrototype(
+    "simplifycfg-branch-unanimity-prototype", cl::Hidden, cl::init(false),
+    cl::desc("Use branch split observations when costing speculation"));
+
 static cl::opt<bool>
     HoistCommon("simplifycfg-hoist-common", cl::Hidden, cl::init(true),
                 cl::desc("Hoist common instructions up to the parent block"));
@@ -3182,12 +3186,37 @@ static bool validateAndCostRequiredSelects(BasicBlock *BB, BasicBlock *ThenBB,
   return HaveRewritablePHIs;
 }
 
+// Every split visit executes both successors. Its frequency is therefore a
+// lower bound on either successor's wave frequency, even with partial waves.
+// This only relaxes a profitability gate; speculation legality is unchanged.
+static bool hasFrequentBranchSplits(const CondBrInst *BI,
+                                    const TargetTransformInfo &TTI) {
+  if (!SpeculateBranchUnanimityPrototype ||
+      !TTI.hasBranchDivergence(BI->getFunction()))
+    return false;
+  const MDNode *MD = BI->getMetadata("branch.unanimity.prototype");
+  if (!MD || MD->getNumOperands() != 2)
+    return false;
+  const auto *Total = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+  const auto *Unanimous = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+  if (!Total || !Unanimous || !Total->getType()->isIntegerTy(64) ||
+      !Unanimous->getType()->isIntegerTy(64))
+    return false;
+  uint64_t Visits = Total->getZExtValue();
+  uint64_t Agreed = Unanimous->getZExtValue();
+  if (Visits < 100 || Agreed > Visits)
+    return false;
+  return BranchProbability::getBranchProbability(Visits - Agreed, Visits) >
+         TTI.getPredictableBranchThreshold().getCompl();
+}
+
 static bool isProfitableToSpeculate(const CondBrInst *BI,
                                     std::optional<bool> Invert,
                                     const TargetTransformInfo &TTI) {
   // If the branch is non-unpredictable, and is predicted to *not* branch to
   // the `then` block, then avoid speculating it.
-  if (BI->getMetadata(LLVMContext::MD_unpredictable))
+  if (BI->getMetadata(LLVMContext::MD_unpredictable) ||
+      hasFrequentBranchSplits(BI, TTI))
     return true;
 
   uint64_t TWeight, FWeight;
@@ -3867,7 +3896,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // It isn't beneficial to speculatively execute the code
   // from the block that we know is predictably not entered.
   bool IsUnpredictable = DomBI->getMetadata(LLVMContext::MD_unpredictable);
-  if (!IsUnpredictable) {
+  if (!IsUnpredictable && !hasFrequentBranchSplits(DomBI, TTI)) {
     uint64_t TWeight, FWeight;
     if (extractBranchWeights(*DomBI, TWeight, FWeight) &&
         (TWeight + FWeight) != 0) {
