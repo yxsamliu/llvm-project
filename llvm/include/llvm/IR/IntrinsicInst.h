@@ -1405,6 +1405,7 @@ protected:
     case Intrinsic::instrprof_increment:
     case Intrinsic::instrprof_increment_step:
     case Intrinsic::instrprof_increment_wave:
+    case Intrinsic::instrprof_branch_vote:
     case Intrinsic::instrprof_callsite:
     case Intrinsic::instrprof_timestamp:
     case Intrinsic::instrprof_value_profile:
@@ -1507,6 +1508,18 @@ public:
   ConstantInt *getNumWaveCounters() const {
     return cast<ConstantInt>(getArgOperand(4));
   }
+};
+
+/// This represents the llvm.instrprof.branch.vote intrinsic.
+class InstrProfBranchVoteInst : public InstrProfCntrInstBase {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::instrprof_branch_vote;
+  }
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+  Value *getCondition() const { return getArgOperand(4); }
 };
 
 /// This represents the llvm.instrprof.callsite intrinsic.

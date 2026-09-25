@@ -1119,6 +1119,13 @@ def int_instrprof_increment_wave : Intrinsic<[],
     [IntrConvergent, IntrNoDuplicate, ImmArg<ArgIndex<1>>,
      ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>]>;
 
+// Count waves evaluating a conditional branch and waves whose active lanes
+// all choose the same successor. The index names the first of two counters.
+def int_instrprof_branch_vote : Intrinsic<[],
+    [llvm_ptr_ty, llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty],
+    [IntrConvergent, IntrNoDuplicate, ImmArg<ArgIndex<1>>,
+     ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>]>;
+
 // Callsite instrumentation for contextual profiling
 def int_instrprof_callsite : Intrinsic<[],
                                [llvm_ptr_ty, llvm_i64_ty,

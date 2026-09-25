@@ -132,6 +132,16 @@ using namespace llvm;
 static cl::opt<bool> OffloadPGOWaveCounts(
     "offload-pgo-wave-counts", cl::Hidden, cl::init(false),
     cl::desc("Collect per-block GPU wave execution counts"));
+static cl::opt<bool> OffloadPGOBranchVotes(
+    "offload-pgo-branch-votes", cl::Hidden, cl::init(false),
+    cl::desc("Prototype direct GPU branch agreement counters"));
+static cl::opt<std::string> OffloadPGOBranchVotesFunction(
+    "offload-pgo-branch-votes-function", cl::Hidden, cl::init(""),
+    cl::desc("Limit prototype GPU branch votes to one exact IR function name"));
+static cl::opt<unsigned> OffloadPGOBranchVotesMaxSites(
+    "offload-pgo-branch-votes-max-sites", cl::Hidden, cl::init(UINT32_MAX),
+    cl::desc(
+        "Limit runtime vote calls while reserving all branch vote counters"));
 using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
 #define DEBUG_TYPE "pgo-instrumentation"
@@ -949,6 +959,11 @@ void FunctionInstrumenter::instrument() {
        PGOTemporalInstrumentation ||
        InstrumentationType != PGOInstrumentationType::FDO))
     report_fatal_error("wave counts require ordinary IR PGO instrumentation");
+  if (OffloadPGOBranchVotes && isGPUProfTarget(M) &&
+      (PGOBlockCoverage || PGOFunctionEntryCoverage ||
+       PGOTemporalInstrumentation ||
+       InstrumentationType != PGOInstrumentationType::FDO))
+    report_fatal_error("branch votes require ordinary IR PGO instrumentation");
   FuncPGOInstrumentation<PGOEdge, PGOBBInfo> FuncInfo(
       F, TLI, ComdatMembers, /*CreateGlobalVar=*/!IsCtxProf, BPI, BFI, LI,
       InstrumentationType == PGOInstrumentationType::CSFDO,
@@ -977,6 +992,17 @@ void FunctionInstrumenter::instrument() {
   FuncInfo.getInstrumentBBs(InstrumentBBs);
   unsigned NumCounters =
       InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  SmallVector<CondBrInst *> VoteBranches;
+  if (OffloadPGOBranchVotes && isGPUProfTarget(M) &&
+      (OffloadPGOBranchVotesFunction.empty() ||
+       F.getName() == OffloadPGOBranchVotesFunction)) {
+    for (BasicBlock &BB : F)
+      if (auto *Branch = dyn_cast<CondBrInst>(BB.getTerminator()))
+        VoteBranches.push_back(Branch);
+    if (VoteBranches.size() > (UINT32_MAX - NumCounters) / 2)
+      report_fatal_error("too many branch vote profiling counters");
+    NumCounters += 2 * VoteBranches.size();
+  }
 
   if (IsCtxProf) {
     StringSet<> SkipCSInstr(llvm::from_range, CtxPGOSkipCallsiteInstrument);
@@ -1048,6 +1074,17 @@ void FunctionInstrumenter::instrument() {
   // Now instrument select instructions:
   FuncInfo.SIVisitor.instrumentSelects(&I, NumCounters, Name,
                                        FuncInfo.FunctionHash);
+  unsigned VoteOrdinal = 0;
+  for (CondBrInst *Branch : VoteBranches) {
+    if (VoteOrdinal++ < OffloadPGOBranchVotesMaxSites) {
+      IRBuilder<> Builder(Branch);
+      Builder.CreateIntrinsic(Intrinsic::instrprof_branch_vote,
+                              {NormalizedNamePtr, CFGHash,
+                               Builder.getInt32(NumCounters),
+                               Builder.getInt32(I), Branch->getCondition()});
+    }
+    I += 2;
+  }
   assert(I == NumCounters);
 
   if (OffloadPGOWaveCounts && isGPUProfTarget(M)) {
@@ -1232,6 +1269,10 @@ public:
   // Annotate per-block uniformity info for offload profiling.
   void setBlockUniformityAttribute();
 
+  // Keep directly observed branch agreement separate from the older full-wave
+  // branch hint while evaluating the new signal.
+  void setBranchAgreement();
+
   void setWaveCounts();
 
   // The hotness of the function from the profile count.
@@ -1280,6 +1321,9 @@ private:
 
   // Total size of the profile count for this function.
   uint32_t ProfileCountSize = 0;
+
+  uint32_t BranchVoteStart = 0;
+  bool HasDirectBranchVotes = false;
 
   // ProfileRecord for this function.
   NamedInstrProfRecord ProfileRecord;
@@ -1343,9 +1387,17 @@ bool PGOUseFunc::setInstrumentedCounts(
   unsigned NumInstrumentedBBs = InstrumentBBs.size();
   unsigned NumSelects = FuncInfo.SIVisitor.getNumOfSelectInsts();
   unsigned NumCounters = NumInstrumentedBBs + NumSelects;
+  unsigned NumConditionalBranches = 0;
+  if (isGPUProfTarget(*M))
+    for (BasicBlock &BB : F)
+      if (isa<CondBrInst>(BB.getTerminator()))
+        ++NumConditionalBranches;
+  HasDirectBranchVotes =
+      NumConditionalBranches &&
+      CountFromProfile.size() == NumCounters + 2 * NumConditionalBranches;
   // The number of counters here should match the number of counters
   // in profile. Return if they mismatch.
-  if (NumCounters != CountFromProfile.size()) {
+  if (!HasDirectBranchVotes && NumCounters != CountFromProfile.size()) {
     LLVM_DEBUG({
       dbgs() << "PGO COUNTER MISMATCH for function " << F.getName() << ":\n";
       dbgs() << "  Expected counters: " << NumCounters << "\n";
@@ -1375,7 +1427,8 @@ bool PGOUseFunc::setInstrumentedCounts(
       CountValue = 1;
     Info.setBBInfoCount(CountValue);
   }
-  ProfileCountSize = CountFromProfile.size();
+  ProfileCountSize = NumCounters;
+  BranchVoteStart = NumCounters;
   CountPosition = I;
 
   // Set the edge count and update the count of unknown edges for BBs.
@@ -1858,6 +1911,31 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   });
 }
 
+void PGOUseFunc::setBranchAgreement() {
+  if (!HasDirectBranchVotes)
+    return;
+
+  LLVMContext &Ctx = F.getContext();
+  unsigned Kind = Ctx.getMDKindID("branch.agreement.prototype");
+  unsigned Index = BranchVoteStart;
+  for (BasicBlock &BB : F) {
+    auto *Branch = dyn_cast<CondBrInst>(BB.getTerminator());
+    if (!Branch)
+      continue;
+    uint64_t Total = ProfileRecord.Counts[Index++];
+    uint64_t Unanimous = ProfileRecord.Counts[Index++];
+    if (Total == 0 || Unanimous > Total)
+      continue;
+    auto *Int64Ty = Type::getInt64Ty(Ctx);
+    Branch->setMetadata(
+        Kind,
+        MDNode::get(
+            Ctx,
+            {ConstantAsMetadata::get(ConstantInt::get(Int64Ty, Total)),
+             ConstantAsMetadata::get(ConstantInt::get(Int64Ty, Unanimous))}));
+  }
+}
+
 void PGOUseFunc::setWaveCounts() {
   if (ProfileRecord.WaveCounts.empty() || !isGPUProfTarget(*M))
     return;
@@ -2338,6 +2416,11 @@ static bool annotateAllFunctions(
     // A replacement profile must not leave an earlier wave mapping live when
     // its record is absent, mismatched, or contains only lane counts.
     clearBlockWaveCounts(F);
+    unsigned BranchVoteKind =
+        F.getContext().getMDKindID("branch.agreement.prototype");
+    for (BasicBlock &BB : F)
+      if (auto *Branch = dyn_cast<CondBrInst>(BB.getTerminator()))
+        Branch->setMetadata(BranchVoteKind, nullptr);
     if (skipPGOUse(F))
       continue;
     TargetLibraryInfo &TLI = LookupTLI(F);
@@ -2387,6 +2470,7 @@ static bool annotateAllFunctions(
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
     Func.setBlockUniformityAttribute();
+    Func.setBranchAgreement();
     Func.setWaveCounts();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)

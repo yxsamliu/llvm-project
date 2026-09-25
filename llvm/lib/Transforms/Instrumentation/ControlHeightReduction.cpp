@@ -62,6 +62,18 @@ static cl::opt<unsigned> CHRMergeThreshold(
     "chr-merge-threshold", cl::init(2), cl::Hidden,
     cl::desc("CHR merges a group of N branches/selects where N >= this value"));
 
+static cl::opt<bool> CHRUseBranchAgreementPrototype(
+    "chr-use-branch-agreement-prototype", cl::init(false), cl::Hidden,
+    cl::desc("Use direct GPU branch agreement to filter CHR scopes"));
+
+static cl::opt<uint64_t> CHRBranchAgreementMinSamples(
+    "chr-branch-agreement-min-samples", cl::init(100), cl::Hidden,
+    cl::desc("Minimum wave visits for CHR branch agreement guidance"));
+
+static cl::opt<unsigned> CHRBranchAgreementMinPercent(
+    "chr-branch-agreement-min-percent", cl::init(100), cl::Hidden,
+    cl::desc("Minimum percentage of unanimous wave visits for CHR"));
+
 static cl::opt<std::string> CHRModuleList(
     "chr-module-list", cl::init(""), cl::Hidden,
     cl::desc("Specify file to retrieve the list of modules to apply CHR to"));
@@ -1331,10 +1343,41 @@ static bool hasAtLeastTwoBiasedBranches(CHRScope *Scope) {
   return NumBiased >= CHRMergeThreshold;
 }
 
+static bool hasSufficientBranchAgreement(const Instruction &Branch) {
+  const MDNode *MD = Branch.getMetadata("branch.agreement.prototype");
+  if (!MD || MD->getNumOperands() != 2 || CHRBranchAgreementMinPercent > 100)
+    return false;
+
+  const auto *TotalMD = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+  const auto *UnanimousMD =
+      mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+  if (!TotalMD || !UnanimousMD || !TotalMD->getType()->isIntegerTy(64) ||
+      !UnanimousMD->getType()->isIntegerTy(64))
+    return false;
+
+  uint64_t Total = TotalMD->getZExtValue();
+  uint64_t Unanimous = UnanimousMD->getZExtValue();
+  if (Total < CHRBranchAgreementMinSamples || Total == 0 || Unanimous > Total)
+    return false;
+
+  // Divide before multiplying so even UINT64_MAX wave visits are handled
+  // without overflow. A 100% threshold accepts no observed split visits.
+  unsigned MaxSplitPercent = 100 - CHRBranchAgreementMinPercent;
+  uint64_t MaxSplits =
+      (Total / 100) * MaxSplitPercent + ((Total % 100) * MaxSplitPercent) / 100;
+  return Total - Unanimous <= MaxSplits;
+}
+
 static Instruction *
 findBranchWithoutUniformityProfile(const DenseSet<Region *> &Regions) {
   for (Region *R : Regions) {
     Instruction *Branch = R->getEntry()->getTerminator();
+    if (CHRUseBranchAgreementPrototype &&
+        Branch->getMetadata("branch.agreement.prototype")) {
+      if (!hasSufficientBranchAgreement(*Branch))
+        return Branch;
+      continue;
+    }
     if (!Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile))
       return Branch;
   }
@@ -1869,6 +1912,10 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
                                             // sub-Scopes.
       assert(BB != PreEntryBlock && "Don't copy the preetntry block");
       BasicBlock *NewBB = CloneBasicBlock(BB, VMap, ".nonchr", &F);
+      // The clone executes only on the new cold path, so the original vote
+      // counts no longer describe its branch visits.
+      if (auto *Branch = dyn_cast<CondBrInst>(NewBB->getTerminator()))
+        Branch->setMetadata("branch.agreement.prototype", nullptr);
       NewBlocks.push_back(NewBB);
       VMap[BB] = NewBB;
 
@@ -2017,6 +2064,7 @@ void CHR::fixupBranch(Region *R, CHRScope *Scope,
                         ConstantInt::getTrue(F.getContext()) :
                         ConstantInt::getFalse(F.getContext());
   BI->setCondition(NewCondition);
+  BI->setMetadata("branch.agreement.prototype", nullptr);
 }
 
 // A helper for fixupBranchesAndSelects. Add to the combined branch condition

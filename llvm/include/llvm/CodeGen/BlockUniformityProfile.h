@@ -14,6 +14,9 @@
 //   - Missing metadata on a terminator falls back to static control-flow
 //     divergence analysis.
 //   - Metadata name: "block.uniformity.profile".
+// An opt-in spill-placement experiment can suppress a static divergent-branch
+// fallback when direct profile votes observed only unanimous active-lane
+// decisions. This changes a cost heuristic, not the IR uniformity proof.
 //
 // This is intentionally target-agnostic: any backend that produces
 // uniformity bits in the profile can attach the same metadata and reuse this

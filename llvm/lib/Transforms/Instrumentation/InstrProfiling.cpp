@@ -375,6 +375,7 @@ private:
   /// Replace instrprof.increment with an increment of the appropriate value.
   void lowerIncrement(InstrProfIncrementInst *Inc);
   void lowerWaveIncrement(InstrProfIncrementWaveInst *Inc);
+  void lowerBranchVote(InstrProfBranchVoteInst *Inc);
   void emitGPUProfileCall(InstrProfCntrInstBase *Inc, FunctionCallee Callee,
                           ArrayRef<Value *> Args);
 
@@ -896,7 +897,10 @@ bool InstrLowerer::lowerIntrinsics(Function *F) {
 
   for (auto *Instr : InstrProfInsts) {
     doSampling(Instr);
-    if (auto *IPW = dyn_cast<InstrProfIncrementWaveInst>(Instr)) {
+    if (auto *IPB = dyn_cast<InstrProfBranchVoteInst>(Instr)) {
+      lowerBranchVote(IPB);
+      MadeChange = true;
+    } else if (auto *IPW = dyn_cast<InstrProfIncrementWaveInst>(Instr)) {
       lowerWaveIncrement(IPW);
       MadeChange = true;
     } else if (auto *IPIS = dyn_cast<InstrProfIncrementInstStep>(Instr)) {
@@ -1037,6 +1041,7 @@ static bool containsProfilingIntrinsics(Module &M) {
          containsIntrinsic(Intrinsic::instrprof_increment) ||
          containsIntrinsic(Intrinsic::instrprof_increment_step) ||
          containsIntrinsic(Intrinsic::instrprof_increment_wave) ||
+         containsIntrinsic(Intrinsic::instrprof_branch_vote) ||
          containsIntrinsic(Intrinsic::instrprof_timestamp) ||
          containsIntrinsic(Intrinsic::instrprof_value_profile);
 }
@@ -1075,12 +1080,18 @@ bool InstrLowerer::lower() {
             report_fatal_error("inconsistent wave counter counts");
           PD.NumWaveCounters = Count;
         }
+        if (isa<InstrProfBranchVoteInst>(I) &&
+            (ProfileCorrelate != InstrProfCorrelator::NONE ||
+             isSamplingEnabled()))
+          report_fatal_error("branch votes do not support profile correlation "
+                             "or lane-level instrumentation sampling");
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
           computeNumValueSiteCounts(Ind);
         else {
           if (FirstProfInst == nullptr &&
               (isa<InstrProfIncrementInst>(I) || isa<InstrProfCoverInst>(I) ||
-               isa<InstrProfIncrementWaveInst>(I)))
+               isa<InstrProfIncrementWaveInst>(I) ||
+               isa<InstrProfBranchVoteInst>(I)))
             FirstProfInst = dyn_cast<InstrProfCntrInstBase>(I);
           // If the MCDCBitmapParameters intrinsic seen, create the bitmaps.
           if (const auto &Params = dyn_cast<InstrProfMCDCBitmapParameters>(I))
@@ -1368,14 +1379,16 @@ void InstrLowerer::emitGPUProfileCall(InstrProfCntrInstBase *Inc,
     HeadBuilder.CreateCondBr(Inv.Matched, ThenBB, ContBB);
     IRBuilder<> ThenBuilder(ThenBB);
     auto *Call = ThenBuilder.CreateCall(Callee, Args);
-    if (isa<InstrProfIncrementWaveInst>(Inc)) {
+    if (isa<InstrProfIncrementWaveInst>(Inc) ||
+        isa<InstrProfBranchVoteInst>(Inc)) {
       Call->setConvergent();
       Call->addFnAttr(Attribute::NoDuplicate);
     }
     ThenBuilder.CreateBr(ContBB);
   } else {
     auto *Call = Builder.CreateCall(Callee, Args);
-    if (isa<InstrProfIncrementWaveInst>(Inc)) {
+    if (isa<InstrProfIncrementWaveInst>(Inc) ||
+        isa<InstrProfBranchVoteInst>(Inc)) {
       Call->setConvergent();
       Call->addFnAttr(Attribute::NoDuplicate);
     }
@@ -1393,6 +1406,24 @@ void InstrLowerer::lowerWaveIncrement(InstrProfIncrementWaveInst *Inc) {
       "__llvm_profile_instrument_gpu_wave",
       FunctionType::get(Builder.getVoidTy(), {PtrTy}, false));
   emitGPUProfileCall(Inc, Callee, {Addr});
+}
+
+void InstrLowerer::lowerBranchVote(InstrProfBranchVoteInst *Inc) {
+  assert(isGPUProfTarget(M) && "branch votes require a GPU target");
+  IRBuilder<> Builder(Inc);
+  Value *Total = getCounterAddress(Inc);
+  Value *Unanimous = Builder.CreateConstInBoundsGEP1_32(
+      Builder.getInt64Ty(), Total, 1, "branch.unanimous.addr");
+  auto *PtrTy = PointerType::getUnqual(M.getContext());
+  Total = Builder.CreatePointerBitCastOrAddrSpaceCast(Total, PtrTy);
+  Unanimous = Builder.CreatePointerBitCastOrAddrSpaceCast(Unanimous, PtrTy);
+  Value *Condition =
+      Builder.CreateZExt(Inc->getCondition(), Builder.getInt32Ty());
+  FunctionCallee Callee = M.getOrInsertFunction(
+      "__llvm_profile_instrument_gpu_branch",
+      FunctionType::get(Builder.getVoidTy(),
+                        {PtrTy, PtrTy, Builder.getInt32Ty()}, false));
+  emitGPUProfileCall(Inc, Callee, {Total, Unanimous, Condition});
 }
 
 void InstrLowerer::lowerIncrement(InstrProfIncrementInst *Inc) {

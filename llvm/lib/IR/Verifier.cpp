@@ -6248,6 +6248,19 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "wave profiling index out of bounds", Call);
     break;
   }
+  case Intrinsic::instrprof_branch_vote: {
+    Check(Call.getModule()->getTargetTriple().isGPU(),
+          "branch vote profiling requires a GPU target", Call);
+    Check(isa<GlobalVariable>(Call.getArgOperand(0)->stripPointerCasts()),
+          "branch vote profiling requires a global name", Call);
+    auto *NumCounters = dyn_cast<ConstantInt>(Call.getArgOperand(2));
+    auto *Index = dyn_cast<ConstantInt>(Call.getArgOperand(3));
+    Check(NumCounters && Index,
+          "branch vote profiling requires constant counter operands", Call);
+    Check(Index->getZExtValue() + 1 < NumCounters->getZExtValue(),
+          "branch vote profiling index out of bounds", Call);
+    break;
+  }
   case Intrinsic::assume: {
     if (Call.hasOperandBundles()) {
       auto *Cond = dyn_cast<ConstantInt>(Call.getArgOperand(0));

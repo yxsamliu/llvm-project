@@ -51,6 +51,23 @@ __llvm_profile_instrument_gpu_wave(uint64_t *counter) {
                               __MEMORY_SCOPE_DEVICE);
 }
 
+// Directly measure whether the lanes active at a conditional branch agree.
+// Unlike the block uniform counter, this also recognizes agreement under a
+// partial wave mask.
+COMPILER_RT_VISIBILITY void
+__llvm_profile_instrument_gpu_branch(uint64_t *total, uint64_t *unanimous,
+                                     int condition) {
+  uint64_t mask = __gpu_lane_mask();
+  uint64_t true_lanes = __gpu_ballot(mask, condition != 0);
+  if (__gpu_is_first_in_lane(mask)) {
+    __scoped_atomic_fetch_add(total, 1, __ATOMIC_RELAXED,
+                              __MEMORY_SCOPE_DEVICE);
+    if (true_lanes == 0 || true_lanes == mask)
+      __scoped_atomic_fetch_add(unanimous, 1, __ATOMIC_RELAXED,
+                                __MEMORY_SCOPE_DEVICE);
+  }
+}
+
 // Block-level sampling for offload PGO. For GPU kernels with stationary
 // behavior (where all thread blocks execute the same code paths regardless of
 // block ID), partial sampling significantly reduces instrumentation overhead
