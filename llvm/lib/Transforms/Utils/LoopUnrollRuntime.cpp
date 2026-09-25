@@ -25,6 +25,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
@@ -54,6 +55,29 @@ static cl::opt<bool> UnrollRuntimeMultiExit(
 static cl::opt<bool> UnrollRuntimeOtherExitPredictable(
     "unroll-runtime-other-exit-predictable", cl::init(false), cl::Hidden,
     cl::desc("Assume the non latch exit block to be predictable"));
+
+static cl::opt<bool> UnrollStaticUniformityPrototype(
+    "unroll-static-uniformity-prototype", cl::init(false), cl::Hidden,
+    cl::desc(
+        "Use static side-exit uniformity for runtime unroll profitability"));
+static cl::opt<bool> UnrollBranchUnanimityPrototype(
+    "unroll-branch-unanimity-prototype", cl::init(false), cl::Hidden,
+    cl::desc("Use measured branch unanimity for runtime unroll profitability"));
+
+// This is a profitability hint, never a convergence or transformation legality
+// proof. Keep the initial experiment strict: at least 100 visits, all
+// unanimous.
+static bool hasSufficientBranchUnanimity(const Instruction &Branch) {
+  const MDNode *MD = Branch.getMetadata("branch.unanimity.prototype");
+  if (!MD || MD->getNumOperands() != 2)
+    return false;
+  const auto *Total = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));
+  const auto *Unanimous = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+  return Total && Unanimous && Total->getType()->isIntegerTy(64) &&
+         Unanimous->getType()->isIntegerTy(64) &&
+         Total->getZExtValue() >= 100 &&
+         Total->getValue() == Unanimous->getValue();
+}
 
 // Probability that the loop trip count is so small that after the prolog
 // we do not enter the unrolled loop at all.
@@ -537,7 +561,7 @@ static Loop *CloneLoopBlocks(Loop *L, Value *NewIter,
 
 /// Returns true if we can profitably unroll the multi-exit loop L.
 static bool canProfitablyRuntimeUnrollMultiExitLoop(
-    Loop *L, const TargetTransformInfo *TTI,
+    Loop *L, const TargetTransformInfo *TTI, UniformityInfo *UI,
     SmallVectorImpl<BasicBlock *> &OtherExits, BasicBlock *LatchExit,
     bool UseEpilogRemainder) {
 
@@ -580,6 +604,15 @@ static bool canProfitablyRuntimeUnrollMultiExitLoop(
     assert(LatchBB && "Expected loop to have a latch");
     BasicBlock *NonLatchExitingBlock =
         (ExitingBlocks[0] == LatchBB) ? ExitingBlocks[1] : ExitingBlocks[0];
+    // Lane-level rarity need not imply that few waves take this side exit.
+    // Direct unanimous observations can recover the existing rarity heuristic
+    // when static analysis cannot prove uniformity. They do not bypass it or
+    // any of the separate convergence legality checks.
+    if ((UnrollStaticUniformityPrototype || UnrollBranchUnanimityPrototype) &&
+        UI && UI->hasDivergentTerminator(*NonLatchExitingBlock) &&
+        !(UnrollBranchUnanimityPrototype &&
+          hasSufficientBranchUnanimity(*NonLatchExitingBlock->getTerminator())))
+      return false;
     auto BranchProb =
         llvm::getBranchProbability(NonLatchExitingBlock, OtherExits[0]);
     // If BranchProbability could not be extracted (returns unknown), then
@@ -676,7 +709,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     const TargetTransformInfo *TTI, bool PreserveLCSSA,
     unsigned SCEVExpansionBudget, bool RuntimeUnrollMultiExit,
     Loop **ResultLoop, std::optional<unsigned> OriginalTripCount,
-    BranchProbability OriginalLoopProb) {
+    BranchProbability OriginalLoopProb, UniformityInfo *UI) {
   LLVM_DEBUG(dbgs() << "Trying runtime unrolling on Loop: \n");
   LLVM_DEBUG(L->dump());
   LLVM_DEBUG(UseEpilogRemainder ? dbgs() << "Using epilog remainder.\n"
@@ -734,7 +767,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
       // it is profitable or the general profitability heuristics apply.
       if (!RuntimeUnrollMultiExit &&
           !canProfitablyRuntimeUnrollMultiExitLoop(
-              L, TTI, OtherExits, LatchExit, UseEpilogRemainder)) {
+              L, TTI, UI, OtherExits, LatchExit, UseEpilogRemainder)) {
         LLVM_DEBUG(dbgs() << "Multiple exit/exiting blocks in loop and "
                              "multi-exit unrolling not enabled!\n");
         return false;
@@ -786,6 +819,11 @@ bool llvm::UnrollRuntimeLoopRemainder(
         << "Count failed constraint on overflow trip count calculation.\n");
     return false;
   }
+
+  // The remainder and unrolled body partition the original branch events.
+  // Clear direct vote counts only after all rejection checks, before cloning.
+  for (BasicBlock *BB : L->blocks())
+    BB->getTerminator()->setMetadata("branch.unanimity.prototype", nullptr);
 
   // Loop structure is the following:
   //
