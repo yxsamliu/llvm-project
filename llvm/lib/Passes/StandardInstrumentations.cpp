@@ -44,6 +44,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/InstructionNamer.h"
 #include <utility>
 #include <vector>
 
@@ -2563,6 +2564,7 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
     ExtendedIRContext *IRContext) {
+  InstructionNamerPass::registerCallbacks(PIC);
   PrintIR.registerCallbacks(PIC, IRContext);
   PrintPass.registerCallbacks(PIC, IRContext);
   TimePasses.registerCallbacks(PIC);
