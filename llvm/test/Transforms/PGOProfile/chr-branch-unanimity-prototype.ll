@@ -1,7 +1,7 @@
 ; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -S | FileCheck %s --check-prefix=OFF
-; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-agreement-prototype -S | FileCheck %s --check-prefix=ON
-; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-agreement-prototype -chr-branch-agreement-min-samples=1 -S | FileCheck %s --check-prefix=ONE
-; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-agreement-prototype -chr-branch-agreement-min-percent=99 -S | FileCheck %s --check-prefix=NINETY_NINE
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-unanimity-prototype -S | FileCheck %s --check-prefix=ON
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-unanimity-prototype -chr-branch-unanimity-min-samples=1 -S | FileCheck %s --check-prefix=ONE
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-use-branch-unanimity-prototype -chr-branch-unanimity-min-percent=99 -S | FileCheck %s --check-prefix=NINETY_NINE
 
 declare void @foo()
 
@@ -12,20 +12,20 @@ define void @vote_only(ptr %ptr) !prof !14 !uniformity.profile !16 {
 ; OFF: ret void
 ; ON-LABEL: define void @vote_only(
 ; ON: entry.split.nonchr:
-; ON-NOT: !branch.agreement.prototype
+; ON-NOT: !branch.unanimity.prototype
 ; ON: ret void
 entry:
   %value = load i32, ptr %ptr
   %bit0 = and i32 %value, 1
   %cond0 = icmp eq i32 %bit0, 0
-  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.agreement.prototype !17
+  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.unanimity.prototype !17
 bb0:
   call void @foo()
   br label %bb1
 bb1:
   %bit1 = and i32 %value, 2
   %cond1 = icmp eq i32 %bit1, 0
-  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.agreement.prototype !17
+  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.unanimity.prototype !17
 bb2:
   call void @foo()
   br label %exit
@@ -44,14 +44,14 @@ entry:
   %value = load i32, ptr %ptr
   %bit0 = and i32 %value, 1
   %cond0 = icmp eq i32 %bit0, 0
-  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.uniformity.profile !16, !branch.agreement.prototype !17
+  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.uniformity.profile !16, !branch.unanimity.prototype !17
 bb0:
   call void @foo()
   br label %bb1
 bb1:
   %bit1 = and i32 %value, 2
   %cond1 = icmp eq i32 %bit1, 0
-  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.uniformity.profile !16, !branch.agreement.prototype !18
+  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.uniformity.profile !16, !branch.unanimity.prototype !18
 bb2:
   call void @foo()
   br label %exit
@@ -70,14 +70,14 @@ entry:
   %value = load i32, ptr %ptr
   %bit0 = and i32 %value, 1
   %cond0 = icmp eq i32 %bit0, 0
-  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.agreement.prototype !19
+  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.unanimity.prototype !19
 bb0:
   call void @foo()
   br label %bb1
 bb1:
   %bit1 = and i32 %value, 2
   %cond1 = icmp eq i32 %bit1, 0
-  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.agreement.prototype !19
+  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.unanimity.prototype !19
 bb2:
   call void @foo()
   br label %exit
@@ -96,14 +96,14 @@ entry:
   %value = load i32, ptr %ptr
   %bit0 = and i32 %value, 1
   %cond0 = icmp eq i32 %bit0, 0
-  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.agreement.prototype !17
+  br i1 %cond0, label %bb1, label %bb0, !prof !15, !branch.unanimity.prototype !17
 bb0:
   call void @foo()
   br label %bb1
 bb1:
   %bit1 = and i32 %value, 2
   %cond1 = icmp eq i32 %bit1, 0
-  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.agreement.prototype !20
+  br i1 %cond1, label %exit, label %bb2, !prof !15, !branch.unanimity.prototype !20
 bb2:
   call void @foo()
   br label %exit

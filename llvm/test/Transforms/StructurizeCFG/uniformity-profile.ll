@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=structurizecfg -structurizecfg-skip-uniform-regions=false -verify-each %s | FileCheck %s --implicit-check-not=block.uniformity.profile --implicit-check-not=branch.uniformity.profile --implicit-check-not=branch.agreement.prototype
+; RUN: opt -S -passes=structurizecfg -structurizecfg-skip-uniform-regions=false -verify-each %s | FileCheck %s --implicit-check-not=block.uniformity.profile --implicit-check-not=branch.uniformity.profile --implicit-check-not=branch.unanimity.prototype
 ;
 ; Block profiles describe executions of the original block, not the branch
 ; condition. Replacing a terminator must keep the block hint, without copying
@@ -35,7 +35,7 @@ define void @loop_prefix(i1 %enter, i1 %stop, i1 %again, ptr %out) !uniformity.p
 entry:
   br label %prefix
 prefix:
-  br i1 %enter, label %a, label %exit.a, !block.uniformity.profile !0, !branch.uniformity.profile !0, !branch.agreement.prototype !1
+  br i1 %enter, label %a, label %exit.a, !block.uniformity.profile !0, !branch.uniformity.profile !0, !branch.unanimity.prototype !1
 a:
   store i32 3, ptr %out
   br i1 %stop, label %exit.a, label %b, !block.uniformity.profile !0

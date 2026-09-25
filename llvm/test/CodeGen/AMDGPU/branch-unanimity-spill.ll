@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 -stop-after=finalize-isel -o - %s | \
 ; RUN:   llc -mtriple=amdgcn-amd-amdhsa -passes='print<block-uniformity-profile>' -x mir -filetype=null 2>&1 | FileCheck %s --check-prefix=OFF
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O0 -stop-after=finalize-isel -o - %s | \
-; RUN:   llc -mtriple=amdgcn-amd-amdhsa -spill-use-branch-agreement-prototype -passes='print<block-uniformity-profile>' -x mir -filetype=null 2>&1 | FileCheck %s --check-prefix=ON
+; RUN:   llc -mtriple=amdgcn-amd-amdhsa -spill-use-branch-unanimity-prototype -passes='print<block-uniformity-profile>' -x mir -filetype=null 2>&1 | FileCheck %s --check-prefix=ON
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O3 -report-profiled-spill -filetype=null %s 2>&1 | FileCheck %s --check-prefix=SPILL-OFF
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O3 -report-profiled-spill -spill-use-branch-agreement-prototype -filetype=null %s 2>&1 | FileCheck %s --check-prefix=SPILL-ON
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -O3 -report-profiled-spill -spill-use-branch-unanimity-prototype -filetype=null %s 2>&1 | FileCheck %s --check-prefix=SPILL-ON
 
 ; Direct votes only change the opt-in spill-cost fallback. A unanimous branch
 ; with enough observed visits suppresses static divergence for an equivalent
@@ -26,7 +26,7 @@ define amdgpu_kernel void @unanimous_votes(ptr addrspace(1) %out) !uniformity.pr
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %cond = icmp eq i32 %id, 0
-  br i1 %cond, label %then, label %else, !branch.agreement.prototype !1
+  br i1 %cond, label %then, label %else, !branch.unanimity.prototype !1
 then:
   store volatile i32 1, ptr addrspace(1) %out
   ret void
@@ -44,7 +44,7 @@ define amdgpu_kernel void @split_votes(ptr addrspace(1) %out) !uniformity.profil
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %cond = icmp eq i32 %id, 0
-  br i1 %cond, label %then, label %else, !branch.agreement.prototype !2
+  br i1 %cond, label %then, label %else, !branch.unanimity.prototype !2
 then:
   store volatile i32 1, ptr addrspace(1) %out
   ret void
@@ -62,7 +62,7 @@ define amdgpu_kernel void @insufficient_votes(ptr addrspace(1) %out) !uniformity
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x()
   %cond = icmp eq i32 %id, 0
-  br i1 %cond, label %then, label %else, !branch.agreement.prototype !3
+  br i1 %cond, label %then, label %else, !branch.unanimity.prototype !3
 then:
   store volatile i32 1, ptr addrspace(1) %out
   ret void

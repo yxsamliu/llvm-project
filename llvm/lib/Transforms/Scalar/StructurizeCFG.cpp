@@ -125,7 +125,7 @@ struct PredInfo {
   Value *Pred;
   MaybeCondBranchWeights Weights;
   MDNode *Uniformity = nullptr;
-  MDNode *Agreement = nullptr;
+  MDNode *Unanimity = nullptr;
 };
 
 using BBPredicates = DenseMap<BasicBlock *, PredInfo>;
@@ -594,7 +594,7 @@ PredInfo StructurizeCFG::buildCondition(CondBrInst *Term, unsigned Idx,
   }
   return {Cond, Weights,
           Term->getMetadata(LLVMContext::MD_branch_uniformity_profile),
-          Term->getMetadata("branch.agreement.prototype")};
+          Term->getMetadata("branch.unanimity.prototype")};
 }
 
 /// Analyze the predecessors of each block and build up predicates
@@ -718,7 +718,7 @@ void StructurizeCFG::insertConditions(bool Loops, SSAUpdaterBulk &PhiInserter) {
         // The vote pair is independent of branch direction. Retain it only
         // when this branch still represents the original decision and block
         // execution population, as with branch weights and uniformity hints.
-        Term->setMetadata("branch.agreement.prototype", ParentInfo.Agreement);
+        Term->setMetadata("branch.unanimity.prototype", ParentInfo.Unanimity);
       }
     } else {
       if (!Dominator.resultIsRememberedBlock())

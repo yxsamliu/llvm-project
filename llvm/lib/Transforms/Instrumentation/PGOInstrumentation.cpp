@@ -134,7 +134,7 @@ static cl::opt<bool> OffloadPGOWaveCounts(
     cl::desc("Collect per-block GPU wave execution counts"));
 static cl::opt<bool> OffloadPGOBranchVotes(
     "offload-pgo-branch-votes", cl::Hidden, cl::init(false),
-    cl::desc("Prototype direct GPU branch agreement counters"));
+    cl::desc("Prototype direct GPU branch unanimity counters"));
 static cl::opt<std::string> OffloadPGOBranchVotesFunction(
     "offload-pgo-branch-votes-function", cl::Hidden, cl::init(""),
     cl::desc("Limit prototype GPU branch votes to one exact IR function name"));
@@ -1269,9 +1269,9 @@ public:
   // Annotate per-block uniformity info for offload profiling.
   void setBlockUniformityAttribute();
 
-  // Keep directly observed branch agreement separate from the older full-wave
-  // branch hint while evaluating the new signal.
-  void setBranchAgreement();
+  // Branch unanimity counts decisions where all currently active lanes choose
+  // one successor. Keep it separate from the older full-wave branch hint.
+  void setBranchUnanimity();
 
   void setWaveCounts();
 
@@ -1911,12 +1911,12 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   });
 }
 
-void PGOUseFunc::setBranchAgreement() {
+void PGOUseFunc::setBranchUnanimity() {
   if (!HasDirectBranchVotes)
     return;
 
   LLVMContext &Ctx = F.getContext();
-  unsigned Kind = Ctx.getMDKindID("branch.agreement.prototype");
+  unsigned Kind = Ctx.getMDKindID("branch.unanimity.prototype");
   unsigned Index = BranchVoteStart;
   for (BasicBlock &BB : F) {
     auto *Branch = dyn_cast<CondBrInst>(BB.getTerminator());
@@ -2417,7 +2417,7 @@ static bool annotateAllFunctions(
     // its record is absent, mismatched, or contains only lane counts.
     clearBlockWaveCounts(F);
     unsigned BranchVoteKind =
-        F.getContext().getMDKindID("branch.agreement.prototype");
+        F.getContext().getMDKindID("branch.unanimity.prototype");
     for (BasicBlock &BB : F)
       if (auto *Branch = dyn_cast<CondBrInst>(BB.getTerminator()))
         Branch->setMetadata(BranchVoteKind, nullptr);
@@ -2470,7 +2470,7 @@ static bool annotateAllFunctions(
     Func.annotateValueSites();
     Func.annotateIrrLoopHeaderWeights();
     Func.setBlockUniformityAttribute();
-    Func.setBranchAgreement();
+    Func.setBranchUnanimity();
     Func.setWaveCounts();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)

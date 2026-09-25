@@ -32,8 +32,8 @@ static cl::opt<bool> DisableStaticUniformityFallback(
     "disable-static-uniformity-fallback", cl::Hidden, cl::init(false),
     cl::desc("Treat blocks without uniformity metadata as unclassified"));
 
-static cl::opt<bool> SpillUseBranchAgreementPrototype(
-    "spill-use-branch-agreement-prototype", cl::Hidden, cl::init(false),
+static cl::opt<bool> SpillUseBranchUnanimityPrototype(
+    "spill-use-branch-unanimity-prototype", cl::Hidden, cl::init(false),
     cl::desc("Use unanimous direct branch votes in the GPU spill fallback"));
 
 static bool hasIRBlockUniformityProfile(const BasicBlock &BB) {
@@ -45,7 +45,7 @@ static bool hasUnanimousBranchVotes(const Instruction &Term) {
   const auto *Branch = dyn_cast<CondBrInst>(&Term);
   if (!Branch)
     return false;
-  const MDNode *MD = Branch->getMetadata("branch.agreement.prototype");
+  const MDNode *MD = Branch->getMetadata("branch.unanimity.prototype");
   if (!MD || MD->getNumOperands() != 2)
     return false;
 
@@ -95,7 +95,7 @@ void BlockUniformityProfile::compute(const MachineFunction &MF,
   HasProfile = MF.getFunction().getMetadata(
       LLVMContext::MD_uniformity_profile);
   const bool UseBranchVotes =
-      HasProfile && SpillUseBranchAgreementPrototype &&
+      HasProfile && SpillUseBranchUnanimityPrototype &&
       MF.getFunction().getParent()->getTargetTriple().isAMDGPU();
   NumBlockIDs = MF.getNumBlockIDs();
   DivergentBlocks.clear();
@@ -144,7 +144,7 @@ void BlockUniformityProfile::print(raw_ostream &OS,
       OS << ": no PGO annotation (statically may be divergent)\n";
       continue;
     }
-    if (SpillUseBranchAgreementPrototype)
+    if (SpillUseBranchUnanimityPrototype)
       OS << ": no PGO annotation (not classified as divergent)\n";
     else
       OS << ": no PGO annotation (statically uniformly reached)\n";

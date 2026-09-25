@@ -51,9 +51,9 @@ __llvm_profile_instrument_gpu_wave(uint64_t *counter) {
                               __MEMORY_SCOPE_DEVICE);
 }
 
-// Directly measure whether the lanes active at a conditional branch agree.
-// Unlike the block uniform counter, this also recognizes agreement under a
-// partial wave mask.
+// Count branch unanimity: all lanes active at this branch choose the same
+// successor. Unlike the block uniform counter, this also recognizes unanimity
+// under a partial wave mask.
 COMPILER_RT_VISIBILITY void
 __llvm_profile_instrument_gpu_branch(uint64_t *total, uint64_t *unanimous,
                                      int condition) {

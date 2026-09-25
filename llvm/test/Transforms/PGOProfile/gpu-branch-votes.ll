@@ -20,19 +20,19 @@
 ; LOWER: @__profc_diamond = {{.*}}[4 x i64]
 ; LOWER: call void @__llvm_profile_instrument_gpu_branch(ptr {{.*}}, ptr {{.*}}, i32 {{.*}})
 ; DEFAULT-NOT: call void @llvm.instrprof.branch.vote
-; UNANIMOUS: br i1 %cond, label %a, label %b, {{.*}}!branch.agreement.prototype ![[UNANIMOUS_MD:[0-9]+]]
+; UNANIMOUS: br i1 %cond, label %a, label %b, {{.*}}!branch.unanimity.prototype ![[UNANIMOUS_MD:[0-9]+]]
 ; UNANIMOUS: ![[UNANIMOUS_MD]] = !{i64 1, i64 1}
-; DIVERGENT: br i1 %cond, label %a, label %b, {{.*}}!branch.agreement.prototype ![[DIVERGENT_MD:[0-9]+]]
+; DIVERGENT: br i1 %cond, label %a, label %b, {{.*}}!branch.unanimity.prototype ![[DIVERGENT_MD:[0-9]+]]
 ; DIVERGENT: ![[DIVERGENT_MD]] = !{i64 1, i64 0}
 ; ORDINARY: br i1 %cond, label %a, label %b, !prof
-; ORDINARY-NOT: !branch.agreement.prototype
+; ORDINARY-NOT: !branch.unanimity.prototype
 
 ;--- main.ll
 target triple = "amdgcn-amd-amdhsa"
 
 define void @diamond(i1 %cond, ptr %p) {
 entry:
-  br i1 %cond, label %a, label %b, !branch.agreement.prototype !0
+  br i1 %cond, label %a, label %b, !branch.unanimity.prototype !0
 a:
   store volatile i32 1, ptr %p
   br label %exit
