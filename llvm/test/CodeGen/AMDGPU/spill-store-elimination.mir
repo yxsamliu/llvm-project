@@ -1,0 +1,676 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=spill-store-elimination -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=DISABLED
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=spill-store-elimination -enable-spill-store-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -passes=spill-store-elimination -enable-spill-store-elimination -verify-machineinstrs -o - %s | FileCheck %s
+
+# DISABLED-LABEL: name: partial_redundancy
+# DISABLED: bb.1:
+# DISABLED: SI_SPILL_V32_RESTORE
+# DISABLED: bb.3:
+# DISABLED: SI_SPILL_V32_SAVE
+# CHECK-LABEL: name: partial_redundancy
+# CHECK: bb.1:
+# CHECK-NOT: SI_SPILL_V32_RESTORE
+# CHECK: bb.2:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: bb.3:
+# CHECK-NOT: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: partial_redundancy
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: fully_redundant
+# CHECK: bb.1:
+# CHECK-NOT: SI_SPILL_V32_RESTORE
+# CHECK: bb.2:
+# CHECK-NOT: SI_SPILL_V32_
+# CHECK: bb.3:
+# CHECK-NOT: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: fully_redundant
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: reload_still_used
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: bb.3:
+# CHECK-NOT: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: reload_still_used
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    $vgpr0 = V_MOV_B32_e32 $vgpr2, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: register_clobber
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: register_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    $vgpr2 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: exec_clobber
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: exec_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    $exec = S_MOV_B64 -1
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: address_clobber
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: address_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    $sgpr32 = S_MOV_B32 0
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: slot_clobber
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: slot_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    SI_SPILL_V32_SAVE $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: different_slot
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: different_slot
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.1, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: different_address
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: different_address
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 4, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: partial_width
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: partial_width
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2_vgpr3 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: volatile_reload
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.2:
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V32_SAVE
+# CHECK: SI_SPILL_V32_RESTORE
+
+---
+name: volatile_reload
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (volatile load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+
+# CHECK-LABEL: name: subregister_clobber
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V{{32|64}}_SAVE
+
+---
+name: subregister_clobber
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $vgpr3
+    $vgpr2_vgpr3 = SI_SPILL_V64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, addrspace 5)
+    $vgpr3 = V_MOV_B32_e32 1, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $vgpr3
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $vgpr3
+    SI_SPILL_V64_SAVE killed $vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: volatile_store
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V{{32|64}}_SAVE
+
+---
+name: volatile_store
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (volatile store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: critical_edge
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V{{32|64}}_RESTORE
+# CHECK: bb.3:
+# CHECK: SI_SPILL_V{{32|64}}_SAVE
+
+---
+name: critical_edge
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3, %bb.4
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.4, implicit $scc
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+  bb.4:
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: frame_setup
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V32_RESTORE
+# CHECK: bb.3:
+# CHECK: frame-setup SI_SPILL_V32_SAVE
+
+---
+name: frame_setup
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    frame-setup SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: frame_destroy
+# CHECK: bb.1:
+# CHECK: SI_SPILL_V32_RESTORE
+# CHECK: bb.3:
+# CHECK: frame-destroy SI_SPILL_V32_SAVE
+
+---
+name: frame_destroy
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+  - { id: 1, type: spill-slot, size: 8, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2, $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $sgpr32, $vgpr0_vgpr1, $vgpr2
+    frame-destroy SI_SPILL_V32_SAVE killed $vgpr2, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
+    $vgpr2 = SI_SPILL_V32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, addrspace 5)
+    GLOBAL_STORE_DWORD $vgpr0_vgpr1, $vgpr2, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...

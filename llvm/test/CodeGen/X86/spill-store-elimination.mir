@@ -1,0 +1,39 @@
+# RUN: llc -mtriple=x86_64 -run-pass=spill-store-elimination -enable-spill-store-elimination -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64 -passes=spill-store-elimination -enable-spill-store-elimination -verify-machineinstrs -o - %s | FileCheck %s
+
+# CHECK-LABEL: name: partial_redundancy
+# CHECK: bb.1:
+# CHECK-NOT: MOV32rm
+# CHECK: bb.2:
+# CHECK: MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed $eax
+# CHECK: bb.3:
+# CHECK-NOT: MOV32mr
+# CHECK: $eax = MOV32rm
+---
+name: partial_redundancy
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $eax, $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.1
+
+  bb.1:
+    successors: %bb.3
+    $eax = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
+    JMP_1 %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $eax
+    JMP_1 %bb.3
+
+  bb.3:
+    liveins: $eax
+    MOV32mr %stack.0, 1, $noreg, 0, $noreg, killed $eax :: (store (s32) into %stack.0)
+    $eax = MOV32rm %stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %stack.0)
+    RET64 implicit $eax
+...

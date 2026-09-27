@@ -85,6 +85,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
+#include "llvm/CodeGen/SpillStoreElimination.h"
 #include "llvm/CodeGen/StackColoring.h"
 #include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
@@ -641,6 +642,7 @@ Error CodeGenPassBuilder::addMachinePasses(PassManagerWrapper &PMW) {
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOptLevel::None) {
+    addMachineFunctionPass(SpillStoreEliminationPass(), PMW);
     addMachineFunctionPass(PostRAMachineSinkingPass(), PMW);
     addMachineFunctionPass(ShrinkWrapPass(), PMW);
   }

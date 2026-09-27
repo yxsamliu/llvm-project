@@ -221,6 +221,9 @@ LLVM_ABI extern char &DetectDeadLanesID;
 /// This pass perform post-ra machine sink for COPY instructions.
 LLVM_ABI extern char &PostRAMachineSinkingID;
 
+/// Eliminate partially redundant spill stores after register allocation.
+LLVM_ABI extern char &SpillStoreEliminationID;
+
 /// This pass adds flow sensitive discriminators.
 LLVM_ABI extern char &MIRAddFSDiscriminatorsID;
 

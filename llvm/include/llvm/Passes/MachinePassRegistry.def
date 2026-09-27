@@ -151,6 +151,7 @@ MACHINE_FUNCTION_PASS("remove-redundant-debug-values", RemoveRedundantDebugValue
 MACHINE_FUNCTION_PASS("require-all-machine-function-properties",
                       RequireAllMachineFunctionPropertiesPass())
 MACHINE_FUNCTION_PASS("shrink-wrap", ShrinkWrapPass())
+MACHINE_FUNCTION_PASS("spill-store-elimination", SpillStoreEliminationPass())
 MACHINE_FUNCTION_PASS("stack-coloring", StackColoringPass())
 MACHINE_FUNCTION_PASS("stack-frame-layout", StackFrameLayoutAnalysisPass())
 MACHINE_FUNCTION_PASS("stack-slot-coloring", StackSlotColoringPass())

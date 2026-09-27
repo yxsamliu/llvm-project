@@ -311,6 +311,7 @@ LLVM_ABI void initializeSjLjEHPreparePass(PassRegistry &);
 LLVM_ABI void initializeSlotIndexesWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeSpeculativeExecutionLegacyPassPass(PassRegistry &);
 LLVM_ABI void initializeSpillPlacementWrapperLegacyPass(PassRegistry &);
+LLVM_ABI void initializeSpillStoreEliminationLegacyPass(PassRegistry &);
 LLVM_ABI void initializeStackColoringLegacyPass(PassRegistry &);
 LLVM_ABI void initializeStackFrameLayoutAnalysisLegacyPass(PassRegistry &);
 LLVM_ABI void initializeStaticDataSplitterLegacyPass(PassRegistry &);
