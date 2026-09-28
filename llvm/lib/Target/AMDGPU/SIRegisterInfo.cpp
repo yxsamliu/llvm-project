@@ -26,6 +26,9 @@ using namespace llvm;
 #define GET_REGINFO_TARGET_DESC
 #include "AMDGPUGenRegisterInfo.inc"
 
+static cl::opt<bool> PreserveSpillReloadRenamable(
+    "amdgpu-preserve-spill-reload-renamable", cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EnableSpillSGPRToVGPR(
   "amdgpu-spill-sgpr-to-vgpr",
   cl::desc("Enable spilling SGPRs to VGPRs"),
@@ -1596,7 +1599,8 @@ void SIRegisterInfo::buildSpillLoadStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     unsigned LoadStoreOp, int Index, Register ValueReg, bool IsKill,
     MCRegister ScratchOffsetReg, int64_t InstOffset, MachineMemOperand *MMO,
-    RegScavenger *RS, LiveRegUnits *LiveUnits, bool NeedsCFI) const {
+    RegScavenger *RS, LiveRegUnits *LiveUnits, bool NeedsCFI,
+    bool ValueIsRenamable) const {
   assert((!RS || !LiveUnits) && "Only RS or LiveUnits can be set but not both");
 
   MachineFunction *MF = MBB.getParent();
@@ -1981,9 +1985,14 @@ void SIRegisterInfo::buildSpillLoadStore(
         PInfo, MMO->getFlags() | MOThreadPrivate, RemEltSize,
         commonAlignment(Alignment, RegOffset));
 
-    auto MIB =
-        BuildMI(MBB, MI, DL, *Desc)
-            .addReg(SubReg, getDefRegState(!IsStore) | getKillRegState(IsKill));
+    // Keep the original operand contract only for an unsplit ordinary reload.
+    // Temporary registers used by special spill lowering are fixed here.
+    bool IsRenamable = ValueIsRenamable && !IsStore && !IsAGPR && e == 1 &&
+                       SubReg == FinalValueReg;
+    auto MIB = BuildMI(MBB, MI, DL, *Desc)
+                   .addReg(SubReg, getDefRegState(!IsStore) |
+                                       getKillRegState(IsKill) |
+                                       getRenamableRegState(IsRenamable));
 
     if (UseVGPROffset) {
       // For an AGPR spill, we reuse the same temp VGPR for the offset and the
@@ -2852,7 +2861,9 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       buildSpillLoadStore(
           *MBB, MI, DL, Opc, Index, VData->getReg(), VData->isKill(), FrameReg,
           TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
-          *MI->memoperands_begin(), RS);
+          *MI->memoperands_begin(), RS, nullptr, false,
+          PreserveSpillReloadRenamable && VData->isRenamable() &&
+              !IsWWMRegSpill);
 
       if (IsWWMRegSpill)
         TII->restoreExec(*MF, *MBB, MI, DL, MFI->getSGPRForEXECCopy());

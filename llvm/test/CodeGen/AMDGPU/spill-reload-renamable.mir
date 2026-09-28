@@ -1,0 +1,76 @@
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -mcpu=gfx942 -run-pass=prolog-epilog -verify-machineinstrs -amdgpu-preserve-spill-reload-renamable %s -o - | FileCheck %s --check-prefixes=COMMON,ON
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -mcpu=gfx942 -run-pass=prolog-epilog -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=COMMON,OFF
+
+# The ordinary tuple retains its contract. Fixed operands, WWM registers,
+# and fragments of a split tuple must not acquire renamability.
+# COMMON-LABEL: name: ordinary_renamable
+# ON: {{^    }}renamable $vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_ST
+# OFF: {{^    }}$vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_ST
+# COMMON-LABEL: name: ordinary_fixed
+# COMMON: {{^    }}$vgpr0_vgpr1 = SCRATCH_LOAD_DWORDX2_ST
+# COMMON-LABEL: name: wwm_fixed
+# COMMON: {{^    }}$vgpr0 = SCRATCH_LOAD_DWORD_ST
+# COMMON-LABEL: name: split_tuple
+# COMMON: {{^    }}$vgpr0_vgpr1_vgpr2_vgpr3 = SCRATCH_LOAD_DWORDX4_ST
+# COMMON: {{^    }}$vgpr4_vgpr5_vgpr6_vgpr7 = SCRATCH_LOAD_DWORDX4_ST
+
+---
+name: ordinary_renamable
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr32'
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body: |
+  bb.0:
+    renamable $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    S_ENDPGM 0, implicit $vgpr0_vgpr1
+...
+---
+name: ordinary_fixed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 8, alignment: 4 }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr32'
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body: |
+  bb.0:
+    $vgpr0_vgpr1 = SI_SPILL_AV64_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s64) from %stack.0, align 4, addrspace 5)
+    S_ENDPGM 0, implicit $vgpr0_vgpr1
+...
+---
+name: wwm_fixed
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 4, alignment: 4 }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr32'
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body: |
+  bb.0:
+    renamable $vgpr0 = SI_SPILL_WWM_AV32_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.0, align 4, addrspace 5)
+    S_ENDPGM 0, implicit $vgpr0
+...
+---
+name: split_tuple
+tracksRegLiveness: true
+stack:
+  - { id: 0, type: spill-slot, size: 32, alignment: 4 }
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+  frameOffsetReg: '$sgpr32'
+  sgprForEXECCopy: '$sgpr100_sgpr101'
+body: |
+  bb.0:
+    renamable $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = SI_SPILL_AV256_RESTORE %stack.0, $sgpr32, 0, implicit $exec :: (load (s256) from %stack.0, align 4, addrspace 5)
+    S_ENDPGM 0, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+...
