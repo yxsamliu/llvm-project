@@ -1307,6 +1307,11 @@ defm TransCoexecutionHazard : AMDGPUSubtargetFeature<"trans-coexecution-hazard",
   /*GenPredicate=*/0
 >;
 
+defm GFX1250VALUBlockingCycles : AMDGPUSubtargetFeature<"gfx1250-valu-blocking-cycles",
+  "VALU pipe occupancy is modeled with GFX1250BlockingCycles",
+  /*GenPredicate=*/0
+>;
+
 defm WMMACoexecutionHazards : AMDGPUSubtargetFeature<"wmma-coexecution-hazards",
   "Hazards when WMMA co-executes with other WMMA/VALU instruction",
   /*GenPredicate=*/0
@@ -2582,6 +2587,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2617,6 +2623,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
@@ -2681,6 +2688,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
+   FeatureGFX1250VALUBlockingCycles,
    FeatureWMMACoexecutionHazards,
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
