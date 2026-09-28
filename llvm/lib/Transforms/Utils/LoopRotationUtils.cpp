@@ -820,6 +820,14 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
+  if (HasWaveProfile) {
+    // The preheader clone inherits the old header's metadata. Restore the
+    // rotated events before the merge performs its own profile transfer.
+    OrigPreheader->getTerminator()->setMetadata(
+        LLVMContext::MD_wave_profile_block, nullptr);
+    WaveProfile.restore();
+  }
+
   // Now that the CFG and DomTree are in a consistent state again, try to merge
   // the OrigHeader block into OrigLatch.  This will succeed if they are
   // connected by an unconditional branch.  This is just a cleanup so the
@@ -829,16 +837,6 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   bool DidMerge = MergeBlockIntoPredecessor(OrigHeader, &DTU, LI, MSSAU);
   if (DidMerge)
     RemoveRedundantDbgInstrs(PredBB);
-
-  if (HasWaveProfile) {
-    // The preheader clone and merged body inherit the old header's metadata.
-    OrigPreheader->getTerminator()->setMetadata(
-        LLVMContext::MD_wave_profile_block, nullptr);
-    if (DidMerge)
-      PredBB->getTerminator()->setMetadata(LLVMContext::MD_wave_profile_block,
-                                           nullptr);
-    WaveProfile.restore();
-  }
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();

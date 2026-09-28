@@ -485,7 +485,8 @@ public:
                            bool ValueIsKill, MCRegister ScratchOffsetReg,
                            int64_t InstrOffset, MachineMemOperand *MMO,
                            RegScavenger *RS, LiveRegUnits *LiveUnits = nullptr,
-                           bool NeedsCFI = false) const;
+                           bool NeedsCFI = false,
+                           bool ValueIsRenamable = false) const;
 
   // Return alignment in register file of first register in a register tuple.
   unsigned getRegClassAlignmentNumBits(const TargetRegisterClass *RC) const {

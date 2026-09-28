@@ -40,6 +40,7 @@
 #include "AMDGPUTargetTransformInfo.h"
 #include "AMDGPUUnifyDivergentExitNodes.h"
 #include "AMDGPUWaitSGPRHazards.h"
+#include "AMDGPUBreakLoadClusterDeps.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
 #include "GCNNSAReassign.h"
@@ -440,6 +441,9 @@ static cl::opt<bool>
                   cl::init(true), cl::Hidden);
 
 // Option to disable vectorizer for tests.
+static cl::opt<bool> EnableLoadClusterRenaming(
+    "amdgpu-enable-load-cluster-renaming", cl::Hidden, cl::init(false));
+
 static cl::opt<bool> EnableLoadStoreVectorizer(
   "amdgpu-load-store-vectorizer",
   cl::desc("Enable load store vectorizer"),
@@ -759,6 +763,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisWrapperPassPass(*PR);
+  initializeAMDGPUBreakLoadClusterDepsLegacyPass(*PR);
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
@@ -2026,6 +2031,11 @@ void GCNPassConfig::addPostRegAlloc() {
 }
 
 void GCNPassConfig::addPreSched2() {
+  // Break false anti-dependencies on load-address chains before the post-RA
+  // scheduler so its load-clustering mutation can burst the loads.
+  if (TM->getOptLevel() > CodeGenOptLevel::None)
+    if (EnableLoadClusterRenaming)
+      addPass(&AMDGPUBreakLoadClusterDepsID);
   if (TM->getOptLevel() > CodeGenOptLevel::None)
     addPass(createSIShrinkInstructionsLegacyPass());
   addPass(&SIPostRABundlerLegacyID);
@@ -2765,6 +2775,11 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
 }
 
 void AMDGPUCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
+  // Break false anti-dependencies on load-address chains before the post-RA
+  // scheduler so its load-clustering mutation can burst the loads.
+  if (TM.getOptLevel() > CodeGenOptLevel::None)
+    if (EnableLoadClusterRenaming)
+      addMachineFunctionPass(AMDGPUBreakLoadClusterDepsPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
   addMachineFunctionPass(SIPostRABundlerPass(), PMW);

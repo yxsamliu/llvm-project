@@ -23,7 +23,7 @@
 // CHECK: _Z8classifyPii:
 // CHECK: Function count: 64
 // CHECK: Block counts: [0, 32]
-// CHECK-NEXT: Block uniformity: [U, D]
+// CHECK: Block uniformity: [U, D]
 
 #include <hip/hip_runtime.h>
 #include <cstdio>
