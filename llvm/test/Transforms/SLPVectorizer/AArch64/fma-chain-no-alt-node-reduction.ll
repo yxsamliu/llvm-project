@@ -59,11 +59,8 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> [[TMP4]], double [[BZ]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[NPBC]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <2 x i32> zeroinitializer
-<<<<<<< HEAD
-=======
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[G22]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[G23D]], i64 1
->>>>>>> 357a253eedf1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[FIRST]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
@@ -93,23 +90,6 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[TMP15:%.*]] = fcmp fast olt <2 x double> [[TMP14]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = fadd fast <2 x double> [[TMP14]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP15]], <2 x double> [[TMP16]], <2 x double> [[TMP14]]
-<<<<<<< HEAD
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
-; CHECK-NEXT:    [[M1:%.*]] = fmul fast double [[TMP23]], [[G11]]
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
-; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[TMP34]], [[G12D]]
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <2 x double> [[TMP17]], double [[M2]], i64 0
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x double> [[TMP4]], double [[M1]], i64 0
-; CHECK-NEXT:    [[TMP26:%.*]] = fmul fast <2 x double> [[TMP24]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = fadd fast <2 x double> [[TMP24]], [[TMP25]]
-; CHECK-NEXT:    [[TMP28:%.*]] = shufflevector <2 x double> [[TMP26]], <2 x double> [[TMP27]], <2 x i32> <i32 2, i32 1>
-; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x double> poison, double [[XIJ]], i64 0
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <2 x double> [[TMP29]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP31:%.*]] = fmul fast <2 x double> [[TMP30]], [[TMP19]]
-; CHECK-NEXT:    [[TMP32:%.*]] = fadd fast <2 x double> [[TMP31]], [[TMP28]]
-; CHECK-NEXT:    [[TMP33:%.*]] = fmul fast <2 x double> [[TMP32]], [[TMP17]]
-; CHECK-NEXT:    [[ZZ:%.*]] = fmul fast double [[XIJ]], [[XIJ]]
-=======
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
 ; CHECK-NEXT:    [[M2:%.*]] = fmul fast double [[TMP18]], [[G12D]]
 ; CHECK-NEXT:    [[A1:%.*]] = fadd fast double [[M2]], [[M1]]
@@ -121,7 +101,6 @@ define void @density(ptr %lcs, ptr %liscom, ptr %densi, ptr %walls, i64 %first, 
 ; CHECK-NEXT:    [[TMP21:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP20]])
 ; CHECK-NEXT:    [[TY:%.*]] = fmul fast double [[TMP21]], [[TMP18]]
 ; CHECK-NEXT:    [[ZZ:%.*]] = fmul fast double [[TMP19]], [[TMP19]]
->>>>>>> 357a253eedf1
 ; CHECK-NEXT:    [[TZ:%.*]] = fmul fast double [[ZZ]], [[G33]]
 ; CHECK-NEXT:    [[A4:%.*]] = fadd fast double [[TY]], [[TZ]]
 ; CHECK-NEXT:    [[RSQ:%.*]] = fadd fast double [[A4]], [[TX]]
