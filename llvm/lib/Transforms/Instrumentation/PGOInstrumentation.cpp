@@ -55,6 +55,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
@@ -109,6 +110,7 @@
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Instrumentation/BlockCoverageInference.h"
 #include "llvm/Transforms/Instrumentation/CFGMST.h"
@@ -180,6 +182,11 @@ static cl::opt<bool> DisableValueProfiling("disable-vp", cl::init(false),
 static cl::opt<bool> PGOUniformityMetadata(
     "pgo-uniformity-metadata", cl::init(true), cl::Hidden,
     cl::desc("Enable uniformity profile metadata during PGO use"));
+
+static cl::opt<bool> PGODenseUniformityMetadata(
+    "pgo-dense-uniformity-metadata", cl::init(false), cl::Hidden,
+    cl::desc("Infer additional full-wave block uniformity from dense wave "
+             "counts during PGO use"));
 
 static cl::opt<bool> PGOWaveMetadata(
     "pgo-wave-metadata", cl::init(true), cl::Hidden,
@@ -1259,6 +1266,8 @@ public:
   // Annotate per-block uniformity info for offload profiling.
   void setBlockUniformityAttribute();
 
+  void setDenseBlockUniformityAttribute();
+
   // The hotness of the function from the profile count.
   enum FuncFreqAttr { FFA_Normal, FFA_Cold, FFA_Hot };
 
@@ -1317,6 +1326,9 @@ private:
 
   // The input profile owns its counter layout, independently of gen options.
   bool HasDenseWaveProfile;
+
+  // Profile-use annotations can change the MST without changing the CFG hash.
+  bool CanInferDenseUniformity = false;
 
   ValueProfileCollector VPC;
 
@@ -1441,6 +1453,8 @@ bool PGOUseFunc::setInstrumentedCounts(
     return false;
   }
   setWaveCounts(InstrumentBBs, ExtraWaveBBs);
+  CanInferDenseUniformity =
+      HasDenseWaveProfile && !F.getMetadata(LLVMContext::MD_prof);
   auto *FuncEntry = &*F.begin();
 
   // Set the profile count to the Instrumented BBs.
@@ -1938,6 +1952,63 @@ void PGOUseFunc::setBlockUniformityAttribute() {
       dbgs() << (ProfileRecord.isBlockUniform(I) ? 'U' : 'D');
     dbgs() << "\n";
   });
+}
+
+void PGOUseFunc::setDenseBlockUniformityAttribute() {
+  if (!CanInferDenseUniformity ||
+      ProfileRecord.WaveCounts.size() != ProfileRecord.Counts.size())
+    return;
+
+  // The wave size may come from the module subarch, CPU, or function features.
+  // The profile does not encode its producer's wave size, so the target must
+  // match the training build. Leave unknown or invalid targets unclassified.
+  if (!M->getTargetTriple().isAMDGCN())
+    return;
+  StringRef CPU = F.getFnAttribute("target-cpu").getValueAsString();
+  if (!CPU.empty() && AMDGPU::parseArchAMDGCN(CPU) == AMDGPU::GK_NONE)
+    return;
+  SmallVector<StringRef> FeatureList;
+  F.getFnAttribute("target-features")
+      .getValueAsString()
+      .split(FeatureList, ',');
+  StringMap<bool> Features;
+  for (StringRef Feature : FeatureList)
+    if (Feature.starts_with("+") || Feature.starts_with("-"))
+      Features[Feature.drop_front()] = Feature.front() == '+';
+  if (AMDGPU::fillAMDGPUFeatureMap(CPU, M->getTargetTriple(), Features).first !=
+      AMDGPU::NO_ERROR)
+    return;
+  bool Wave32 = Features.lookup("wavefrontsize32");
+  bool Wave64 = Features.lookup("wavefrontsize64");
+  if (Wave32 == Wave64)
+    return;
+  uint64_t WaveSize = Wave32 ? 32 : 64;
+
+  std::vector<BasicBlock *> InstrumentBBs;
+  FuncInfo.getInstrumentBBs(InstrumentBBs);
+  unsigned Index =
+      InstrumentBBs.size() + FuncInfo.SIVisitor.getNumOfSelectInsts();
+  MDNode *UniformMD = MDNode::get(F.getContext(), {});
+  for (BasicBlock *BB : getExtraWaveBlocks(F, InstrumentBBs)) {
+    uint64_t Waves = ProfileRecord.WaveCounts[Index++];
+    const auto *Info = findBBInfo(BB);
+    if (!Info || !Info->Count || !Waves)
+      continue;
+    uint64_t Lanes = *Info->Count;
+    // Lane counts are additive and can be reconstructed. Wave visits cannot.
+    // Equality with the measured maximum lane capacity implies every visit
+    // had a full wave. Division avoids overflowing Waves * WaveSize.
+    // The zero-step suffix's uniformity bits are not observations and must
+    // never be used here. Mixed full/partial execution remains unknown.
+    if (Lanes % WaveSize || Lanes / WaveSize != Waves)
+      continue;
+    F.setMetadata(LLVMContext::MD_uniformity_profile, UniformMD);
+    BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
+                                     UniformMD);
+  }
+  // This infers block activity only. Preserve the existing branch hints:
+  // full-wave activity is not a direct measurement of branch unanimity among
+  // a partially active set of lanes.
 }
 
 void SelectInstVisitor::instrumentOneSelectInst(SelectInst &SI) {
@@ -2465,6 +2536,8 @@ static bool annotateAllFunctions(
     Func.annotateIrrLoopHeaderWeights();
     if (PGOUniformityMetadata)
       Func.setBlockUniformityAttribute();
+    if (PGOUniformityMetadata && PGODenseUniformityMetadata)
+      Func.setDenseBlockUniformityAttribute();
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);

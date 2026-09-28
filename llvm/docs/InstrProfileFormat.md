@@ -48,6 +48,29 @@ so wave counts must not participate in scalar flow reconstruction. Existing
 lane counts, uniformity classification, and optimization consumers retain
 their previous meaning.
 
+### Inferring additional block uniformity
+
+The hidden profile-use option `-pgo-dense-uniformity-metadata=true` (default
+false) uses dense wave counts to infer additional `block.uniformity.profile`
+hints for blocks without sparse lane counters. The reconstructed lane count
+must equal the measured wave count times the hardware wave size, and the
+wave count must be nonzero. This establishes full-wave activity on every
+observed visit. Zero or missing observations do not establish uniformity.
+
+The option requires the same target and wave size as the training build and
+a wave size identifiable from the module target, CPU, or function features.
+It reuses the existing profile without changing instrumentation, counter
+layout, profile summaries, branch weights, or branch-uniformity hints.
+`-pgo-uniformity-metadata=false` disables both sparse and inferred hints.
+Wave metadata emission can be disabled independently.
+
+This is conservative inference, not dense collection of the existing
+uniform-lane counter. Mixed full/partial execution cannot be classified by
+this exact test, even if it would meet the usual 90% uniform-lane threshold.
+The zero-step suffix's lane and uniform counters remain zero and are not
+uniformity observations. These inferred hints have the same profitability
+semantics as other block-uniformity hints; they are not correctness proofs.
+
 
 ## Overview
 
