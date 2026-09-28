@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
+; RUN: opt -passes=pgo-instr-gen -pgo-instrument-dense-wave-counts=false -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
 ; RUN: %python %t/raw.py > %t/profile.raw
 ; RUN: llvm-profdata merge %t/profile.raw -o %t/profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/profile -S %t/input.ll -o %t/default.ll
