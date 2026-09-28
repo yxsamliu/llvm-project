@@ -181,6 +181,10 @@ static cl::opt<bool> PGOUniformityMetadata(
     "pgo-uniformity-metadata", cl::init(true), cl::Hidden,
     cl::desc("Enable uniformity profile metadata during PGO use"));
 
+static cl::opt<bool> PGOWaveMetadata(
+    "pgo-wave-metadata", cl::init(true), cl::Hidden,
+    cl::desc("Enable wave count profile metadata during PGO use"));
+
 // Command line option to set the maximum number of VP annotations to write to
 // the metadata for a single indirect call callsite.
 static cl::opt<unsigned> MaxNumAnnotations(
@@ -1313,7 +1317,8 @@ static void setupBBInfoEdges(
 // Wave slots use the same indices as lane counters, including the trailing
 // select counters. Only block-counter slots describe block-entry events.
 void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs) {
-  if (ProfileRecord.WaveCounts.empty() || !isGPUProfTarget(*M) || IsCS)
+  if (!PGOWaveMetadata || ProfileRecord.WaveCounts.empty() ||
+      !isGPUProfTarget(*M) || IsCS)
     return;
   if (ProfileRecord.WaveCounts.size() != ProfileRecord.Counts.size()) {
     F.getContext().diagnose(DiagnosticInfoPGOProfile(
