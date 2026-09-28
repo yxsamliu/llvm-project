@@ -6439,15 +6439,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   // OpenCL v2.0, s6.13.17 - Enqueue kernel function.
   // Table 6.13.17.1 specifies four overload forms of enqueue_kernel.
-  // The code below expands the builtin call to a call to one of the following
-  // functions that an OpenCL runtime library will have to provide:
-  //   __enqueue_kernel_basic
-  //   __enqueue_kernel_varargs
-  //   __enqueue_kernel_basic_events
-  //   __enqueue_kernel_events_varargs
+  // The code below expands the builtin call to one of four runtime functions.
+  // AMDGPU uses the _captures variants because its child kernels omit the
+  // block header.
   case Builtin::BIenqueue_kernel: {
     StringRef Name; // Generated function call name
     unsigned NumArgs = E->getNumArgs();
+    bool CompactCaptures = getTargetHooks().useOpenCLBlockCapturesAsKernelArg();
 
     llvm::Type *QueueTy = ConvertType(getContext().OCLQueueTy);
     llvm::Type *GenericVoidPtrTy = Builder.getPtrTy(
@@ -6474,7 +6472,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     if (NumArgs == 4) {
       // The most basic form of the call with parameters:
       // queue_t, kernel_enqueue_flags_t, ndrange_t, block(void)
-      Name = "__enqueue_kernel_basic";
+      Name = CompactCaptures ? "__enqueue_kernel_basic_captures"
+                             : "__enqueue_kernel_basic";
       llvm::Type *ArgTys[] = {QueueTy, Int32Ty, RangePtrTy, GenericVoidPtrTy,
                               GenericVoidPtrTy};
       llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, ArgTys, false);
@@ -6525,7 +6524,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     // Could have events and/or varargs.
     if (E->getArg(3)->getType()->isBlockPointerType()) {
       // No events passed, but has variadic arguments.
-      Name = "__enqueue_kernel_varargs";
+      Name = CompactCaptures ? "__enqueue_kernel_varargs_captures"
+                             : "__enqueue_kernel_varargs";
       auto Info =
           CGM.getOpenCLRuntime().emitOpenCLEnqueuedBlock(*this, E->getArg(3));
       llvm::Value *Kernel =
@@ -6599,7 +6599,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
       if (NumArgs == 7) {
         // Has events but no variadics.
-        Name = "__enqueue_kernel_basic_events";
+        Name = CompactCaptures ? "__enqueue_kernel_basic_events_captures"
+                               : "__enqueue_kernel_basic_events";
         llvm::FunctionType *FTy =
             llvm::FunctionType::get(Int32Ty, ArgTys, false);
         return RValue::get(
@@ -6609,7 +6610,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       // Pass the number of variadics to the runtime function too.
       Args.push_back(ConstantInt::get(Int32Ty, NumArgs - 7));
       ArgTys.push_back(Int32Ty);
-      Name = "__enqueue_kernel_events_varargs";
+      Name = CompactCaptures ? "__enqueue_kernel_events_varargs_captures"
+                             : "__enqueue_kernel_events_varargs";
 
       auto [ElemPtr, TmpPtr] = CreateArrayForSizeVar(7);
       Args.push_back(ElemPtr);

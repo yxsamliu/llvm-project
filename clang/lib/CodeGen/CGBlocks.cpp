@@ -1114,7 +1114,8 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
 
   if (IsOpenCL) {
     CGM.getOpenCLRuntime().recordBlockInfo(blockInfo.BlockExpression, InvokeFn,
-                                           result, blockInfo.StructureType);
+                                           result, blockInfo.StructureType,
+                                           blockInfo.BlockAlign);
   }
 
   return result;
@@ -1407,7 +1408,7 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     CGM.getOpenCLRuntime().recordBlockInfo(
         blockInfo.BlockExpression,
         cast<llvm::Function>(blockFn->stripPointerCasts()), Result,
-        literal->getValueType());
+        literal->getValueType(), blockInfo.BlockAlign);
   return Result;
 }
 

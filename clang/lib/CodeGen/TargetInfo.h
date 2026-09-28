@@ -402,11 +402,16 @@ public:
   /// a wrapper for the block invoke function with target-specific calling
   /// convention and ABI as an OpenCL kernel. The wrapper function accepts
   /// block context and block arguments in target-specific way and calls
-  /// the original block invoke function.
+  /// the original block invoke function. BlockAlign is the alignment of the
+  /// source block literal.
   virtual llvm::Value *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
-                            llvm::Type *BlockTy) const;
+                            llvm::Type *BlockTy, CharUnits BlockAlign) const;
+
+  /// Whether the enqueue runtime expects child kernels to receive only the
+  /// captured fields of an OpenCL block literal.
+  virtual bool useOpenCLBlockCapturesAsKernelArg() const { return false; }
 
   /// \return true if the target supports alias from the unmangled name to the
   /// mangled name of functions declared within an extern "C" region and marked

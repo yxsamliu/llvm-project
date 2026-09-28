@@ -20,7 +20,7 @@
 // CHECK: @__static_invoker_block_invoke_kernel.runtime.handle = internal addrspace(1) externally_initialized constant %block.runtime.handle.t zeroinitializer, section ".amdgpu.kernel.runtime.handle"
 // CHECK: @__static_invoker_block_invoke_kernel.runtime.handle.3 = internal addrspace(1) externally_initialized constant %block.runtime.handle.t zeroinitializer, section ".amdgpu.kernel.runtime.handle"
 
-// CHECK: define internal amdgpu_kernel void @__static_invoker_block_invoke_kernel(<{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1) }> %0) #{{[0-9]+}} !associated ![[ASSOC_FIRST_MD:[0-9]+]]
+// CHECK: define internal amdgpu_kernel void @__static_invoker_block_invoke_kernel(<{ ptr addrspace(1), ptr addrspace(1) }> %0) #{{[0-9]+}} !associated ![[ASSOC_FIRST_MD:[0-9]+]]
 
 
 // CHECK-LABEL: define internal void @__static_invoker_block_invoke(ptr noundef %.block_descriptor)
@@ -31,12 +31,12 @@
 
 
 // CHECK-LABEL: define internal void @static_invoker(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr)
-// CHECK:  call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle to ptr), ptr %{{.+}})
+// CHECK:  call i32 @__enqueue_kernel_basic_captures(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle to ptr), ptr %{{.+}})
 
-// CHECK: declare i32 @__enqueue_kernel_basic(ptr addrspace(1), i32, ptr addrspace(5), ptr, ptr) local_unnamed_addr
+// CHECK: declare i32 @__enqueue_kernel_basic_captures(ptr addrspace(1), i32, ptr addrspace(5), ptr, ptr) local_unnamed_addr
 
 
-// CHECK: define internal amdgpu_kernel void @__static_invoker_block_invoke_kernel.2(<{ i32, i32, ptr, ptr addrspace(1), ptr addrspace(1) }> %0) #{{[0-9]+}} !associated ![[ASSOC_SECOND_MD:[0-9]+]]
+// CHECK: define internal amdgpu_kernel void @__static_invoker_block_invoke_kernel.2(<{ ptr addrspace(1), ptr addrspace(1) }> %0) #{{[0-9]+}} !associated ![[ASSOC_SECOND_MD:[0-9]+]]
 // CHECK: call void @__static_invoker_block_invoke.4(ptr %
 
 
@@ -49,7 +49,7 @@
 // CHECK-LABEL: define dso_local amdgpu_kernel void @test_kernel_second(ptr addrspace(1) noundef align 4 %outptr, ptr addrspace(1) noundef align 4 %argptr, ptr addrspace(1) noundef align 4 %difference)
 
 // CHECK-LABEL: define internal void @static_invoker.5(ptr addrspace(1) noundef %outptr, ptr addrspace(1) noundef %argptr) unnamed_addr #{{[0-9]+}} {
-// CHECK: call i32 @__enqueue_kernel_basic(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle.3 to ptr), ptr %{{.+}})
+// CHECK: call i32 @__enqueue_kernel_basic_captures(ptr addrspace(1) %{{[0-9]+}}, i32 %{{[0-9]+}}, ptr addrspace(5) %tmp, ptr addrspacecast (ptr addrspace(1) @__static_invoker_block_invoke_kernel.runtime.handle.3 to ptr), ptr %{{.+}})
 
 
 typedef struct {int a;} ndrange_t;

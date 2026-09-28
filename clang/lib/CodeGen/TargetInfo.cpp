@@ -177,7 +177,8 @@ void TargetCodeGenInfo::addStackProbeTargetAttributes(
 /// name is the name of the block invoke function postfixed with "_kernel".
 /// It simply calls the block invoke function then returns.
 llvm::Value *TargetCodeGenInfo::createEnqueuedBlockKernel(
-    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy,
+    CharUnits) const {
   auto *InvokeFT = Invoke->getFunctionType();
   auto &C = CGF.getLLVMContext();
   std::string Name = Invoke->getName().str() + "_kernel";

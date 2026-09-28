@@ -3,6 +3,8 @@
 
 #define LSIZE_LIMIT 65536U
 #define LOCAL_ALIGN 16
+// Clang's OpenCL block header contains size, alignment, and an invoke pointer.
+#define BLOCK_HEADER_SIZE (2 * sizeof(uint) + sizeof(void *))
 
 struct rtinfo {
     __global char* kernel_object;
@@ -168,11 +170,16 @@ enqueue_marker(queue_t q, uint nwl, const clk_event_t *wl, clk_event_t *ce)
     return 0;
 }
 
-int
-__enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture)
+static inline int
+enqueue_kernel_basic_impl(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture,
+                          uint capture_offset)
 {
-    uint csize = ((uint *)capture)[0];
+    uint block_size = ((uint *)capture)[0];
+    if (block_size < capture_offset)
+        return CLK_ENQUEUE_FAILURE;
+    uint csize = block_size - capture_offset;
     uint calign = ((uint *)capture)[1];
+    void *context = (char *)capture + capture_offset;
     __global AmdVQueueHeader *vq = __builtin_astype(q, __global AmdVQueueHeader *);
 
     if (align_up(csize, sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
@@ -188,7 +195,7 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
     __global AmdAqlWrap *aw = (__global AmdAqlWrap *)(vq + 1) + ai;
 
     // Set up kernarg
-    copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
+    copy_captured_context(aw->aql.kernarg_address, context, csize, calign);
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(size_t)));
     if (__oclc_ABI_version < 500) {
         implicit[0] = r.globalWorkOffset[0];
@@ -246,10 +253,28 @@ __enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, v
 }
 
 int
-__enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, uint nwl, const clk_event_t *wl, clk_event_t *ce, void *block, void *capture)
+__enqueue_kernel_basic(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture)
 {
-    uint csize = ((uint *)capture)[0];
+    return enqueue_kernel_basic_impl(q, f, r, block, capture, 0);
+}
+
+int
+__enqueue_kernel_basic_captures(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture)
+{
+    return enqueue_kernel_basic_impl(q, f, r, block, capture, BLOCK_HEADER_SIZE);
+}
+
+static inline int
+enqueue_kernel_basic_events_impl(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, uint nwl,
+                                 const clk_event_t *wl, clk_event_t *ce, void *block, void *capture,
+                                 uint capture_offset)
+{
+    uint block_size = ((uint *)capture)[0];
+    if (block_size < capture_offset)
+        return CLK_ENQUEUE_FAILURE;
+    uint csize = block_size - capture_offset;
     uint calign = ((uint *)capture)[1];
+    void *context = (char *)capture + capture_offset;
     __global AmdVQueueHeader *vq = __builtin_astype(q, __global AmdVQueueHeader *);
 
     if (align_up(csize, sizeof(size_t)) + NUM_IMPLICIT_ARGS*sizeof(size_t) > vq->arg_size ||
@@ -283,7 +308,7 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
     __global AmdAqlWrap *aw = (__global AmdAqlWrap *)(vq + 1) + ai;
 
     // Set up kernarg
-    copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
+    copy_captured_context(aw->aql.kernarg_address, context, csize, calign);
     __global size_t *implicit = (__global size_t *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(size_t)));
     if (__oclc_ABI_version < 500) {
         implicit[0] = r.globalWorkOffset[0];
@@ -343,10 +368,29 @@ __enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange
 }
 
 int
-__enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture, uint nl, __private size_t *ll)
+__enqueue_kernel_basic_events(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, uint nwl, const clk_event_t *wl,
+                              clk_event_t *ce, void *block, void *capture)
 {
-    uint csize = ((uint *)capture)[0];
+    return enqueue_kernel_basic_events_impl(q, f, r, nwl, wl, ce, block, capture, 0);
+}
+
+int
+__enqueue_kernel_basic_events_captures(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, uint nwl,
+                                       const clk_event_t *wl, clk_event_t *ce, void *block, void *capture)
+{
+    return enqueue_kernel_basic_events_impl(q, f, r, nwl, wl, ce, block, capture, BLOCK_HEADER_SIZE);
+}
+
+static inline int
+enqueue_kernel_varargs_impl(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture, uint nl,
+                            __private size_t *ll, uint capture_offset)
+{
+    uint block_size = ((uint *)capture)[0];
+    if (block_size < capture_offset)
+        return CLK_ENQUEUE_FAILURE;
+    uint csize = block_size - capture_offset;
     uint calign = ((uint *)capture)[1];
+    void *context = (char *)capture + capture_offset;
 
     const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
     uint lo = rti->group_segment_size;
@@ -369,7 +413,7 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     __global AmdAqlWrap *aw = (__global AmdAqlWrap *)(vq + 1) + ai;
 
     // Set up kernarg
-    copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
+    copy_captured_context(aw->aql.kernarg_address, context, csize, calign);
 
     __global uint *la = (__global uint *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(uint)));
     lo = rti->group_segment_size;
@@ -431,12 +475,31 @@ __enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r,
     return 0;
 }
 
+int
+__enqueue_kernel_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture, uint nl,
+                         __private size_t *ll)
+{
+    return enqueue_kernel_varargs_impl(q, f, r, block, capture, nl, ll, 0);
+}
 
 int
-__enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, int nwl, const clk_event_t *wl, clk_event_t *ce, void *block, void *capture, uint nl, __private size_t *ll)
+__enqueue_kernel_varargs_captures(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, void *block, void *capture,
+                                  uint nl, __private size_t *ll)
 {
-    uint csize = ((uint *)capture)[0];
+    return enqueue_kernel_varargs_impl(q, f, r, block, capture, nl, ll, BLOCK_HEADER_SIZE);
+}
+
+static inline int
+enqueue_kernel_events_varargs_impl(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, int nwl,
+                                   const clk_event_t *wl, clk_event_t *ce, void *block, void *capture, uint nl,
+                                   __private size_t *ll, uint capture_offset)
+{
+    uint block_size = ((uint *)capture)[0];
+    if (block_size < capture_offset)
+        return CLK_ENQUEUE_FAILURE;
+    uint csize = block_size - capture_offset;
     uint calign = ((uint *)capture)[1];
+    void *context = (char *)capture + capture_offset;
 
     const __global struct rtinfo *rti = (const __global struct rtinfo *)block;
     uint lo = rti->group_segment_size;
@@ -478,7 +541,7 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     __global AmdAqlWrap *aw = (__global AmdAqlWrap *)(vq + 1) + ai;
 
     // Set up kernarg
-    copy_captured_context(aw->aql.kernarg_address, capture, csize, calign);
+    copy_captured_context(aw->aql.kernarg_address, context, csize, calign);
 
     __global uint *la = (__global uint *)((__global char *)aw->aql.kernarg_address + align_up(csize, sizeof(uint)));
     lo = rti->group_segment_size;
@@ -540,3 +603,17 @@ __enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndran
     return 0;
 }
 
+int
+__enqueue_kernel_events_varargs(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, int nwl, const clk_event_t *wl,
+                                clk_event_t *ce, void *block, void *capture, uint nl, __private size_t *ll)
+{
+    return enqueue_kernel_events_varargs_impl(q, f, r, nwl, wl, ce, block, capture, nl, ll, 0);
+}
+
+int
+__enqueue_kernel_events_varargs_captures(queue_t q, kernel_enqueue_flags_t f, const ndrange_t r, int nwl,
+                                         const clk_event_t *wl, clk_event_t *ce, void *block, void *capture, uint nl,
+                                         __private size_t *ll)
+{
+    return enqueue_kernel_events_varargs_impl(q, f, r, nwl, wl, ce, block, capture, nl, ll, BLOCK_HEADER_SIZE);
+}

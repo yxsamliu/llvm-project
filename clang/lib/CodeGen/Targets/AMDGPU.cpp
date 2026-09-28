@@ -318,7 +318,13 @@ public:
                                const AtomicExpr *Expr = nullptr) const override;
   llvm::Value *createEnqueuedBlockKernel(CodeGenFunction &CGF,
                                          llvm::Function *BlockInvokeFunc,
-                                         llvm::Type *BlockTy) const override;
+                                         llvm::Type *BlockTy,
+                                         CharUnits BlockAlign) const override;
+  bool useOpenCLBlockCapturesAsKernelArg() const override {
+    // r600 uses a different block header layout.
+    return getABIInfo().getTarget().getTriple().getArch() ==
+           llvm::Triple::amdgpu;
+  }
   bool shouldEmitStaticExternCAliases() const override;
   bool shouldEmitDWARFBitFieldSeparators() const override;
   void setCUDAKernelCallingConvention(const FunctionType *&FT) const override;
@@ -617,18 +623,26 @@ getAMDGPURuntimeHandleType(llvm::LLVMContext &C,
 
 /// Create an OpenCL kernel for an enqueued block.
 ///
-/// The type of the first argument (the block literal) is the struct type
-/// of the block literal instead of a pointer type. The first argument
-/// (block literal) is passed directly by value to the kernel. The kernel
-/// allocates the same type of struct on stack and stores the block literal
-/// to it and passes its pointer to the block invoke function. The kernel
-/// has "enqueued-block" function attribute and kernel argument metadata.
+/// The captured fields of the block literal are passed by value to the
+/// kernel. The kernel restores them at their original offsets in a private
+/// block literal before calling the block invoke function.
 llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
-    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy) const {
+    CodeGenFunction &CGF, llvm::Function *Invoke, llvm::Type *BlockTy,
+    CharUnits BlockAlign) const {
   auto &Builder = CGF.Builder;
   auto &C = CGF.getLLVMContext();
 
   auto *InvokeFT = Invoke->getFunctionType();
+  auto *BlockStructTy = llvm::cast<llvm::StructType>(BlockTy);
+  bool CompactCaptures = useOpenCLBlockCapturesAsKernelArg();
+  bool HasCaptures = BlockStructTy->getNumElements() > 3;
+  bool HasBlockArg = !CompactCaptures || HasCaptures;
+  if (CompactCaptures) {
+    assert(BlockStructTy->getNumElements() >= 3 &&
+           "block literal must contain an OpenCL header");
+    assert((!HasCaptures || BlockStructTy->isPacked()) &&
+           "captured block literal must be packed");
+  }
   llvm::SmallVector<llvm::Type *, 2> ArgTys;
   llvm::SmallVector<llvm::Metadata *, 8> AddressQuals;
   llvm::SmallVector<llvm::Metadata *, 8> AccessQuals;
@@ -637,13 +651,19 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   llvm::SmallVector<llvm::Metadata *, 8> ArgTypeQuals;
   llvm::SmallVector<llvm::Metadata *, 8> ArgNames;
 
-  ArgTys.push_back(BlockTy);
-  ArgTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
-  AddressQuals.push_back(llvm::ConstantAsMetadata::get(Builder.getInt32(0)));
-  ArgBaseTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
-  ArgTypeQuals.push_back(llvm::MDString::get(C, ""));
-  AccessQuals.push_back(llvm::MDString::get(C, "none"));
-  ArgNames.push_back(llvm::MDString::get(C, "block_literal"));
+  llvm::StructType *CaptureTy = nullptr;
+  if (CompactCaptures && HasCaptures)
+    CaptureTy = llvm::StructType::get(
+        C, BlockStructTy->elements().drop_front(3), BlockStructTy->isPacked());
+  if (HasBlockArg) {
+    ArgTys.push_back(CompactCaptures ? CaptureTy : BlockTy);
+    ArgTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
+    AddressQuals.push_back(llvm::ConstantAsMetadata::get(Builder.getInt32(0)));
+    ArgBaseTypeNames.push_back(llvm::MDString::get(C, "__block_literal"));
+    ArgTypeQuals.push_back(llvm::MDString::get(C, ""));
+    AccessQuals.push_back(llvm::MDString::get(C, "none"));
+    ArgNames.push_back(llvm::MDString::get(C, "block_literal"));
+  }
   for (unsigned I = 1, E = InvokeFT->getNumParams(); I < E; ++I) {
     ArgTys.push_back(InvokeFT->getParamType(I));
     ArgTypeNames.push_back(llvm::MDString::get(C, "void*"));
@@ -657,6 +677,20 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
 
   llvm::Module &Mod = CGF.CGM.getModule();
   const llvm::DataLayout &DL = Mod.getDataLayout();
+  if (CompactCaptures) {
+    const llvm::StructLayout *BlockLayout = DL.getStructLayout(BlockStructTy);
+    assert(BlockLayout->getElementOffset(2) == 8 &&
+           "unexpected OpenCL block header layout");
+    if (HasCaptures) {
+      assert(BlockLayout->getElementOffset(3) == 16 &&
+             BlockLayout->getSizeInBytes() ==
+                 16 + DL.getTypeAllocSize(CaptureTy).getFixedValue() &&
+             "block header must be 16 bytes");
+    } else {
+      assert(BlockLayout->getSizeInBytes() == 16 &&
+             "block header must be 16 bytes");
+    }
+  }
 
   llvm::Twine Name = Invoke->getName() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
@@ -676,14 +710,20 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  const auto BlockAlign = DL.getPrefTypeAlign(BlockTy);
   auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
-  BlockPtr->setAlignment(BlockAlign);
-  Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
+  llvm::Align AllocAlign =
+      CompactCaptures ? BlockAlign.getAsAlign() : DL.getPrefTypeAlign(BlockTy);
+  BlockPtr->setAlignment(AllocAlign);
+  if (CompactCaptures && HasCaptures) {
+    auto *CapturePtr = Builder.CreateStructGEP(BlockStructTy, BlockPtr, 3);
+    Builder.CreateAlignedStore(F->arg_begin(), CapturePtr, llvm::Align(1));
+  } else if (!CompactCaptures) {
+    Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, AllocAlign);
+  }
   auto *Cast = Builder.CreatePointerCast(BlockPtr, InvokeFT->getParamType(0));
   llvm::SmallVector<llvm::Value *, 2> Args;
   Args.push_back(Cast);
-  for (llvm::Argument &A : llvm::drop_begin(F->args()))
+  for (llvm::Argument &A : llvm::drop_begin(F->args(), HasBlockArg ? 1 : 0))
     Args.push_back(&A);
   llvm::CallInst *call = Builder.CreateCall(Invoke, Args);
   call->setCallingConv(Invoke->getCallingConv());
