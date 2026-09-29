@@ -59,6 +59,11 @@ static cl::opt<bool> VerifyAnalysisInvalidation("verify-analysis-invalidation",
 #endif
 );
 
+static cl::opt<bool> InstNamerAfterEachPass(
+    "instnamer-after-each-pass", cl::Hidden,
+    cl::desc("Name unnamed IR values before and after each new-PM pass with "
+             "pipeline-unique names"));
+
 // An option that supports the -print-changed option.  See
 // the description for -print-changed for an explanation of the use
 // of this option.  Note that this option has no effect without -print-changed.
@@ -2564,7 +2569,8 @@ void PrintCrashIRInstrumentation::registerCallbacks(
 void StandardInstrumentations::registerCallbacks(
     PassInstrumentationCallbacks &PIC, ModuleAnalysisManager *MAM,
     ExtendedIRContext *IRContext) {
-  InstructionNamerPass::registerCallbacks(PIC);
+  if (InstNamerAfterEachPass)
+    InstructionNamerPass::registerCallbacks(PIC);
   PrintIR.registerCallbacks(PIC, IRContext);
   PrintPass.registerCallbacks(PIC, IRContext);
   TimePasses.registerCallbacks(PIC);
