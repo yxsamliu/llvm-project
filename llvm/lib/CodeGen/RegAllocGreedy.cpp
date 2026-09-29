@@ -1217,10 +1217,11 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     if (ExtraInfo->getOrInitStage(Reg.reg()) != RS_New)
       continue;
 
-    // Do not region-split a remainder again. A remainder confined to one
-    // block can still use local splitting and its existing progress checks.
+    // Do not region-split a remainder again. A local remainder with enough
+    // accesses can still use local splitting and its progress checks.
     if (IntvMap[I] == 0) {
-      if (Reg.empty() || !LIS->intervalIsInOneMBB(Reg))
+      if (Reg.empty() || !LIS->intervalIsInOneMBB(Reg) ||
+          !hasNItemsOrMore(MRI->reg_nodbg_instructions(Reg.reg()), 3))
         ExtraInfo->setStage(Reg, RS_Spill);
       continue;
     }
