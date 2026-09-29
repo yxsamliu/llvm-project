@@ -2685,7 +2685,6 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureBlock16ConversionScaleInsts,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
    FeatureGFX1250VALUBlockingCycles,
