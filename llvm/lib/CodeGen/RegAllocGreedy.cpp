@@ -1206,7 +1206,7 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   unsigned OrigBlocks = SA->getNumLiveBlocks();
 
   // Sort out the new intervals created by splitting. We get four kinds:
-  // - Remainder intervals should not be split again.
+  // - Multi-block remainder intervals should not be split again.
   // - Candidate intervals can be assigned to Cand.PhysReg.
   // - Block-local splits are candidates for local splitting.
   // - DCE leftovers should go back on the queue.
@@ -1217,10 +1217,11 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     if (ExtraInfo->getOrInitStage(Reg.reg()) != RS_New)
       continue;
 
-    // Remainder interval. Don't try splitting again, spill if it doesn't
-    // allocate.
+    // Do not region-split a remainder again. A remainder confined to one
+    // block can still use local splitting and its existing progress checks.
     if (IntvMap[I] == 0) {
-      ExtraInfo->setStage(Reg, RS_Spill);
+      if (Reg.empty() || !LIS->intervalIsInOneMBB(Reg))
+        ExtraInfo->setStage(Reg, RS_Spill);
       continue;
     }
 
