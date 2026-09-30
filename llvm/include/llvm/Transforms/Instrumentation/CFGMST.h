@@ -259,9 +259,13 @@ template <class Edge, class BBInfo> class CFGMST {
     for (auto &Ei : AllEdges) {
       if (Ei->Removed)
         continue;
-      // If we detect infinite loops, force
-      // instrumenting the entry edge:
-      if (!ExitBlockFound && Ei->SrcBB == nullptr)
+      // Forced instrumentation may disconnect the graph. A spanning forest
+      // still allows the remaining edge counts to be reconstructed, with the
+      // extra counters supplying the counts between its components.
+      if (Ei->SrcBB == nullptr && (!ExitBlockFound || InstrumentFuncEntry))
+        continue;
+      if (InstrumentLoopEntries && Ei->DestBB && LI->isLoopHeader(Ei->DestBB) &&
+          !LI->getLoopFor(Ei->DestBB)->contains(Ei->SrcBB))
         continue;
       if (unionGroups(Ei->SrcBB, Ei->DestBB))
         Ei->InMST = true;
