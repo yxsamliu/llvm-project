@@ -80,15 +80,20 @@ using namespace llvm;
 #define DEBUG_TYPE "regalloc"
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
-STATISTIC(NumLocalSplits,  "Number of split local live ranges");
-STATISTIC(NumEvicted,      "Number of interferences evicted");
+STATISTIC(NumLocalSplits, "Number of split local live ranges");
+STATISTIC(NumEvicted, "Number of interferences evicted");
+
+static cl::opt<bool> EnableWaveRegionCostBound(
+    "enable-wave-region-cost-bound", cl::Hidden, cl::init(false),
+    cl::desc("Reject regions with a proven higher wave spill cost"));
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
     cl::desc("Spill mode for splitting live ranges"),
     cl::values(clEnumValN(SplitEditor::SM_Partition, "default", "Default"),
                clEnumValN(SplitEditor::SM_Size, "size", "Optimize for size"),
-               clEnumValN(SplitEditor::SM_Speed, "speed", "Optimize for speed")),
+               clEnumValN(SplitEditor::SM_Speed, "speed",
+                          "Optimize for speed")),
     cl::init(SplitEditor::SM_Speed));
 
 static cl::opt<unsigned>
@@ -740,7 +745,8 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 /// that all preferences in SplitConstraints are met.
 /// Return false if there are no bundles with positive bias.
 bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
-                                   BlockFrequency &Cost) {
+                                   BlockFrequency &Cost,
+                                   SmallVectorImpl<int64_t> *CostDifference) {
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
 
   // Reset interference dependent info.
@@ -798,6 +804,8 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
       }
     }
 
+    if (CostDifference)
+      (*CostDifference)[BC.Number] += Ins;
     // Accumulate the total frequency of inserted spill code.
     while (Ins--)
       StaticCost += SpillPlacer->getBlockFrequency(BC.Number);
@@ -1013,8 +1021,10 @@ BlockFrequency RAGreedy::calcBlockSplitCost() {
 /// pattern in LiveBundles. This cost should be added to the local cost of the
 /// interference pattern in SplitConstraints.
 ///
-BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
-                                             const AllocationOrder &Order) {
+BlockFrequency
+RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
+                              const AllocationOrder &Order,
+                              SmallVectorImpl<int64_t> *CostDifference) {
   BlockFrequency GlobalCost = BlockFrequency(0);
   const BitVector &LiveBundles = Cand.LiveBundles;
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
@@ -1031,6 +1041,8 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
       Ins += RegIn != (BC.Entry == SpillPlacement::PrefReg);
     if (BI.LiveOut)
       Ins += RegOut != (BC.Exit == SpillPlacement::PrefReg);
+    if (CostDifference)
+      (*CostDifference)[BC.Number] += Ins;
     while (Ins--)
       GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
   }
@@ -1044,12 +1056,16 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
       // We need double spill code if this block has interference.
       Cand.Intf.moveToBlock(Number);
       if (Cand.Intf.hasInterference()) {
+        if (CostDifference)
+          (*CostDifference)[Number] += 2;
         GlobalCost += SpillPlacer->getBlockFrequency(Number);
         GlobalCost += SpillPlacer->getBlockFrequency(Number);
       }
       continue;
     }
     // live-in / stack-out or stack-in live-out.
+    if (CostDifference)
+      ++(*CostDifference)[Number];
     GlobalCost += SpillPlacer->getBlockFrequency(Number);
   }
   return GlobalCost;
@@ -1232,6 +1248,19 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
 
+  if (EnableWaveRegionCostBound && HasCompact && BestCand != NoCand &&
+      BestCost >= SpillCost && BestCost != BlockFrequency::max() &&
+      SpillCost != BlockFrequency::max() &&
+      GlobalCand[BestCand].WaveCostExceedsBlockSplit) {
+    // doRegionSplit also assigns uncovered compact bundles. The physical
+    // candidate's cost is sufficient only when that union adds no bundles.
+    const BitVector &Physical = GlobalCand[BestCand].LiveBundles;
+    bool ExtraCompact = llvm::any_of(GlobalCand.front().LiveBundles.set_bits(),
+                                     [&](int I) { return !Physical.test(I); });
+    if (!ExtraCompact) {
+      return MCRegister::NoRegister;
+    }
+  }
   // No solutions found, fall back to single block splitting.
   if (!HasCompact && BestCand == NoCand)
     return MCRegister::NoRegister;
@@ -1269,9 +1298,19 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
   GlobalSplitCandidate &Cand = GlobalCand[NumCands];
   Cand.reset(IntfCache, PhysReg);
 
+  SmallVector<int64_t> CostDifference;
+  SmallVectorImpl<int64_t> *Difference = nullptr;
+  if (EnableWaveRegionCostBound && SpillPlacer->hasMeasuredWaveBlocks()) {
+    CostDifference.resize(MF->getNumBlockIDs());
+    Difference = &CostDifference;
+    // Use-block entries are not unique by block; accumulate every term.
+    for (const auto &BI : SA->getUseBlocks())
+      CostDifference[BI.MBB->getNumber()] -=
+          1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef);
+  }
   SpillPlacer->prepare(Cand.LiveBundles);
   BlockFrequency Cost;
-  if (!addSplitConstraints(Cand.Intf, Cost)) {
+  if (!addSplitConstraints(Cand.Intf, Cost, Difference)) {
     LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
     return BestCand;
   }
@@ -1300,7 +1339,10 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
     return BestCand;
   }
 
-  Cost += calcGlobalSplitCost(Cand, Order);
+  Cost += calcGlobalSplitCost(Cand, Order, Difference);
+  if (Difference)
+    Cand.WaveCostExceedsBlockSplit =
+        SpillPlacer->isWaveCostDifferencePositive(CostDifference);
   LLVM_DEBUG({
     dbgs() << ", total = " << printBlockFreq(*MBFI, Cost) << " with bundles";
     for (int I : Cand.LiveBundles.set_bits())
