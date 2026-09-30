@@ -1,5 +1,5 @@
 ; RUN: split-file %s %t
-; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -S %t/input.ll | FileCheck %s --check-prefix=GEN
+; RUN: opt -passes=pgo-instr-gen -pgo-instrument-entry -pgo-instrument-dense-wave-counts=false -S %t/input.ll | FileCheck %s --check-prefix=GEN
 ; RUN: %python %t/raw.py > %t/profile.raw
 ; RUN: llvm-profdata merge %t/profile.raw -o %t/profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/profile -S %t/input.ll -o %t/default.ll
@@ -15,6 +15,8 @@
 ; RUN: llvm-profdata merge %t/zero.raw -o %t/zero.profile
 ; RUN: opt -passes=pgo-instr-use,verify -pgo-test-profile-file=%t/zero.profile -pgo-uniformity-metadata=false -S %t/default.ll | FileCheck %s --check-prefix=ZERO --implicit-check-not=uniformity.profile
 
+; This legacy sparse fixture disables dense generation explicitly.
+; Its recorded layout controls profile use even with dense generation enabled.
 ; The fixture follows the real instrumented counter order. Both block counters
 ; observe full-wave entries. The select counter is unrelated to block metadata.
 ; GEN-LABEL: define void @diamond
