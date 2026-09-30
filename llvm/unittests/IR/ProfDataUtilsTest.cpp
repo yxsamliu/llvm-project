@@ -814,4 +814,67 @@ TEST_F(WaveProfileTest, TransferInvalidatesDiscardedMetadataEdit) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(WaveProfileTest, TransferForgetsTransplantedIdentity) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 10, 90, 100});
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BasicBlock *Right = Left->getNextNode();
+  BlockWaveCountPreserver Profile(F);
+  Profile.forget(*Left);
+  Left->getTerminator()->setMetadata(
+      LLVMContext::MD_wave_profile_block,
+      Right->getTerminator()->getMetadata(LLVMContext::MD_wave_profile_block));
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(4, {0, 2, 3}));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{100, 0, 90, 100}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferForgetsEntryWithoutLosingNormalization) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 10, 90, 100});
+  BlockWaveCountPreserver Profile(F);
+  Profile.forget(F.getEntryBlock());
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Entry, 100u);
+  EXPECT_EQ(Valid, makeBitVector(4, {1, 2, 3}));
+  EXPECT_EQ(Counts, (SmallVector<uint64_t>{0, 10, 90, 100}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferForgottenIdentityKeepsInvalidCountsInvalid) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 10, 90, 100}, makeBitVector(4, {0, 2, 3}));
+  BasicBlock *Left = F.getEntryBlock().getNextNode();
+  BlockWaveCountPreserver Profile(F);
+  Profile.forget(*Left->getNextNode());
+  Profile.restore();
+  SmallVector<uint64_t> Counts;
+  BitVector Valid;
+  uint64_t Entry;
+  ASSERT_TRUE(extractMappedBlockWaveCounts(F, Counts, Valid, Entry));
+  EXPECT_EQ(Valid, makeBitVector(4, {0, 3}));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
+TEST_F(WaveProfileTest, TransferForgottenIdentityRespectsProfileReplacement) {
+  Function &F = *M->getFunction("diamond");
+  setBlockWaveCounts(F, {100, 10, 90, 100});
+  BlockWaveCountPreserver Profile(F);
+  Profile.forget(*F.getEntryBlock().getNextNode());
+  setBlockWaveCounts(F, {200, 20, 180, 200});
+  Profile.restore();
+  EXPECT_FALSE(F.getMetadata(LLVMContext::MD_wave_profile));
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+}
+
 } // namespace
