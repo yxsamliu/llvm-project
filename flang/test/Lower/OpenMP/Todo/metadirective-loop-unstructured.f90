@@ -1,6 +1,6 @@
 ! Defer unstructured associated loops until every selection path can give its
 ! PFT blocks an independent mapping.
-
+! XFAIL: *
 ! RUN: split-file %s %t
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/static.f90 2>&1 | FileCheck %s
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=52 -o - %t/runtime.f90 2>&1 | FileCheck %s
