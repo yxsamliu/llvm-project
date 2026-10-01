@@ -65,9 +65,12 @@ static cl::opt<bool> ReportIntegratedSpill(
     "report-integrated-spill", cl::Hidden, cl::init(false),
     cl::desc("Report uniformity fallback and marginal wave spill costs"));
 
-static cl::opt<bool> EnableWaveProfiledSpill(
-    "enable-wave-profiled-spill", cl::Hidden, cl::init(true),
-    cl::desc("Use validated AMDGPU wave counts for spill placement"));
+static cl::opt<bool> WaveGuidedSpillPlacement(
+    "wave-guided-spill-placement", cl::Hidden, cl::init(true),
+    cl::desc("Use validated wave counts for spill-placement frequencies"));
+static cl::opt<bool> WaveGuidedSpillCosts(
+    "wave-guided-spill-costs", cl::Hidden, cl::init(true),
+    cl::desc("Use validated wave counts to bound region spill costs"));
 static cl::opt<bool> ReportWaveProfiledSpill(
     "report-wave-profiled-spill", cl::Hidden, cl::init(false),
     cl::desc("Report wave-count mapping and spill-cost coverage"));
@@ -302,7 +305,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
   unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
-      EnableWaveProfiledSpill &&
+      (WaveGuidedSpillPlacement || WaveGuidedSpillCosts) &&
       mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
       extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
                                    EntryWaveCount) &&
@@ -332,7 +335,11 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
         continue;
       }
       uint64_t Count = WaveCounts[Index++];
-      RawWaveCounts[&BB] = Count;
+      // Keep the two consumers independent after validating the mapping.
+      if (WaveGuidedSpillCosts)
+        RawWaveCounts[&BB] = Count;
+      if (!WaveGuidedSpillPlacement)
+        continue;
       uint64_t Frequency =
           ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
               .scale(MBFI->getEntryFreq().getFrequency());
@@ -370,9 +377,12 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
     if (Wave != WaveFrequencies.end())
       MarginalWaveChanges += Wave->second != Fallback;
 
-    if (Wave != WaveFrequencies.end()) {
+    if (auto Count = RawWaveCounts.find(I.getBasicBlock());
+        Count != RawWaveCounts.end()) {
       MeasuredWaveBlocks.set(Num);
-      MeasuredWaveCounts[Num] = RawWaveCounts.lookup(I.getBasicBlock());
+      MeasuredWaveCounts[Num] = Count->second;
+    }
+    if (Wave != WaveFrequencies.end()) {
       if (ReportWaveProfiledSpill)
         ChangedWaveCosts += Wave->second != MBFI->getBlockFreq(&I);
       LLVM_DEBUG(dbgs() << "Wave spill frequency " << mf.getName() << " "
@@ -385,7 +395,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
     errs() << "INTEGRATED_SPILL\t" << mf.getName() << "\t"
            << UseUniformity << "\t" << FallbackBlocks << "\t"
            << WaveFrequencies.size() << "\t" << MarginalWaveChanges << "\n";
-  if (ReportWaveProfiledSpill && EnableWaveProfiledSpill)
+  if (ReportWaveProfiledSpill && WaveGuidedSpillPlacement)
     errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
            << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
            << "\t" << ChangedWaveCosts << "\n";

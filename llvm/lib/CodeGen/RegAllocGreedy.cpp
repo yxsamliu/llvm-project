@@ -83,10 +83,6 @@ STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
 
-static cl::opt<bool> EnableWaveRegionCostBound(
-    "enable-wave-region-cost-bound", cl::Hidden, cl::init(true),
-    cl::desc("Reject regions with a proven higher wave spill cost"));
-
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
     "split-spill-mode", cl::Hidden,
     cl::desc("Spill mode for splitting live ranges"),
@@ -1247,9 +1243,8 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
 
-  if (EnableWaveRegionCostBound && HasCompact && BestCand != NoCand &&
-      BestCost >= SpillCost && BestCost != BlockFrequency::max() &&
-      SpillCost != BlockFrequency::max() &&
+  if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
+      BestCost != BlockFrequency::max() && SpillCost != BlockFrequency::max() &&
       GlobalCand[BestCand].WaveCostExceedsBlockSplit) {
     // doRegionSplit also assigns uncovered compact bundles. The physical
     // candidate's cost is sufficient only when that union adds no bundles.
@@ -1298,7 +1293,7 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
 
   SmallVector<int64_t> CostDifference;
   SmallVectorImpl<int64_t> *Difference = nullptr;
-  if (EnableWaveRegionCostBound && SpillPlacer->hasMeasuredWaveBlocks()) {
+  if (SpillPlacer->hasMeasuredWaveBlocks()) {
     CostDifference.resize(MF->getNumBlockIDs());
     Difference = &CostDifference;
     // Use-block entries are not unique by block; accumulate every term.

@@ -11,7 +11,10 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TargetSelect.h"
+#include <tuple>
 
 using namespace llvm;
 
@@ -123,4 +126,36 @@ TEST_F(WaveRegionCostTest, SaturatedCount) {
   setBlockWaveCounts(*Mod->getFunction("test"), {1, 0, UINT64_MAX, 0, 0});
   EXPECT_FALSE(placement().isWaveCostDifferencePositive({0, 0, 1, 0, 0}));
 }
+
+class WaveSpillOptionsTest
+    : public WaveRegionCostTest,
+      public testing::WithParamInterface<std::tuple<bool, bool>> {};
+
+TEST_P(WaveSpillOptionsTest, IndependentConsumers) {
+  auto [UsePlacement, UseCosts] = GetParam();
+  auto &Options = cl::getRegisteredOptions();
+  auto *Placement = static_cast<cl::opt<bool> *>(
+      Options.lookup("wave-guided-spill-placement"));
+  auto *Costs =
+      static_cast<cl::opt<bool> *>(Options.lookup("wave-guided-spill-costs"));
+  ASSERT_NE(Placement, nullptr);
+  ASSERT_NE(Costs, nullptr);
+  SaveAndRestore<bool> RestorePlacement(Placement->getValue(), UsePlacement);
+  SaveAndRestore<bool> RestoreCosts(Costs->getValue(), UseCosts);
+
+  auto &MF = getMF("test");
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto &SP = placement();
+  EXPECT_EQ(SP.hasMeasuredWaveBlocks(), UseCosts);
+  // A positive raw-count bound survives disabling frequency reweighting.
+  EXPECT_EQ(SP.isWaveCostDifferencePositive({0, -2, 1, 0, 0}), UseCosts);
+  // Placement still uses the measured-zero floor with cost bounds disabled.
+  BlockFrequency Expected = UsePlacement
+                                ? BlockFrequency(1)
+                                : MBFI.getBlockFreq(MF.getBlockNumbered(4));
+  EXPECT_EQ(SP.getBlockFrequency(4), Expected);
+}
+
+INSTANTIATE_TEST_SUITE_P(IndependentOptions, WaveSpillOptionsTest,
+                         testing::Combine(testing::Bool(), testing::Bool()));
 } // namespace

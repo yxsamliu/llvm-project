@@ -159,6 +159,8 @@ public:
     return BlockFrequencies[Number];
   }
 
+  /// Raw counts for the optional wave-guided spill-cost comparison. Their
+  /// availability is independent of the spill-placement frequency policy.
   bool hasMeasuredWaveBlocks() const { return MeasuredWaveBlocks.any(); }
 
   /// Bound a signed difference of spill executions using original wave counts.
