@@ -27,6 +27,7 @@
 #define LLVM_LIB_CODEGEN_SPILLPLACEMENT_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -35,7 +36,6 @@
 
 namespace llvm {
 
-class BitVector;
 class BlockUniformityProfile;
 class EdgeBundles;
 class MachineBlockFrequencyInfo;
@@ -65,6 +65,10 @@ class SpillPlacement {
 
   // Block frequencies are computed once. Indexed by block number.
   SmallVector<BlockFrequency, 8> BlockFrequencies;
+  BitVector MeasuredWaveBlocks;
+  SmallVector<uint64_t> MeasuredWaveCounts;
+  uint64_t NormalizationWaveCount = 0;
+  BitVector AcyclicBlocks;
 
   /// Decision threshold. A node gets the output value 0 if the weighted sum of
   /// its inputs falls in the open interval (-Threshold;Threshold).
@@ -154,6 +158,15 @@ public:
   BlockFrequency getBlockFrequency(unsigned Number) const {
     return BlockFrequencies[Number];
   }
+
+  bool hasMeasuredWaveBlocks() const { return MeasuredWaveBlocks.any(); }
+
+  /// Bound a signed difference of spill executions using original wave counts.
+  /// Missing acyclic blocks lie in [0, entry count]; missing cyclic blocks have
+  /// no finite upper bound. Spill-placement floors and scaling are excluded.
+  /// This orders modeled spill executions in the training run, not a runtime
+  /// profitability guarantee. Return false if arithmetic is not representable.
+  LLVM_ABI bool isWaveCostDifferencePositive(ArrayRef<int64_t> Coefficients);
 
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &Inv);

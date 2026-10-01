@@ -27,12 +27,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/SpillPlacement.h"
-#include "llvm/CodeGen/BlockUniformityProfile.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/UniformityAnalysis.h"
+#include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -44,6 +45,7 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScaledNumber.h"
@@ -297,6 +299,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   BitVector HasWaveCount;
   uint64_t EntryWaveCount = 0;
   DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
+  DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
   unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
       EnableWaveProfiledSpill &&
@@ -329,6 +332,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
         continue;
       }
       uint64_t Count = WaveCounts[Index++];
+      RawWaveCounts[&BB] = Count;
       uint64_t Frequency =
           ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
               .scale(MBFI->getEntryFreq().getFrequency());
@@ -340,6 +344,11 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
+  MeasuredWaveBlocks.clear();
+  MeasuredWaveBlocks.resize(mf.getNumBlockIDs());
+  AcyclicBlocks.clear();
+  MeasuredWaveCounts.assign(mf.getNumBlockIDs(), 0);
+  NormalizationWaveCount = EntryWaveCount;
   setThreshold(MBFI->getEntryFreq());
   unsigned ChangedWaveCosts = 0;
   unsigned FallbackBlocks = 0, MarginalWaveChanges = 0;
@@ -360,7 +369,10 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
         Wave == WaveFrequencies.end() ? Fallback : Wave->second;
     if (Wave != WaveFrequencies.end())
       MarginalWaveChanges += Wave->second != Fallback;
+
     if (Wave != WaveFrequencies.end()) {
+      MeasuredWaveBlocks.set(Num);
+      MeasuredWaveCounts[Num] = RawWaveCounts.lookup(I.getBasicBlock());
       if (ReportWaveProfiledSpill)
         ChangedWaveCosts += Wave->second != MBFI->getBlockFreq(&I);
       LLVM_DEBUG(dbgs() << "Wave spill frequency " << mf.getName() << " "
@@ -377,6 +389,47 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
     errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
            << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
            << "\t" << ChangedWaveCosts << "\n";
+}
+
+bool SpillPlacement::isWaveCostDifferencePositive(
+    ArrayRef<int64_t> Coefficients) {
+  if (!hasMeasuredWaveBlocks())
+    return false;
+  assert(Coefficients.size() == BlockFrequencies.size());
+  if (AcyclicBlocks.empty()) {
+    AcyclicBlocks.resize(MF->getNumBlockIDs());
+    // Unreachable blocks are left unknown. SCCs include irreducible cycles.
+    for (auto I = scc_begin(MF); !I.isAtEnd(); ++I)
+      if (!I.hasCycle())
+        AcyclicBlocks.set(I->front()->getNumber());
+  }
+
+  uint64_t Positive = 0, Negative = 0;
+  for (unsigned I = 0; I != Coefficients.size(); ++I) {
+    int64_t C = Coefficients[I];
+    if (!C)
+      continue;
+    uint64_t Frequency = 0;
+    if (MeasuredWaveBlocks.test(I)) {
+      Frequency = MeasuredWaveCounts[I];
+    } else if (C < 0) {
+      if (!AcyclicBlocks.test(I))
+        return false;
+      Frequency = NormalizationWaveCount;
+    }
+    // Reject potentially saturated counters and unrepresentable arithmetic.
+    if (Frequency == UINT64_MAX || C == INT64_MIN)
+      return false;
+    auto Product = checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
+    if (!Product)
+      return false;
+    uint64_t &Sum = C < 0 ? Negative : Positive;
+    auto Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
+    if (!Total)
+      return false;
+    Sum = *Total;
+  }
+  return Positive > Negative;
 }
 
 /// activate - mark node n as active if it wasn't already.

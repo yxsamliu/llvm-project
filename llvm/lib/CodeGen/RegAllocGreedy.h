@@ -227,6 +227,7 @@ private:
   struct GlobalSplitCandidate {
     // Register intended for assignment, or 0.
     MCRegister PhysReg;
+    bool WaveCostExceedsBlockSplit = false;
 
     // SplitKit interval index for this candidate.
     unsigned IntvIdx;
@@ -240,6 +241,7 @@ private:
 
     void reset(InterferenceCache &Cache, MCRegister Reg) {
       PhysReg = Reg;
+      WaveCostExceedsBlockSplit = false;
       IntvIdx = 0;
       Intf.setPhysReg(Cache, Reg);
       LiveBundles.clear();
@@ -313,11 +315,13 @@ private:
 
   bool hasVirtRegAlloc();
   BlockFrequency calcBlockSplitCost();
-  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &);
+  bool addSplitConstraints(InterferenceCache::Cursor, BlockFrequency &,
+                           SmallVectorImpl<int64_t> *CostDifference = nullptr);
   bool addThroughConstraints(InterferenceCache::Cursor, ArrayRef<unsigned>);
   bool growRegion(GlobalSplitCandidate &Cand);
-  BlockFrequency calcGlobalSplitCost(GlobalSplitCandidate &,
-                                     const AllocationOrder &Order);
+  BlockFrequency
+  calcGlobalSplitCost(GlobalSplitCandidate &, const AllocationOrder &Order,
+                      SmallVectorImpl<int64_t> *CostDifference = nullptr);
   bool calcCompactRegion(GlobalSplitCandidate &);
   void splitAroundRegion(LiveRangeEdit &, ArrayRef<unsigned>);
   void calcGapWeights(MCRegister, SmallVectorImpl<float> &);
