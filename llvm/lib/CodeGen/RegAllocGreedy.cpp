@@ -84,7 +84,7 @@ STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
 
 static cl::opt<bool> EnableWaveRegionCostBound(
-    "enable-wave-region-cost-bound", cl::Hidden, cl::init(false),
+    "enable-wave-region-cost-bound", cl::Hidden, cl::init(true),
     cl::desc("Reject regions with a proven higher wave spill cost"));
 
 static cl::opt<SplitEditor::ComplementSpillMode> SplitSpillMode(
