@@ -1034,12 +1034,21 @@ unsigned
 llvm::SplitAllCriticalEdges(Function &F,
                             const CriticalEdgeSplittingOptions &Options) {
   unsigned NumBroken = 0;
+  // Reuse a temporary tree across the batch when loop metadata needs it.
+  DominatorTree LocalDT;
+  auto SplitOptions = Options;
   for (BasicBlock &BB : F) {
     Instruction *TI = BB.getTerminator();
-    if (TI->getNumSuccessors() > 1 && !isa<IndirectBrInst>(TI))
+    if (TI->getNumSuccessors() > 1 && !isa<IndirectBrInst>(TI)) {
+      if (!SplitOptions.DT && !SplitOptions.LI &&
+          TI->getMetadata(LLVMContext::MD_loop)) {
+        LocalDT.recalculate(F);
+        SplitOptions.DT = &LocalDT;
+      }
       for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
-        if (SplitCriticalEdge(TI, i, Options))
+        if (SplitCriticalEdge(TI, i, SplitOptions))
           ++NumBroken;
+    }
   }
   return NumBroken;
 }

@@ -176,8 +176,6 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
   // Create our unconditional branch.
   UncondBrInst *NewBI = UncondBrInst::Create(DestBB, NewBB);
   NewBI->setDebugLoc(TI->getDebugLoc());
-  if (auto *LoopMD = TI->getMetadata(LLVMContext::MD_loop))
-    NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
 
   // Insert the block into the function... right after the block TI lives in.
   Function &F = *TIBB->getParent();
@@ -228,16 +226,12 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
     }
   }
 
-  // If we have nothing to update, just return.
   auto *DT = Options.DT;
   auto *PDT = Options.PDT;
   auto *MSSAU = Options.MSSAU;
   if (MSSAU)
     MSSAU->wireOldPredecessorsToNewImmediatePredecessor(
         DestBB, NewBB, {TIBB}, Options.MergeIdenticalEdges);
-
-  if (!DT && !PDT && !LI)
-    return NewBB;
 
   if (DT || PDT) {
     // Update the DominatorTree.
@@ -259,6 +253,34 @@ llvm::SplitKnownCriticalEdge(Instruction *TI, unsigned SuccNum,
       DT->applyUpdates(Updates);
     if (PDT)
       PDT->applyUpdates(Updates);
+  }
+
+  if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop)) {
+    Loop *L = LI ? LI->getLoopFor(TIBB) : nullptr;
+    DominatorTree LocalDT;
+    if (!L && !DT)
+      LocalDT.recalculate(F);
+    const DominatorTree &LoopDT = DT ? *DT : LocalDT;
+
+    // A terminator may latch several nested loops. Preserve the metadata on
+    // every remaining backedge, including those of enclosing loops.
+    auto IsBackedge = [&](BasicBlock *Succ) {
+      if (L) {
+        for (Loop *Parent = L; Parent; Parent = Parent->getParentLoop())
+          if (Parent->getHeader() == Succ)
+            return true;
+        return false;
+      }
+      return LoopDT.dominates(Succ, TIBB);
+    };
+    if (!L && !LoopDT.isReachableFromEntry(TIBB)) {
+      NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+    } else {
+      if (IsBackedge(DestBB))
+        NewBI->setMetadata(LLVMContext::MD_loop, LoopMD);
+      if (none_of(successors(TIBB), IsBackedge))
+        TI->setMetadata(LLVMContext::MD_loop, nullptr);
+    }
   }
 
   // Update LoopInfo if it is around.
