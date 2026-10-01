@@ -65,6 +65,7 @@ class SpillPlacement {
 
   // Block frequencies are computed once. Indexed by block number.
   SmallVector<BlockFrequency, 8> BlockFrequencies;
+  // Empty when no block has an accepted wave count.
   BitVector MeasuredWaveBlocks;
   SmallVector<uint64_t> MeasuredWaveCounts;
   uint64_t NormalizationWaveCount = 0;
@@ -161,7 +162,7 @@ public:
 
   /// Raw counts for the optional wave-guided spill-cost comparison. Their
   /// availability is independent of the spill-placement frequency policy.
-  bool hasMeasuredWaveBlocks() const { return MeasuredWaveBlocks.any(); }
+  bool hasMeasuredWaveBlocks() const { return !MeasuredWaveBlocks.empty(); }
 
   /// Bound a signed difference of spill executions using original wave counts.
   /// Missing acyclic blocks lie in [0, entry count]; missing cyclic blocks have

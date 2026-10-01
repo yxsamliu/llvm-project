@@ -52,6 +52,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -352,9 +353,12 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
   MeasuredWaveBlocks.clear();
-  MeasuredWaveBlocks.resize(mf.getNumBlockIDs());
+  MeasuredWaveCounts.clear();
+  if (!RawWaveCounts.empty()) {
+    MeasuredWaveBlocks.resize(mf.getNumBlockIDs());
+    MeasuredWaveCounts.assign(mf.getNumBlockIDs(), 0);
+  }
   AcyclicBlocks.clear();
-  MeasuredWaveCounts.assign(mf.getNumBlockIDs(), 0);
   NormalizationWaveCount = EntryWaveCount;
   setThreshold(MBFI->getEntryFreq());
   unsigned ChangedWaveCosts = 0;
@@ -409,9 +413,10 @@ bool SpillPlacement::isWaveCostDifferencePositive(
   if (AcyclicBlocks.empty()) {
     AcyclicBlocks.resize(MF->getNumBlockIDs());
     // Unreachable blocks are left unknown. SCCs include irreducible cycles.
-    for (auto I = scc_begin(MF); !I.isAtEnd(); ++I)
+    for (auto I = scc_begin(MF); !I.isAtEnd(); ++I) {
       if (!I.hasCycle())
         AcyclicBlocks.set(I->front()->getNumber());
+    }
   }
 
   uint64_t Positive = 0, Negative = 0;
@@ -430,11 +435,12 @@ bool SpillPlacement::isWaveCostDifferencePositive(
     // Reject potentially saturated counters and unrepresentable arithmetic.
     if (Frequency == UINT64_MAX || C == INT64_MIN)
       return false;
-    auto Product = checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
+    std::optional<uint64_t> Product =
+        checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
     if (!Product)
       return false;
     uint64_t &Sum = C < 0 ? Negative : Positive;
-    auto Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
+    std::optional<uint64_t> Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
     if (!Total)
       return false;
     Sum = *Total;
