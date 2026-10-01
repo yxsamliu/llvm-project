@@ -122,6 +122,9 @@ protected: // Can only create subclasses.
   unsigned RequireStructuredCFG : 1;
   unsigned O0WantsFastISel : 1;
 
+  /// Set if the target supports default outlining behaviour.
+  unsigned SupportsDefaultOutlining : 1;
+
   // PGO related tunables.
   std::optional<PGOOptions> PGOOption;
 
@@ -270,6 +273,11 @@ public:
   bool requiresStructuredCFG() const { return RequireStructuredCFG; }
   void setRequiresStructuredCFG(bool Value) { RequireStructuredCFG = Value; }
 
+  bool supportsDefaultOutlining() const { return SupportsDefaultOutlining; }
+  void setSupportsDefaultOutlining(bool Enable) {
+    SupportsDefaultOutlining = Enable;
+  }
+
   /// Returns the code generation relocation model. The choices are static, PIC,
   /// and dynamic-no-pic, and target default.
   Reloc::Model getRelocationModel() const;
@@ -316,9 +324,6 @@ public:
   }
   void setMachineOutliner(bool Enable) {
     Options.EnableMachineOutliner = Enable;
-  }
-  void setSupportsDefaultOutlining(bool Enable) {
-    Options.SupportsDefaultOutlining = Enable;
   }
   void setSupportsDebugEntryValues(bool Enable) {
     Options.SupportsDebugEntryValues = Enable;
