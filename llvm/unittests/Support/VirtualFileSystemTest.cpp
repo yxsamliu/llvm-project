@@ -12,6 +12,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -20,6 +21,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cstdlib>
 #include <map>
 #include <string>
 #include <thread>
@@ -225,6 +227,53 @@ std::string getPosixPath(const Twine &S) {
   return std::string(Result.str());
 }
 } // end anonymous namespace
+
+#if GTEST_HAS_DEATH_TEST
+namespace {
+bool CheckFileSystemDuringExit = false;
+// Register before GoogleTest can initialize the filesystem. Only the exit-test
+// subprocess enables the callback.
+const int RegisterFileSystemExitCheck = std::atexit([] {
+  if (!CheckFileSystemDuringExit)
+    return;
+  auto FS = vfs::getRealFileSystem();
+  auto CWD = FS->getCurrentWorkingDirectory();
+  if (!CWD || !FS->status(*CWD))
+    std::_Exit(1);
+});
+} // namespace
+
+TEST(VirtualFileSystemDeathTest, UseDuringProcessExit) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  ASSERT_EXIT(
+      {
+        if (RegisterFileSystemExitCheck)
+          std::_Exit(1);
+        CheckFileSystemDuringExit = true;
+        {
+          auto FS = vfs::getRealFileSystem();
+          if (!FS->getCurrentWorkingDirectory())
+            std::_Exit(1);
+        }
+        std::exit(0);
+      },
+      testing::ExitedWithCode(0), "");
+}
+
+TEST(VirtualFileSystemDeathTest, ExplicitShutdown) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+  ASSERT_EXIT(
+      {
+        auto FS = vfs::getRealFileSystem();
+        if (FS->UseCount() != 2)
+          std::_Exit(1);
+        llvm_shutdown();
+        // Shutdown releases the shared owner, leaving this caller's reference.
+        std::_Exit(FS->UseCount() == 1 ? 0 : 1);
+      },
+      testing::ExitedWithCode(0), "");
+}
+#endif
 
 TEST(VirtualFileSystemTest, StatusQueries) {
   auto D = makeIntrusiveRefCnt<DummyFileSystem>();

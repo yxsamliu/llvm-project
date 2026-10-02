@@ -372,6 +372,8 @@ protected:
 /// the operating system.
 /// The working directory is linked to the process's working directory.
 /// (This is usually thread-hostile).
+/// The shared instance is retained until llvm_shutdown(), including during
+/// process exit handlers.
 /// This may only be called outside the IO sandbox.
 LLVM_ABI IntrusiveRefCntPtr<FileSystem> getRealFileSystem();
 

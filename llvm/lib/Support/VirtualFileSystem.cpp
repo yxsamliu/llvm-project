@@ -32,6 +32,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
@@ -418,12 +419,22 @@ void RealFileSystem::printImpl(raw_ostream &OS, PrintType Type,
   OS << " CWD\n";
 }
 
+namespace {
+struct CreateRealFileSystem {
+  static void *call() {
+    return new IntrusiveRefCntPtr<FileSystem>(
+        makeIntrusiveRefCnt<RealFileSystem>(true));
+  }
+};
+} // namespace
+
 IntrusiveRefCntPtr<FileSystem> vfs::getRealFileSystem() {
-  static IntrusiveRefCntPtr<FileSystem> FS =
-      makeIntrusiveRefCnt<RealFileSystem>(true);
+  // Runtime compiler actions can use this filesystem from exit handlers.
+  // Keep it alive until explicit LLVM shutdown instead of static destruction.
+  static ManagedStatic<IntrusiveRefCntPtr<FileSystem>, CreateRealFileSystem> FS;
   sys::sandbox::violationIfEnabled();
 
-  return FS;
+  return *FS;
 }
 
 std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {

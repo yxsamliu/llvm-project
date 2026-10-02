@@ -62,8 +62,8 @@ static void late_action(void) {
 }
 
 int main(void) {
-  // The first action constructs LLVM's lazy real-filesystem singleton. Since
-  // this handler was registered first, it runs after that singleton's cleanup.
+  // Register before the first action initializes LLVM's shared filesystem.
+  // With ordinary static destruction, this handler runs after its cleanup.
   if (atexit(late_action))
     return 1;
   if (preprocess())
