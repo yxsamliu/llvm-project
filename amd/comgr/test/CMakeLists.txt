@@ -194,9 +194,11 @@ endif()
 
   target_link_libraries("${name}"
     amd_comgr)
-  add_dependencies("${name}"
-    ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES};${TEST_INPUT_BUNDLES};
-    ${TEST_INPUT_ARCHIVES};${TEST_INPUT_LINKED_OBJS})
+  if(NOT "${ARGV2}" STREQUAL "NO_INPUTS")
+    add_dependencies("${name}"
+      ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES};${TEST_INPUT_BUNDLES};
+      ${TEST_INPUT_ARCHIVES};${TEST_INPUT_LINKED_OBJS})
+  endif()
   add_test(NAME ${test_name}
     COMMAND "${name}")
   add_dependencies(check-comgr ${name})
@@ -204,8 +206,10 @@ endif()
   # .lib/.dll directory to their PATH. Use ENVIRONMENT_MODIFICATION so the
   # inherited PATH is preserved (transitive DLL deps like zstd.dll live there).
   if (UNIX)
-    set_tests_properties(${test_name}
-      PROPERTIES ENVIRONMENT "AMD_COMGR_CACHE=0;")
+    set_tests_properties(${test_name} PROPERTIES
+      ENVIRONMENT "AMD_COMGR_CACHE=0;"
+      ENVIRONMENT_MODIFICATION
+        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:amd_comgr>")
   else()
     set_tests_properties(${test_name} PROPERTIES
       ENVIRONMENT_MODIFICATION
@@ -224,6 +228,8 @@ add_comgr_test(symbols_test c)
 add_comgr_test(symbols_iterate_test c)
 add_comgr_test(compile_test c)
 add_comgr_test(compile_minimal_test c)
+# This test embeds its own source and needs no generated input artifacts.
+add_comgr_test(late_action_test c NO_INPUTS)
 add_comgr_test(compile_log_test c)
 add_comgr_test(compile_log_remarks_test c)
 add_comgr_test(compile_source_with_device_libs_to_bc_test c)

@@ -2808,7 +2808,9 @@ AMDGPUCompiler::AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet,
 
   // Initialize OverlayFS with the real file system which helps redirect
   // non-VFS reads and writes.
-  OverlayFS = new vfs::OverlayFileSystem(vfs::getRealFileSystem());
+  // A Comgr action can run after the process-wide filesystem singleton has
+  // been destroyed during exit, so give each overlay its own base.
+  OverlayFS = new vfs::OverlayFileSystem(vfs::createPhysicalFileSystem());
 
   std::optional<bool> VFSStatus = env::shouldUseVFS();
   if ((VFSStatus.has_value() && *VFSStatus) ||
