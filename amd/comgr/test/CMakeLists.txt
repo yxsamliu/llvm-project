@@ -199,22 +199,36 @@ endif()
       ${TEST_INPUT_BINARIES};${TEST_INPUT_BITCODES};${TEST_INPUT_BUNDLES};
       ${TEST_INPUT_ARCHIVES};${TEST_INPUT_LINKED_OBJS})
   endif()
-  add_test(NAME ${test_name}
-    COMMAND "${name}")
-  add_dependencies(check-comgr ${name})
-  # Windows binaries have no equivalent to RPATH, so we must prepend the
-  # .lib/.dll directory to their PATH. Use ENVIRONMENT_MODIFICATION so the
-  # inherited PATH is preserved (transitive DLL deps like zstd.dll live there).
-  if (UNIX)
-    set_tests_properties(${test_name} PROPERTIES
-      ENVIRONMENT "AMD_COMGR_CACHE=0;"
-      ENVIRONMENT_MODIFICATION
-        "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:amd_comgr>")
+  # ENVIRONMENT_MODIFICATION requires CMake 3.22, but standalone Comgr
+  # supports older CMake versions. Set the loader path at test time there.
+  if(CMAKE_VERSION VERSION_LESS 3.22)
+    if(WIN32)
+      set(comgr_test_library_dir "$<TARGET_LINKER_FILE_DIR:amd_comgr>")
+    else()
+      set(comgr_test_library_dir "$<TARGET_FILE_DIR:amd_comgr>")
+    endif()
+    add_test(NAME ${test_name}
+      COMMAND "${CMAKE_COMMAND}"
+        "-DCOMGR_TEST_EXECUTABLE=$<TARGET_FILE:${name}>"
+        "-DCOMGR_TEST_LIBRARY_DIR=${comgr_test_library_dir}"
+        -P "${CMAKE_CURRENT_SOURCE_DIR}/run_comgr_test.cmake")
   else()
-    set_tests_properties(${test_name} PROPERTIES
-      ENVIRONMENT_MODIFICATION
-      "PATH=path_list_prepend:$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE=set:0")
+    add_test(NAME ${test_name}
+      COMMAND "${name}")
+    # Windows binaries have no equivalent to RPATH, so prepend the
+    # .lib/.dll directory to PATH, preserving transitive DLL dependencies.
+    if(UNIX)
+      set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT "AMD_COMGR_CACHE=0;"
+        ENVIRONMENT_MODIFICATION
+          "LD_LIBRARY_PATH=path_list_prepend:$<TARGET_FILE_DIR:amd_comgr>")
+    else()
+      set_tests_properties(${test_name} PROPERTIES
+        ENVIRONMENT_MODIFICATION
+          "PATH=path_list_prepend:$<TARGET_LINKER_FILE_DIR:amd_comgr>;AMD_COMGR_CACHE=set:0")
+    endif()
   endif()
+  add_dependencies(check-comgr ${name})
 endmacro()
 
 add_comgr_test(data_test c)
