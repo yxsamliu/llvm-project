@@ -14,7 +14,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <deque>
-#include <limits>
 #include <list>
 #include <map>
 #include <shared_mutex>
@@ -431,46 +430,6 @@ public:
   }
 };
 
-struct KernelLaunchInfoTy {
-  uint32_t MaxNumThreads = 0;
-  uint32_t PreferredNumThreads = 0;
-  uint32_t ReductionDataSize = 0;
-  /// Defaults to OMP_TGT_EXEC_MODE_BARE.
-  OMPTgtExecModeFlags Mode = OMP_TGT_EXEC_MODE_BARE;
-
-  /// Indicate if the kernel works in Bare, Generic SPMD, Generic, No-Loop
-  /// or SPMD mode.
-  bool isBareMode() const { return Mode == OMP_TGT_EXEC_MODE_BARE; }
-  bool isGenericMode() const { return Mode == OMP_TGT_EXEC_MODE_GENERIC; }
-  bool isGenericSPMDMode() const {
-    return Mode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isSPMDMode() const { return Mode == OMP_TGT_EXEC_MODE_SPMD; }
-  bool isNoLoopMode() const { return Mode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP; }
-
-  static const char *getExecutionModeName(OMPTgtExecModeFlags Mode) {
-    switch (Mode) {
-    case OMP_TGT_EXEC_MODE_BARE:
-      return "BARE";
-    case OMP_TGT_EXEC_MODE_SPMD:
-      return "SPMD";
-    case OMP_TGT_EXEC_MODE_GENERIC:
-      return "Generic";
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-      return "Generic-SPMD";
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
-      return "SPMD-No-Loop";
-    }
-    return "Unknown";
-  }
-
-  /// Return the display name of this kernel's execution mode, for
-  /// debug/info logging only.
-  const char *getExecutionModeName() const {
-    return getExecutionModeName(Mode);
-  }
-};
-
 /// The subset of KernelArgsTy fields the plugin interface needs to launch a
 /// kernel, plus the resolved argument-pointer array. Unlike KernelArgsTy,
 /// this struct is populated by libomptarget on the stack for every launch,
@@ -501,7 +460,6 @@ struct KernelLaunchArgsTy {
   uint32_t UserNumBlocks[3] = {0, 0, 0};
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
-  KernelLaunchInfoTy KernelLaunchInfo;
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
     uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
@@ -519,8 +477,9 @@ struct KernelLaunchArgsTy {
 /// should define the specific kernel class, derive from this generic one, and
 /// implement the necessary virtual function members.
 struct GenericKernelTy {
-  /// Construct a kernel with a name.
-  GenericKernelTy(StringRef Name) : Name(Name) {}
+  /// Construct a kernel with a name and a execution mode.
+  GenericKernelTy(StringRef Name)
+      : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -561,16 +520,18 @@ struct GenericKernelTy {
   /// Get the size of the static per-block memory consumed by the kernel.
   uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
-  /// Return the maximum number of threads per block that this kernel's
-  /// underlying device function may run, as reported by the driver/backend.
-  virtual uint32_t getMaxThreads() const {
-    return std::numeric_limits<uint32_t>::max();
-  }
+  /// Get the maximum number of threads per block that this kernel may use.
+  uint32_t getMaxThreads() const { return MaxNumThreads; }
 
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
     return *ImagePtr;
+  }
+
+  /// Return the kernel environment object for kernel \p Name.
+  const KernelEnvironmentTy &getKernelEnvironmentForKernel() {
+    return KernelEnvironment;
   }
 
   /// Return a device pointer to a new kernel launch environment.
@@ -650,7 +611,6 @@ struct GenericKernelTy {
   }
 
 protected:
-<<<<<<< HEAD
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
     switch (ExecutionMode) {
@@ -673,8 +633,6 @@ protected:
 
   OMPTgtExecModeFlags getExecutionModeFlags() const { return ExecutionMode; }
 
-=======
->>>>>>> f294f1750505
   /// Prints generic kernel launch information.
   Error printLaunchInfo(GenericDeviceTy &GenericDevice,
                         const KernelLaunchArgsTy &LaunchArgs,
@@ -705,34 +663,20 @@ private:
 
   /// Get the effective number of threads for the kernel based on the
   /// user-defined number of threads.
-<<<<<<< HEAD
   virtual uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
                                           uint32_t UserThreadLimit) const;
-=======
-  static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                         uint32_t UserThreadLimit,
-                                         const KernelLaunchArgsTy &LaunchArgs);
->>>>>>> f294f1750505
 
   /// Get the effective number of blocks for the kernel based on the
   /// user-defined number of blocks and the loop trip count.
   /// The number of threads \p NumThreads can be adjusted by this method.
   /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
   /// thread_limit clause.
-<<<<<<< HEAD
   virtual uint32_t getEffectiveNumBlocks(GenericDeviceTy &GenericDevice,
                                          uint32_t UserNumBlocks,
                                          uint64_t LoopTripCount,
                                          uint32_t &EffectiveNumThreads,
                                          bool IsNumThreadsStrict,
                                          bool IsNumThreadsFromUser) const;
-=======
-  static uint32_t
-  getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
-                        uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-                        bool IsNumThreadsStrict, bool IsNumThreadsFromUser,
-                        const KernelLaunchArgsTy &LaunchArgs);
->>>>>>> f294f1750505
 
   /// The kernel name.
   std::string Name;
@@ -744,8 +688,17 @@ private:
   DeviceImageTy *ImagePtr = nullptr;
 
 protected:
+  /// The preferred number of threads to run the kernel.
+  uint32_t PreferredNumThreads;
+
+  /// The maximum number of threads which the kernel could leverage.
+  uint32_t MaxNumThreads;
+
   /// The static memory sized per block.
   uint32_t StaticBlockMemSize = 0;
+
+  /// The kernel environment, including execution flags.
+  KernelEnvironmentTy KernelEnvironment;
 
   /// The prototype kernel launch environment.
   KernelLaunchEnvironmentTy KernelLaunchEnvironment;
