@@ -116,6 +116,32 @@ TEST_F(WaveRegionCostTest, MissingProfile) {
   EXPECT_FALSE(placement().isWaveCostDifferencePositive({0, -1, 1, 0, 0}));
 }
 
+// A function-level uniformity marker supplies no execution frequency for
+// unmeasured blocks, including those in an irreducible cycle.
+TEST_F(WaveRegionCostTest, UniformityMarkerKeepsUnmeasuredFrequencies) {
+  auto &MF = getMF("test");
+  MF.getFunction().setMetadata(LLVMContext::MD_uniformity_profile,
+                               MDNode::get(Mod->getContext(), {}));
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto &SP = placement();
+  for (unsigned Number : {1u, 3u})
+    EXPECT_EQ(SP.getBlockFrequency(Number),
+              MBFI.getBlockFreq(MF.getBlockNumbered(Number)));
+  EXPECT_EQ(SP.getBlockFrequency(4).getFrequency(), 1u);
+}
+
+TEST_F(WaveRegionCostTest, UniformityMarkerWithoutWaveCounts) {
+  auto &MF = getMF("test");
+  clearBlockWaveCounts(MF.getFunction());
+  MF.getFunction().setMetadata(LLVMContext::MD_uniformity_profile,
+                               MDNode::get(Mod->getContext(), {}));
+  auto &MBFI = MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto &SP = placement();
+  EXPECT_FALSE(SP.hasMeasuredWaveBlocks());
+  for (auto &MBB : MF)
+    EXPECT_EQ(SP.getBlockFrequency(MBB.getNumber()), MBFI.getBlockFreq(&MBB));
+}
+
 TEST_F(WaveRegionCostTest, InvalidEntry) {
   setBlockWaveCounts(*Mod->getFunction("test"), {0, 0, 1000, 0, 0});
   EXPECT_FALSE(placement().hasMeasuredWaveBlocks());

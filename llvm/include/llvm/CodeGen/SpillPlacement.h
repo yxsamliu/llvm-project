@@ -36,7 +36,6 @@
 
 namespace llvm {
 
-class BlockUniformityProfile;
 class EdgeBundles;
 class MachineBlockFrequencyInfo;
 class MachineFunction;
@@ -183,8 +182,7 @@ private:
   LLVM_ABI void releaseMemory();
 
   void run(MachineFunction &MF, EdgeBundles *Bundles,
-           MachineBlockFrequencyInfo *MBFI,
-           const BlockUniformityProfile *Profile);
+           MachineBlockFrequencyInfo *MBFI);
   void activate(unsigned n);
   void setThreshold(BlockFrequency Entry);
 

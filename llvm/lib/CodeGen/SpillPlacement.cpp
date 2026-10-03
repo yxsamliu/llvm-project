@@ -32,8 +32,6 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/UniformityAnalysis.h"
-#include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
@@ -59,13 +57,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-static cl::opt<bool> EnableUniformityProfiledSpill(
-    "enable-uniformity-profiled-spill", cl::Hidden, cl::init(false),
-    cl::desc("Use uniformity spill fallback independently of wave costs"));
-static cl::opt<bool> ReportIntegratedSpill(
-    "report-integrated-spill", cl::Hidden, cl::init(false),
-    cl::desc("Report uniformity fallback and marginal wave spill costs"));
-
 static cl::opt<bool> WaveGuidedSpillPlacement(
     "wave-guided-spill-placement", cl::Hidden, cl::init(true),
     cl::desc("Use validated wave counts for spill-placement frequencies"));
@@ -83,7 +74,6 @@ char &llvm::SpillPlacementID = SpillPlacementWrapperLegacy::ID;
 INITIALIZE_PASS_BEGIN(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                       "Spill Code Placement Analysis", true, true)
 INITIALIZE_PASS_DEPENDENCY(EdgeBundlesWrapperLegacy)
-INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 INITIALIZE_PASS_END(SpillPlacementWrapperLegacy, DEBUG_TYPE,
                     "Spill Code Placement Analysis", true, true)
 
@@ -91,7 +81,6 @@ void SpillPlacementWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineBlockFrequencyInfoWrapperPass>();
   AU.addRequiredTransitive<EdgeBundlesWrapperLegacy>();
-  AU.addRequired<UniformityInfoWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
@@ -227,9 +216,7 @@ bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  BlockUniformityProfile Profile;
-  Profile.compute(MF, getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo());
-  Impl.run(MF, Bundles, MBFI, &Profile);
+  Impl.run(MF, Bundles, MBFI);
   return false;
 }
 
@@ -240,9 +227,8 @@ SpillPlacementAnalysis::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
   auto *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
   auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
-  auto &Profile = MFAM.getResult<BlockUniformityProfileProxy>(MF);
   SpillPlacement Impl;
-  Impl.run(MF, Bundles, MBFI, &Profile);
+  Impl.run(MF, Bundles, MBFI);
   return Impl;
 }
 
@@ -254,8 +240,7 @@ bool SpillPlacementAnalysis::Result::invalidate(
     return true;
   // Check dependencies.
   return Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
-         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA) ||
-         Inv.invalidate<BlockUniformityProfileProxy>(MF, PA);
+         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
 }
 
 SpillPlacement::SpillPlacement() = default;
@@ -288,8 +273,7 @@ static bool hasMatchingWaveProfileBlock(
 }
 
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
-                         MachineBlockFrequencyInfo *MBFI,
-                         const BlockUniformityProfile *Profile) {
+                         MachineBlockFrequencyInfo *MBFI) {
   MF = &mf;
   this->bundles = Bundles;
   this->MBFI = MBFI;
@@ -362,24 +346,13 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   NormalizationWaveCount = EntryWaveCount;
   setThreshold(MBFI->getEntryFreq());
   unsigned ChangedWaveCosts = 0;
-  unsigned FallbackBlocks = 0, MarginalWaveChanges = 0;
-  const bool UseUniformity = EnableUniformityProfiledSpill &&
-      mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
-      Profile && Profile->hasProfile();
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
     auto Wave = WaveFrequencies.find(I.getBasicBlock());
-    // Compute the same fallback in both wave-off and wave-on variants.
-    // A measured wave count overrides it only for an accepted mapping.
-    BlockFrequency Fallback = MBFI->getBlockFreq(&I);
-    if (UseUniformity && Profile->isDivergent(I)) {
-      Fallback = MBFI->getEntryFreq();
-      ++FallbackBlocks;
-    }
+    // Only a validated measurement replaces the original block frequency.
+    // Uniformity alone does not establish how often a block executes.
     BlockFrequencies[Num] =
-        Wave == WaveFrequencies.end() ? Fallback : Wave->second;
-    if (Wave != WaveFrequencies.end())
-      MarginalWaveChanges += Wave->second != Fallback;
+        Wave == WaveFrequencies.end() ? MBFI->getBlockFreq(&I) : Wave->second;
 
     if (auto Count = RawWaveCounts.find(I.getBasicBlock());
         Count != RawWaveCounts.end()) {
@@ -395,10 +368,6 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                         << MBFI->getEntryFreq().getFrequency() << ")\n");
     }
   }
-  if (ReportIntegratedSpill)
-    errs() << "INTEGRATED_SPILL\t" << mf.getName() << "\t"
-           << UseUniformity << "\t" << FallbackBlocks << "\t"
-           << WaveFrequencies.size() << "\t" << MarginalWaveChanges << "\n";
   if (ReportWaveProfiledSpill && WaveGuidedSpillPlacement)
     errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
            << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
