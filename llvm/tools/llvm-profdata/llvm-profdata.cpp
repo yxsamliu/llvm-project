@@ -1033,11 +1033,14 @@ static Error writeInstrProfile(StringRef OutputFilename,
                                         : Writer.write(Output)) {
     // Unsupported formats cannot represent the profile at all. Preserve the
     // existing warning behavior for recoverable profile-data errors.
-    warn(handleErrors(std::move(E), [&](const InstrProfError &IPE) -> Error {
-      if (IPE.get() == instrprof_error::unsupported_version)
-        exitWithError(IPE.message(), OutputFilename);
+    bool UnsupportedVersion = false;
+    E = handleErrors(std::move(E), [&](const InstrProfError &IPE) -> Error {
+      UnsupportedVersion = IPE.get() == instrprof_error::unsupported_version;
       return make_error<InstrProfError>(IPE.get(), IPE.getMessage());
-    }));
+    });
+    if (UnsupportedVersion)
+      return makeError(std::move(E), OutputFilename);
+    warn(std::move(E));
   }
   return Error::success();
 }
@@ -3052,7 +3055,7 @@ static Error showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
       InstrProfSymtab &Symtab = Reader->getSymtab();
       if (Error E = InstrProfWriter::writeRecordInText(Func.Name, Func.Hash,
                                                        Func, Symtab, OS))
-        exitWithError(std::move(E), Filename);
+        return makeError(std::move(E), Filename);
       continue;
     }
 

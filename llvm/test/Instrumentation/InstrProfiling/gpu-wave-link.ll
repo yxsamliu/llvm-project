@@ -10,13 +10,13 @@
 ; CHECK: @[[SHARED:__profc_shared[^ ]*]] = {{.*}}[2 x i64] zeroinitializer
 
 ; AB-LABEL: define amdgpu_kernel void @caller_a(
-; AB: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i32 1
+; AB: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i64 8
 ; AB-LABEL: define amdgpu_kernel void @caller_b(
-; AB: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i32 1
+; AB: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i64 8
 ; BA-LABEL: define amdgpu_kernel void @caller_b(
-; BA: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i32 1
+; BA: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i64 8
 ; BA-LABEL: define amdgpu_kernel void @caller_a(
-; BA: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i32 1
+; BA: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[SHARED]]{{.*}}i64 8
 
 ;--- a.ll
 source_filename = "a.cpp"

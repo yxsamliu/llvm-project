@@ -20,4 +20,4 @@ declare void @llvm.instrprof.increment(ptr, i64, i32, i32)
 
 ;; Check sampling guard calls library function
 ; CHECK: call i32 @__llvm_profile_sampling_gpu(i32 3)
-; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_3d to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_3d to ptr), i64 1, ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel_3d, i32 0, i32 1) to ptr))
+; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_3d to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_3d to ptr), i64 1, ptr addrspacecast (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__profc_kernel_3d, i64 8) to ptr))

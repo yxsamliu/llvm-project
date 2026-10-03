@@ -32,4 +32,4 @@ attributes #0 = { "target-cpu"="gfx1100" }
 
 ;; Check library call
 ; CHECK: po_then:
-; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_w32 to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_w32 to ptr), i64 1, ptr addrspacecast (ptr addrspace(1) getelementptr inbounds ([2 x i64], ptr addrspace(1) @__profc_kernel_w32, i32 0, i32 1) to ptr))
+; CHECK: call void @__llvm_profile_instrument_gpu(ptr addrspacecast (ptr addrspace(1) @__profc_kernel_w32 to ptr), ptr addrspacecast (ptr addrspace(1) @__llvm_prf_unifcnt_kernel_w32 to ptr), i64 1, ptr addrspacecast (ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @__profc_kernel_w32, i64 8) to ptr))

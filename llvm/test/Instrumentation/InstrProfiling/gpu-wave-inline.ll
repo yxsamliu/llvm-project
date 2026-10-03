@@ -12,16 +12,16 @@ target triple = "amdgcn-amd-amdhsa"
 ; CHECK-DAG: @__profd_{{.*}}callee = {{.*}}i32 2, [3 x i16] zeroinitializer, i16 0, i32 0, i32 1 }
 
 ; CHECK-LABEL: define i32 @caller(
-; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@__profc_caller{{.*}}i32 1
-; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[CALLEE]]{{.*}}i32 1
+; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@__profc_caller{{.*}}i64 8
+; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[CALLEE]]{{.*}}i64 8
 define i32 @caller(i32 %x) {
   %v = call i32 @callee(i32 %x)
   ret i32 %v
 }
 
 ; CHECK-LABEL: define i32 @other(
-; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@__profc_other{{.*}}i32 1
-; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[CALLEE]]{{.*}}i32 1
+; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@__profc_other{{.*}}i64 8
+; CHECK: call void @__llvm_profile_instrument_gpu({{.*}}i64 1, ptr {{.*}}@[[CALLEE]]{{.*}}i64 8
 ; CHECK-NOT: define {{.*}}@callee(
 define i32 @other(i32 %x) {
   %v = call i32 @callee(i32 %x)
