@@ -1,4 +1,5 @@
 ; RUN: opt < %s -passes='require<profile-summary>,function(chr)' -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,function(chr)' -chr-uniformity-profile=false -S | FileCheck %s
 
 ; Without uniformity profile, Boolean selects retain the existing CHR behavior.
 define i1 @boolean_no_uniformity(i1 %condition, i1 %second_condition, i1 %left, i1 %right) !prof !14 {

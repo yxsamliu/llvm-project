@@ -1,9 +1,25 @@
 ; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-uniformity-profile=false -S | FileCheck %s --check-prefix=IGNORE-UNIFORMITY
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-branches=true -chr-selects=true -S | FileCheck %s
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-branches=false -S | FileCheck %s --check-prefix=NO-BRANCHES
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-selects=false -S | FileCheck %s --check-prefix=NO-SELECTS
+; RUN: opt < %s -passes='require<profile-summary>,function(chr,instcombine,simplifycfg)' -chr-branches=false -chr-selects=false -S | FileCheck %s --check-prefix=DISABLED
+
+; Candidate switches do not remove profile metadata or uniformity safeguards.
+; DISABLED: declare void @foo()
+; DISABLED-NOT: .nonchr
 
 declare void @foo()
 
 ; Preserve the existing behavior when a function has no uniformity profile.
 define void @no_profile(ptr %ptr) !prof !14 {
+; NO-BRANCHES-LABEL: define void @no_profile(
+; NO-BRANCHES-NOT: .nonchr
+; NO-BRANCHES: ret void
+; NO-SELECTS-LABEL: define void @no_profile(
+; NO-SELECTS: entry.split.nonchr:
+; IGNORE-UNIFORMITY-LABEL: define void @no_profile(
+; IGNORE-UNIFORMITY: entry.split.nonchr:
 ; CHECK-LABEL: define void @no_profile(
 ; CHECK: entry.split.nonchr:
 entry:
@@ -32,6 +48,13 @@ exit:
 ; Uniform branches remain eligible for CHR when uniformity profile is
 ; present.
 define void @uniform(ptr %ptr) !prof !14 !uniformity.profile !16 {
+; NO-BRANCHES-LABEL: define void @uniform(
+; NO-BRANCHES-NOT: .nonchr
+; NO-BRANCHES: ret void
+; NO-SELECTS-LABEL: define void @uniform(
+; NO-SELECTS: entry.split.nonchr:
+; IGNORE-UNIFORMITY-LABEL: define void @uniform(
+; IGNORE-UNIFORMITY: entry.split.nonchr:
 ; CHECK-LABEL: define void @uniform(
 ; CHECK: entry.split.nonchr:
 entry:
@@ -62,6 +85,14 @@ exit:
 ; With uniformity profile, a branch without branch-uniformity metadata
 ; is not known to be uniform. Do not apply CHR to a scope containing one.
 define void @not_known_uniform(ptr %ptr) !prof !14 !uniformity.profile !16 {
+; NO-BRANCHES-LABEL: define void @not_known_uniform(
+; NO-BRANCHES-NOT: .nonchr
+; NO-BRANCHES: ret void
+; NO-SELECTS-LABEL: define void @not_known_uniform(
+; NO-SELECTS-NOT: .nonchr
+; NO-SELECTS: ret void
+; IGNORE-UNIFORMITY-LABEL: define void @not_known_uniform(
+; IGNORE-UNIFORMITY: entry.split.nonchr:
 ; CHECK-LABEL: define void @not_known_uniform(
 ; CHECK-NOT: split
 ; CHECK: ret void
@@ -92,6 +123,13 @@ exit:
 ; A scope with a branch that is not known uniform does not disable a separate
 ; uniform scope in the same function.
 define void @per_scope(ptr %uniform_ptr, ptr %divergent_ptr) !prof !14 !uniformity.profile !16 {
+; NO-BRANCHES-LABEL: define void @per_scope(
+; NO-BRANCHES-NOT: .nonchr
+; NO-BRANCHES: ret void
+; NO-SELECTS-LABEL: define void @per_scope(
+; NO-SELECTS: entry.split.nonchr:
+; IGNORE-UNIFORMITY-LABEL: define void @per_scope(
+; IGNORE-UNIFORMITY: entry.split.nonchr:
 ; CHECK-LABEL: define void @per_scope(
 ; CHECK: entry.split.nonchr:
 ; CHECK-NOT: after.uniform.split.nonchr:
@@ -143,6 +181,13 @@ exit:
 
 ; Scopes containing only non-Boolean selects keep their existing behavior.
 define i32 @select_only(i32 %value) !prof !14 !uniformity.profile !16 {
+; NO-BRANCHES-LABEL: define i32 @select_only(
+; NO-BRANCHES: entry.split.nonchr:
+; NO-SELECTS-LABEL: define i32 @select_only(
+; NO-SELECTS-NOT: .nonchr
+; NO-SELECTS: ret i32
+; IGNORE-UNIFORMITY-LABEL: define i32 @select_only(
+; IGNORE-UNIFORMITY: entry.split.nonchr:
 ; CHECK-LABEL: define i32 @select_only(
 ; CHECK: entry.split.nonchr:
 entry:

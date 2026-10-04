@@ -22,6 +22,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -53,6 +54,22 @@ static cl::opt<bool> DisableCHR("disable-chr", cl::init(false), cl::Hidden,
 
 static cl::opt<bool> ForceCHR("force-chr", cl::init(false), cl::Hidden,
                               cl::desc("Apply CHR for all functions"));
+
+static cl::opt<bool> CHRUniformityProfile(
+    "chr-uniformity-profile", cl::init(true), cl::Hidden,
+    cl::desc("Use branch uniformity profiles to filter CHR candidates"));
+
+static cl::opt<bool> CHRBranches(
+    "chr-branches", cl::init(true), cl::Hidden,
+    cl::desc("Consider biased branches for control height reduction"));
+
+static cl::opt<bool> CHRSelects(
+    "chr-selects", cl::init(true), cl::Hidden,
+    cl::desc("Consider biased selects for control height reduction"));
+
+static cl::opt<bool> CHRSelectGuardCost(
+    "chr-select-guard-cost", cl::init(false), cl::Hidden,
+    cl::desc("Compare profiled select savings with target guard costs"));
 
 static cl::opt<double> CHRBiasThreshold(
     "chr-bias-threshold", cl::init(0.99), cl::Hidden,
@@ -287,8 +304,9 @@ class CHR {
  public:
   CHR(Function &Fin, BlockFrequencyInfo &BFIin, DominatorTree &DTin,
       ProfileSummaryInfo &PSIin, RegionInfo &RIin,
-      OptimizationRemarkEmitter &OREin)
-      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
+      OptimizationRemarkEmitter &OREin, TargetTransformInfo &TTIin)
+      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin),
+        TTI(TTIin) {}
 
   ~CHR() {
     for (CHRScope *Scope : Scopes) {
@@ -324,6 +342,8 @@ class CHR {
 
   void classifyBiasedScopes(SmallVectorImpl<CHRScope *> &Scopes);
   void classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope);
+
+  bool hasUnprofitableSelectGuard(CHRScope *Scope);
 
   void filterScopes(SmallVectorImpl<CHRScope *> &Input,
                     SmallVectorImpl<CHRScope *> &Output);
@@ -374,6 +394,7 @@ class CHR {
   ProfileSummaryInfo &PSI;
   RegionInfo &RI;
   OptimizationRemarkEmitter &ORE;
+  TargetTransformInfo &TTI;
   CHRStats Stats;
 
   // A function attachment indicates that uniformity profile data is available.
@@ -773,7 +794,7 @@ CHRScope * CHR::findScope(Region *R) {
     }
   }
 
-  if (Exit) {
+  if (CHRBranches && Exit) {
     // Try to find an if-then block (check if R is an if-then).
     // if (cond) {
     //  ...
@@ -802,7 +823,7 @@ CHRScope * CHR::findScope(Region *R) {
       }
     }
   }
-  {
+  if (CHRSelects) {
     // Try to look for selects in the direct child blocks (as opposed to in
     // subregions) of R.
     // ...
@@ -1348,6 +1369,71 @@ static SelectInst *findBooleanSelect(const DenseSet<SelectInst *> &Selects) {
   return nullptr;
 }
 
+// For a select-only scope in one block, all candidates have the same
+// execution population. The minimum individual preferred probability bounds
+// their conjunction from above; it is not a measurement of the joint outcome.
+// Compare this optimistic saving with the estimated guard work. This does not
+// account for additional hoisting, duplicated code, or register pressure.
+bool CHR::hasUnprofitableSelectGuard(CHRScope *Scope) {
+  if (!CHRSelectGuardCost || !TTI.hasBranchDivergence() ||
+      !Scope->TrueBiasedRegions.empty() || !Scope->FalseBiasedRegions.empty())
+    return false;
+
+  BasicBlock *SelectBlock = nullptr;
+  DenseSet<Value *> Conditions;
+  DenseSet<Value *> NegatedConditions;
+  InstructionCost SelectCost = 0;
+  BranchProbability BestProbability(1, 1);
+  constexpr auto CostKind = TargetTransformInfo::TCK_RecipThroughput;
+  auto AddSelects = [&](const DenseSet<SelectInst *> &Selects, bool Negated) {
+    for (SelectInst *SI : Selects) {
+      if (!SelectBlock)
+        SelectBlock = SI->getParent();
+      if (SI->getParent() != SelectBlock || isa<Constant>(SI->getCondition()))
+        return false;
+      Conditions.insert(SI->getCondition());
+      if (Negated)
+        NegatedConditions.insert(SI->getCondition());
+      SelectCost += TTI.getInstructionCost(SI, CostKind);
+      BestProbability = std::min(BestProbability, SelectBiasMap.lookup(SI));
+    }
+    return true;
+  };
+  if (!AddSelects(Scope->TrueBiasedSelects, false) ||
+      !AddSelects(Scope->FalseBiasedSelects, true) || Conditions.empty())
+    return false;
+
+  Type *CondTy = Type::getInt1Ty(F.getContext());
+  InstructionCost GuardCost = TTI.getCFInstrCost(Instruction::CondBr, CostKind);
+  GuardCost += TTI.getArithmeticInstrCost(Instruction::And, CondTy, CostKind) *
+               (Conditions.size() - 1);
+  GuardCost += TTI.getArithmeticInstrCost(Instruction::Xor, CondTy, CostKind) *
+               NegatedConditions.size();
+  if (!SelectCost.isValid() || !GuardCost.isValid() ||
+      SelectCost.getValue() < 0 || GuardCost.getValue() < 0)
+    return false;
+
+  // Compare without rounding a fractional saving or overflowing 64-bit costs.
+  APInt WeightedSaving(128, SelectCost.getValue());
+  WeightedSaving *= BestProbability.getNumerator();
+  APInt WeightedGuard(128, GuardCost.getValue());
+  WeightedGuard *= BranchProbability::getDenominator();
+  if (WeightedGuard.ult(WeightedSaving))
+    return false;
+
+  ORE.emit([&]() {
+    return OptimizationRemarkMissed(DEBUG_TYPE, "SelectGuardCost",
+                                    SelectBlock->getTerminator())
+           << "select guard cost " << ore::NV("GuardCost", GuardCost)
+           << " is not below optimistic profiled savings from "
+           << ore::NV("SelectCost", SelectCost) << " select cost at probability "
+           << ore::NV("PreferredNumerator", BestProbability.getNumerator())
+           << "/" << ore::NV("PreferredDenominator",
+                              BranchProbability::getDenominator());
+  });
+  return true;
+}
+
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
@@ -1374,21 +1460,26 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
         continue;
       }
 
-      Instruction *BranchWithoutUniformityProfile =
-          findBranchWithoutUniformityProfile(Scope->TrueBiasedRegions);
-      if (!BranchWithoutUniformityProfile)
-        BranchWithoutUniformityProfile =
-            findBranchWithoutUniformityProfile(Scope->FalseBiasedRegions);
-      if (BranchWithoutUniformityProfile) {
-        ORE.emit([&]() {
-          return OptimizationRemarkMissed(DEBUG_TYPE, "BranchNotKnownUniform",
-                                          BranchWithoutUniformityProfile)
-                 << "drop scope containing a branch that is not known to be "
-                    "uniform";
-        });
-        continue;
+      if (CHRUniformityProfile) {
+        Instruction *BranchWithoutUniformityProfile =
+            findBranchWithoutUniformityProfile(Scope->TrueBiasedRegions);
+        if (!BranchWithoutUniformityProfile)
+          BranchWithoutUniformityProfile =
+              findBranchWithoutUniformityProfile(Scope->FalseBiasedRegions);
+        if (BranchWithoutUniformityProfile) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "BranchNotKnownUniform",
+                                            BranchWithoutUniformityProfile)
+                   << "drop scope containing a branch that is not known to be "
+                      "uniform";
+          });
+          continue;
+        }
       }
     }
+
+    if (hasUnprofitableSelectGuard(Scope))
+      continue;
 
     // Filter out the ones with only one region and no subs.
     if (!hasAtLeastTwoBiasedBranches(Scope)) {
@@ -2183,7 +2274,8 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  bool Changed = CHR(F, BFI, DT, PSI, RI, ORE, TTI).run();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
