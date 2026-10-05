@@ -1,0 +1,129 @@
+# Both predecessors receive the shared tail. Preserve its untouched
+# successors even when the original tail is removed. Subsequent branch folding
+# can split/merge blocks, so it must invalidate the remaining cached counts.
+# Check the relevant code and cache events without freezing the entire layout.
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -run-pass=block-placement -loop-to-cold-block-ratio=8 -tail-dup-placement-threshold=4 -verify-machineinstrs -tail-duplication-profile-cost=default %s -o - | FileCheck %s --check-prefix=KEEP
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -run-pass=block-placement -loop-to-cold-block-ratio=8 -tail-dup-placement-threshold=4 -verify-machineinstrs -tail-duplication-profile-cost=lane-branches %s -o - | FileCheck %s --check-prefix=KEEP
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -O3 -run-pass=block-placement -loop-to-cold-block-ratio=8 -tail-dup-placement-threshold=4 -verify-machineinstrs -tail-duplication-profile-cost=wave-branches -report-wave-tail-duplication %s -o - 2> %t.wave.log | FileCheck %s --check-prefix=FULL
+# RUN: FileCheck %s --check-prefix=CACHE < %t.wave.log
+
+# KEEP-LABEL: bb.3.tail:
+# KEEP: $exec = S_OR_B64 $exec, $sgpr8_sgpr9, implicit-def dead $scc
+# KEEP-NEXT: $sgpr8_sgpr9 = S_AND_SAVEEXEC_B64 $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
+# KEEP-NEXT: S_CBRANCH_EXECNZ
+# FULL-LABEL: body:
+# FULL-NOT: bb.{{[0-9]+}}.tail:
+# FULL: bb.3.work1:
+# FULL: $exec = S_OR_B64 $exec, $sgpr8_sgpr9, implicit-def dead $scc
+# FULL-NEXT: $sgpr8_sgpr9 = S_AND_SAVEEXEC_B64 $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
+# FULL-NEXT: S_CBRANCH_EXECNZ
+# FULL-NOT: bb.{{[0-9]+}}.tail:
+# FULL: S_ENDPGM 0
+# FULL-NOT: bb.{{[0-9]+}}.tail:
+# CACHE: WAVE_TAIL_PRESERVE full 4 5 524288
+# CACHE-NEXT: WAVE_TAIL_PRESERVE full 4 6 2097152
+# CACHE-NEXT: WAVE_TAIL_INVALIDATE full branch-folder
+
+--- |
+  target triple = "amdgcn-amd-amdhsa"
+  define amdgpu_kernel void @full(i1 %a0, i1 %a1, i1 %a2, i1 %a3, i1 %end) !prof !1 !wave.profile !2 {
+  entry:
+    br label %loop, !wave.profile.block !10
+  loop:
+    br i1 %a0, label %work0, label %work1, !wave.profile.block !11
+  work0:
+    br label %tail, !wave.profile.block !12
+  work1:
+    br label %tail, !wave.profile.block !13
+  tail:
+    br i1 %a1, label %work2, label %latch, !wave.profile.block !14
+  work2:
+    br label %latch, !wave.profile.block !15
+  latch:
+    br i1 %end, label %exit, label %loop, !wave.profile.block !16
+  exit:
+    ret void, !wave.profile.block !17
+  }
+  !llvm.module.flags = !{!50}
+  !1 = !{!"function_entry_count", i64 65536}
+  !2 = !{i64 2, i64 2126183510711298807, i64 1024, i64 32768, i64 8192, i64 24576, i64 32768, i64 8192, i64 32768, i64 1024}
+  !10 = !{i64 2, i64 2126183510711298807, i64 0, i64 1, i64 1}
+  !11 = !{i64 2, i64 2126183510711298807, i64 1, i64 1, i64 2, i64 3}
+  !12 = !{i64 2, i64 2126183510711298807, i64 2, i64 1, i64 4}
+  !13 = !{i64 2, i64 2126183510711298807, i64 3, i64 1, i64 4}
+  !14 = !{i64 2, i64 2126183510711298807, i64 4, i64 1, i64 5, i64 6}
+  !15 = !{i64 2, i64 2126183510711298807, i64 5, i64 1, i64 6}
+  !16 = !{i64 2, i64 2126183510711298807, i64 6, i64 1, i64 7, i64 1}
+  !17 = !{i64 2, i64 2126183510711298807, i64 7, i64 1}
+  !50 = !{i32 1, !"ProfileSummary", !51}
+  !51 = !{!52, !53, !54, !55, !56, !57, !58, !59}
+  !52 = !{!"ProfileFormat", !"InstrProf"}
+  !53 = !{!"TotalCount", i64 8388608}
+  !54 = !{!"MaxCount", i64 2097152}
+  !55 = !{!"MaxInternalCount", i64 2097152}
+  !56 = !{!"MaxFunctionCount", i64 65536}
+  !57 = !{!"NumCounts", i64 11}
+  !58 = !{!"NumFunctions", i64 1}
+  !59 = !{!"DetailedSummary", !60}
+  !60 = !{!61, !62, !63}
+  !61 = !{i32 10000, i64 65536, i32 1}
+  !62 = !{i32 999000, i64 65536, i32 11}
+  !63 = !{i32 999999, i64 65536, i32 11}
+...
+---
+name: full
+tracksRegLiveness: false
+body: |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    S_BRANCH %bb.1
+  bb.1.loop:
+    successors: %bb.2(0x00800000), %bb.3(0x7f800000)
+    $sgpr8_sgpr9 = S_AND_SAVEEXEC_B64 $sgpr0_sgpr1, implicit-def $exec, implicit-def $scc, implicit $exec
+    S_CBRANCH_EXECZ %bb.3, implicit $exec
+    S_BRANCH %bb.2
+  bb.2.work0:
+    successors: %bb.4(0x80000000)
+    $sgpr20 = S_ADD_U32 $sgpr20, 1, implicit-def $scc
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_BRANCH %bb.4
+  bb.3.work1:
+    successors: %bb.4(0x80000000)
+    $sgpr20 = S_ADD_U32 $sgpr20, 2, implicit-def $scc
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_BRANCH %bb.4
+  bb.4.tail:
+    successors: %bb.5(0x00800000), %bb.6(0x7f800000)
+    $exec = S_OR_B64 $exec, $sgpr8_sgpr9, implicit-def dead $scc
+    $sgpr8_sgpr9 = S_AND_SAVEEXEC_B64 $sgpr2_sgpr3, implicit-def $exec, implicit-def $scc, implicit $exec
+    S_CBRANCH_EXECZ %bb.6, implicit $exec
+  bb.5.work2:
+    successors: %bb.6(0x80000000)
+    $sgpr20 = S_ADD_U32 $sgpr20, 3, implicit-def $scc
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    S_BRANCH %bb.6
+  bb.6.latch:
+    successors: %bb.7(0x04000000), %bb.1(0x7c000000)
+    $exec = S_OR_B64 $exec, $sgpr8_sgpr9, implicit-def dead $scc
+    S_NOP 0
+    S_NOP 0
+    S_NOP 0
+    $sgpr16 = S_ADD_I32 $sgpr16, -1, implicit-def $scc
+    S_CMP_EQ_U32 $sgpr16, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.7, implicit $scc
+    S_BRANCH %bb.1
+  bb.7.exit:
+    S_ENDPGM 0
+...
