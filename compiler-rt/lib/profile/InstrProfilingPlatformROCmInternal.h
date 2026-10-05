@@ -111,7 +111,8 @@ void ensureHipLoaded();
 int hipMemcpyAvailable();
 int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size);
 int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
-                            const ::OffloadSectionShadowGroup *Sections);
+                            const ::OffloadSectionShadowGroup *Sections,
+                            ProfBoundsSet *CollectedBounds = nullptr);
 
 #if defined(__linux__)
 // Implemented in InstrProfilingPlatformROCmHSA.cpp.
