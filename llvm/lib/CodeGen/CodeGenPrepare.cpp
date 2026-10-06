@@ -1171,6 +1171,14 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
     }
   }
 
+  // Removing a block on a single predecessor's edge preserves the surrounding
+  // wave events. Multiple predecessors may change wave reconvergence.
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (BB->getSinglePredecessor()) {
+    WaveProfile.emplace(*BB->getParent());
+    WaveProfile->forget(*BB);
+  }
+
   // Otherwise, we have multiple predecessors of BB.  Update the PHIs in DestBB
   // to handle the new incoming edges it is about to have.
   for (PHINode &PN : DestBB->phis()) {
@@ -1226,6 +1234,9 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   DTU->applyUpdates(DTUpdates);
   DTU->deleteBB(BB);
   ++NumBlocksElim;
+
+  if (WaveProfile)
+    WaveProfile->restore();
 
   LLVM_DEBUG(dbgs() << "AFTER:\n" << *DestBB << "\n\n\n");
   return true;

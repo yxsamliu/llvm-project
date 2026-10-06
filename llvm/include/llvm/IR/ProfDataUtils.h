@@ -105,7 +105,12 @@ class LLVM_ABI BlockWaveCountPreserver {
 
 public:
   explicit BlockWaveCountPreserver(Function &F);
+  /// Whether construction captured a valid wave profile.
+  bool hasProfile() const { return Profile.get() != nullptr; }
   void invalidate(const BasicBlock &BB);
+  /// Discard an execution event and its identity. On restore, a surviving
+  /// block gets a new unmeasured identity, replacing any transplanted metadata.
+  void forget(const BasicBlock &BB);
   void restore();
 };
 

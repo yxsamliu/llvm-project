@@ -1280,6 +1280,15 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
           if (PredTI->hasNonDebugLocLoopMetadata())
             return false;
 
+  // Removing an unconditional block on a single predecessor's edge does not
+  // change the surrounding wave events. Multi-predecessor reconvergence is
+  // not covered by this transfer.
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (BBKillable && BB->getSinglePredecessor()) {
+    WaveProfile.emplace(*BB->getParent());
+    WaveProfile->forget(*BB);
+  }
+
   if (BBKillable)
     LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
   else if (BBPhisMergeable)
@@ -1380,6 +1389,9 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
 
   if (BBKillable)
     DeleteDeadBlock(BB, DTU);
+
+  if (WaveProfile)
+    WaveProfile->restore();
 
   return true;
 }

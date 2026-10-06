@@ -370,6 +370,13 @@ void BlockWaveCountPreserver::invalidate(const BasicBlock &BB) {
     }
 }
 
+void BlockWaveCountPreserver::forget(const BasicBlock &BB) {
+  unsigned Size = Blocks.size();
+  llvm::erase_if(Blocks,
+                 [&](const BlockProfile &Block) { return Block.Block == &BB; });
+  Invalidated |= Blocks.size() != Size;
+}
+
 void BlockWaveCountPreserver::restore() {
   TrackingMDNodeRef SavedProfile(std::move(Profile));
   if (!SavedProfile)

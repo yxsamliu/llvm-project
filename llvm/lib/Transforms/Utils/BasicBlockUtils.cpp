@@ -34,6 +34,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -45,6 +46,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -288,6 +290,12 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
   LLVM_DEBUG(dbgs() << "Merging: " << BB->getName() << " into "
                     << PredBB->getName() << "\n");
 
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (!PredecessorWithTwoSuccessors) {
+    WaveProfile.emplace(*BB->getParent());
+    WaveProfile->forget(*BB);
+  }
+
   // Begin by getting rid of unneeded PHIs.
   SmallVector<AssertingVH<Value>, 4> IncomingValues;
   if (isa<PHINode>(BB->front())) {
@@ -365,6 +373,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
     // The merged block retains the predecessor's executions. Its terminator
     // changes, but its block-uniformity classification still applies.
     STI->copyMetadata(*PTI, {LLVMContext::MD_block_uniformity_profile});
+    // The transplanted terminator must not replace the predecessor's event.
+    if (WaveProfile->hasProfile())
+      STI->setMetadata(LLVMContext::MD_wave_profile_block, nullptr);
 
     // Delete the unconditional branch from the predecessor.
     PredBB->back().eraseFromParent();
@@ -402,6 +413,9 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DomTreeUpdater *DTU,
 
   // Finally, erase the old block and update dominator info.
   DeleteDeadBlock(BB, DTU);
+
+  if (WaveProfile)
+    WaveProfile->restore();
 
   return true;
 }
@@ -1331,6 +1345,12 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     return NewBBs[0];
   }
 
+  // A new unconditional block on one predecessor's edge does not change
+  // existing wave events. The new block remains unmeasured.
+  std::optional<BlockWaveCountPreserver> WaveProfile;
+  if (Preds.size() == 1)
+    WaveProfile.emplace(*BB->getParent());
+
   // Create new basic block, insert right before the original block.
   BasicBlock *NewBB = BasicBlock::Create(
       BB->getContext(), BB->getName() + Suffix, BB->getParent(), BB);
@@ -1397,6 +1417,9 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
         OldLatch->getTerminator()->setMetadata(LLVMContext::MD_loop, nullptr);
     }
   }
+
+  if (WaveProfile)
+    WaveProfile->restore();
 
   return NewBB;
 }
