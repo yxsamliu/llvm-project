@@ -55,6 +55,7 @@ add_llvm_unittest(CodeGenTests
   TypeTraitsTest.cpp
   TargetOptionsTest.cpp
   TestAsmPrinter.cpp
+  WaveRegionCostTest.cpp
   X86MCInstLowerTest.cpp
   )
 

@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
@@ -42,21 +43,26 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ScaledNumber.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
-static cl::opt<bool> EnableWaveProfiledSpill(
-    "enable-wave-profiled-spill", cl::Hidden, cl::init(true),
-    cl::desc("Use validated AMDGPU wave counts for spill placement"));
+static cl::opt<bool> WaveGuidedSpillPlacement(
+    "wave-guided-spill-placement", cl::Hidden, cl::init(true),
+    cl::desc("Use validated wave counts for spill-placement frequencies"));
+static cl::opt<bool> WaveGuidedSpillCosts(
+    "wave-guided-spill-costs", cl::Hidden, cl::init(true),
+    cl::desc("Use validated wave counts to bound region spill costs"));
 static cl::opt<bool> ReportWaveProfiledSpill(
     "report-wave-profiled-spill", cl::Hidden, cl::init(false),
     cl::desc("Report wave-count mapping and spill-cost coverage"));
@@ -281,9 +287,10 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   BitVector HasWaveCount;
   uint64_t EntryWaveCount = 0;
   DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
+  DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
   unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
-      EnableWaveProfiledSpill &&
+      (WaveGuidedSpillPlacement || WaveGuidedSpillCosts) &&
       mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
       extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
                                    EntryWaveCount) &&
@@ -313,6 +320,11 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
         continue;
       }
       uint64_t Count = WaveCounts[Index++];
+      // Keep the two consumers independent after validating the mapping.
+      if (WaveGuidedSpillCosts)
+        RawWaveCounts[&BB] = Count;
+      if (!WaveGuidedSpillPlacement)
+        continue;
       uint64_t Frequency =
           ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
               .scale(MBFI->getEntryFreq().getFrequency());
@@ -324,13 +336,29 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
 
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
+  MeasuredWaveBlocks.clear();
+  MeasuredWaveCounts.clear();
+  if (!RawWaveCounts.empty()) {
+    MeasuredWaveBlocks.resize(mf.getNumBlockIDs());
+    MeasuredWaveCounts.assign(mf.getNumBlockIDs(), 0);
+  }
+  AcyclicBlocks.clear();
+  NormalizationWaveCount = EntryWaveCount;
   setThreshold(MBFI->getEntryFreq());
   unsigned ChangedWaveCosts = 0;
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
     auto Wave = WaveFrequencies.find(I.getBasicBlock());
+    // Only a validated measurement replaces the original block frequency.
+    // Uniformity alone does not establish how often a block executes.
     BlockFrequencies[Num] =
         Wave == WaveFrequencies.end() ? MBFI->getBlockFreq(&I) : Wave->second;
+
+    if (auto Count = RawWaveCounts.find(I.getBasicBlock());
+        Count != RawWaveCounts.end()) {
+      MeasuredWaveBlocks.set(Num);
+      MeasuredWaveCounts[Num] = Count->second;
+    }
     if (Wave != WaveFrequencies.end()) {
       if (ReportWaveProfiledSpill)
         ChangedWaveCosts += Wave->second != MBFI->getBlockFreq(&I);
@@ -340,10 +368,53 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                         << MBFI->getEntryFreq().getFrequency() << ")\n");
     }
   }
-  if (ReportWaveProfiledSpill && EnableWaveProfiledSpill)
+  if (ReportWaveProfiledSpill && WaveGuidedSpillPlacement)
     errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
            << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
            << "\t" << ChangedWaveCosts << "\n";
+}
+
+bool SpillPlacement::isWaveCostDifferencePositive(
+    ArrayRef<int64_t> Coefficients) {
+  if (!hasMeasuredWaveBlocks())
+    return false;
+  assert(Coefficients.size() == BlockFrequencies.size());
+  if (AcyclicBlocks.empty()) {
+    AcyclicBlocks.resize(MF->getNumBlockIDs());
+    // Unreachable blocks are left unknown. SCCs include irreducible cycles.
+    for (auto I = scc_begin(MF); !I.isAtEnd(); ++I) {
+      if (!I.hasCycle())
+        AcyclicBlocks.set(I->front()->getNumber());
+    }
+  }
+
+  uint64_t Positive = 0, Negative = 0;
+  for (unsigned I = 0; I != Coefficients.size(); ++I) {
+    int64_t C = Coefficients[I];
+    if (!C)
+      continue;
+    uint64_t Frequency = 0;
+    if (MeasuredWaveBlocks.test(I)) {
+      Frequency = MeasuredWaveCounts[I];
+    } else if (C < 0) {
+      if (!AcyclicBlocks.test(I))
+        return false;
+      Frequency = NormalizationWaveCount;
+    }
+    // Reject potentially saturated counters and unrepresentable arithmetic.
+    if (Frequency == UINT64_MAX || C == INT64_MIN)
+      return false;
+    std::optional<uint64_t> Product =
+        checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
+    if (!Product)
+      return false;
+    uint64_t &Sum = C < 0 ? Negative : Positive;
+    std::optional<uint64_t> Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
+    if (!Total)
+      return false;
+    Sum = *Total;
+  }
+  return Positive > Negative;
 }
 
 /// activate - mark node n as active if it wasn't already.

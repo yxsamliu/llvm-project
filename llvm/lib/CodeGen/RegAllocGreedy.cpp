@@ -562,7 +562,7 @@ MCRegister RAGreedy::tryAssign(const LiveInterval &VirtReg,
       }
 
       // We can also split the virtual register in cold blocks.
-      if (trySplitAroundHintReg(PhysHint, VirtReg, NewVRegs, Order))
+      if (trySplitAroundHintReg(PhysHint, VirtReg, NewVRegs))
         return MCRegister();
 
       // Record the missed hint, we may be able to recover
@@ -734,18 +734,20 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 //                              Region Splitting
 //===----------------------------------------------------------------------===//
 
-/// addSplitConstraints - Fill out the SplitConstraints vector based on the
-/// interference pattern in Physreg and its aliases. Add the constraints to
-/// SpillPlacement and return the static cost of this split in Cost, assuming
-/// that all preferences in SplitConstraints are met.
-/// Return false if there are no bundles with positive bias.
-bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
-                                   BlockFrequency &Cost) {
+/// calcSplitConstraints - Fill out the SplitConstraints vector based on the
+/// interference pattern in Physreg and its aliases. When requested, compute
+/// the static cost in Cost and add spill counts to CostDifference, assuming all
+/// preferences in SplitConstraints are met. Return false if a required spill
+/// cannot be inserted.
+bool RAGreedy::calcSplitConstraints(InterferenceCache::Cursor Intf,
+                                    BlockFrequency *Cost,
+                                    SmallVectorImpl<int64_t> *CostDifference) {
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
 
   // Reset interference dependent info.
   SplitConstraints.resize(UseBlocks.size());
-  BlockFrequency StaticCost = BlockFrequency(0);
+  if (Cost)
+    *Cost = BlockFrequency(0);
   for (unsigned I = 0; I != UseBlocks.size(); ++I) {
     const SplitAnalysis::BlockInfo &BI = UseBlocks[I];
     SpillPlacement::BlockConstraint &BC = SplitConstraints[I];
@@ -798,11 +800,21 @@ bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
       }
     }
 
+    if (CostDifference)
+      (*CostDifference)[BC.Number] += Ins;
     // Accumulate the total frequency of inserted spill code.
-    while (Ins--)
-      StaticCost += SpillPlacer->getBlockFrequency(BC.Number);
+    if (Cost) {
+      while (Ins--)
+        *Cost += SpillPlacer->getBlockFrequency(BC.Number);
+    }
   }
-  Cost = StaticCost;
+  return true;
+}
+
+bool RAGreedy::addSplitConstraints(InterferenceCache::Cursor Intf,
+                                   BlockFrequency &Cost) {
+  if (!calcSplitConstraints(Intf, &Cost))
+    return false;
 
   // Add constraints for use-blocks. Note that these are the only constraints
   // that may add a positive bias, it is downhill from here.
@@ -1009,13 +1021,13 @@ BlockFrequency RAGreedy::calcBlockSplitCost() {
   return Cost;
 }
 
-/// calcGlobalSplitCost - Return the global split cost of following the split
-/// pattern in LiveBundles. This cost should be added to the local cost of the
-/// interference pattern in SplitConstraints.
+/// addGlobalSplitCost - Add the global split cost of following LiveBundles
+/// to Cost and spill counts to CostDifference, when requested. Cost should
+/// initially contain the local cost of the interference in SplitConstraints.
 ///
-BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
-                                             const AllocationOrder &Order) {
-  BlockFrequency GlobalCost = BlockFrequency(0);
+void RAGreedy::addGlobalSplitCost(GlobalSplitCandidate &Cand,
+                                  BlockFrequency *Cost,
+                                  SmallVectorImpl<int64_t> *CostDifference) {
   const BitVector &LiveBundles = Cand.LiveBundles;
   ArrayRef<SplitAnalysis::BlockInfo> UseBlocks = SA->getUseBlocks();
   for (unsigned I = 0; I != UseBlocks.size(); ++I) {
@@ -1031,8 +1043,12 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
       Ins += RegIn != (BC.Entry == SpillPlacement::PrefReg);
     if (BI.LiveOut)
       Ins += RegOut != (BC.Exit == SpillPlacement::PrefReg);
-    while (Ins--)
-      GlobalCost += SpillPlacer->getBlockFrequency(BC.Number);
+    if (CostDifference)
+      (*CostDifference)[BC.Number] += Ins;
+    if (Cost) {
+      while (Ins--)
+        *Cost += SpillPlacer->getBlockFrequency(BC.Number);
+    }
   }
 
   for (unsigned Number : Cand.ActiveBlocks) {
@@ -1044,15 +1060,21 @@ BlockFrequency RAGreedy::calcGlobalSplitCost(GlobalSplitCandidate &Cand,
       // We need double spill code if this block has interference.
       Cand.Intf.moveToBlock(Number);
       if (Cand.Intf.hasInterference()) {
-        GlobalCost += SpillPlacer->getBlockFrequency(Number);
-        GlobalCost += SpillPlacer->getBlockFrequency(Number);
+        if (CostDifference)
+          (*CostDifference)[Number] += 2;
+        if (Cost) {
+          *Cost += SpillPlacer->getBlockFrequency(Number);
+          *Cost += SpillPlacer->getBlockFrequency(Number);
+        }
       }
       continue;
     }
     // live-in / stack-out or stack-in live-out.
-    GlobalCost += SpillPlacer->getBlockFrequency(Number);
+    if (CostDifference)
+      ++(*CostDifference)[Number];
+    if (Cost)
+      *Cost += SpillPlacer->getBlockFrequency(Number);
   }
-  return GlobalCost;
 }
 
 /// splitAroundRegion - Split the current live range around the regions
@@ -1232,6 +1254,18 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
 
+  if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
+      SpillPlacer->hasMeasuredWaveBlocks()) {
+    // doRegionSplit also assigns uncovered compact bundles. The physical
+    // candidate's cost is sufficient only when that union adds no bundles.
+    const BitVector &Physical = GlobalCand[BestCand].LiveBundles;
+    bool ExtraCompact = llvm::any_of(GlobalCand.front().LiveBundles.set_bits(),
+                                     [&](int I) { return !Physical.test(I); });
+    if (!ExtraCompact && isWaveRegionCostHigher(GlobalCand[BestCand])) {
+      LLVM_DEBUG(dbgs() << "Wave cost exceeds block splitting\n");
+      return MCRegister::NoRegister;
+    }
+  }
   // No solutions found, fall back to single block splitting.
   if (!HasCompact && BestCand == NoCand)
     return MCRegister::NoRegister;
@@ -1239,8 +1273,24 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
 }
 
+bool RAGreedy::isWaveRegionCostHigher(GlobalSplitCandidate &Cand) {
+  // Only the selected physical candidate needs a wave-cost comparison. Other
+  // candidates overwrite SplitConstraints, so reconstruct its constraints
+  // without changing the spill placement solution or live bundles.
+  SmallVector<int64_t> CostDifference(MF->getNumBlockIDs(), 0);
+  if (!calcSplitConstraints(Cand.Intf, nullptr, &CostDifference))
+    return false;
+  addGlobalSplitCost(Cand, nullptr, &CostDifference);
+
+  // Use-block entries are not unique by block; accumulate every term.
+  for (const SplitAnalysis::BlockInfo &BI : SA->getUseBlocks()) {
+    CostDifference[BI.MBB->getNumber()] -=
+        1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef);
+  }
+  return SpillPlacer->isWaveCostDifferencePositive(CostDifference);
+}
+
 unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
-                                                     AllocationOrder &Order,
                                                      BlockFrequency &BestCost,
                                                      unsigned &NumCands,
                                                      unsigned &BestCand) {
@@ -1300,7 +1350,7 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
     return BestCand;
   }
 
-  Cost += calcGlobalSplitCost(Cand, Order);
+  addGlobalSplitCost(Cand, &Cost);
   LLVM_DEBUG({
     dbgs() << ", total = " << printBlockFreq(*MBFI, Cost) << " with bundles";
     for (int I : Cand.LiveBundles.set_bits())
@@ -1327,8 +1377,7 @@ unsigned RAGreedy::calculateRegionSplitCost(const LiveInterval &VirtReg,
     if (IgnoreCSR && EvictAdvisor->isUnusedCalleeSavedReg(PhysReg))
       continue;
 
-    calculateRegionSplitCostAroundReg(PhysReg, Order, BestCost, NumCands,
-                                      BestCand);
+    calculateRegionSplitCostAroundReg(PhysReg, BestCost, NumCands, BestCand);
   }
 
   return BestCand;
@@ -1378,8 +1427,7 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
 // Hint if we can place new COPY instructions in cold blocks.
 bool RAGreedy::trySplitAroundHintReg(MCRegister Hint,
                                      const LiveInterval &VirtReg,
-                                     SmallVectorImpl<Register> &NewVRegs,
-                                     AllocationOrder &Order) {
+                                     SmallVectorImpl<Register> &NewVRegs) {
   // Split the VirtReg may generate COPY instructions in multiple cold basic
   // blocks, and increase code size. So we avoid it when the function is
   // optimized for size.
@@ -1454,7 +1502,7 @@ bool RAGreedy::trySplitAroundHintReg(MCRegister Hint,
   unsigned NumCands = 0;
   unsigned BestCand = NoCand;
   SA->analyze(&VirtReg);
-  calculateRegionSplitCostAroundReg(Hint, Order, Cost, NumCands, BestCand);
+  calculateRegionSplitCostAroundReg(Hint, Cost, NumCands, BestCand);
   if (BestCand == NoCand)
     return false;
 
