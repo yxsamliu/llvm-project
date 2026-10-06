@@ -54,6 +54,10 @@ static cl::opt<bool> DisableCHR("disable-chr", cl::init(false), cl::Hidden,
 static cl::opt<bool> ForceCHR("force-chr", cl::init(false), cl::Hidden,
                               cl::desc("Apply CHR for all functions"));
 
+static cl::opt<bool> CHRUniformityProfile(
+    "chr-uniformity-profile", cl::init(true), cl::Hidden,
+    cl::desc("Use branch uniformity profiles to filter CHR candidates"));
+
 static cl::opt<double> CHRBiasThreshold(
     "chr-bias-threshold", cl::init(0.99), cl::Hidden,
     cl::desc("CHR considers a branch bias greater than this ratio as biased"));
@@ -375,6 +379,11 @@ class CHR {
   RegionInfo &RI;
   OptimizationRemarkEmitter &ORE;
   CHRStats Stats;
+
+  // A function attachment indicates that uniformity profile data is available.
+  // This preserves CHR's existing behavior when no uniformity profile was
+  // collected.
+  bool HasUniformityProfile = F.getMetadata(LLVMContext::MD_uniformity_profile);
 
   // All the true-biased regions in the function
   DenseSet<Region *> TrueBiasedRegionsGlobal;
@@ -1326,9 +1335,43 @@ static bool hasAtLeastTwoBiasedBranches(CHRScope *Scope) {
   return NumBiased >= CHRMergeThreshold;
 }
 
+static Instruction *
+findBranchWithoutUniformityProfile(const DenseSet<Region *> &Regions) {
+  for (Region *R : Regions) {
+    Instruction *Branch = R->getEntry()->getTerminator();
+    if (!Branch->getMetadata(LLVMContext::MD_branch_uniformity_profile))
+      return Branch;
+  }
+  return nullptr;
+}
+
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
+    // Branch weights count individual lanes. A divergent branch can therefore
+    // look strongly biased even when every wave executes both paths. Avoid
+    // applying CHR to such a scope because duplicating its control flow may
+    // increase live ranges and register pressure without eliminating control
+    // flow for the wave.
+    if (HasUniformityProfile) {
+      if (CHRUniformityProfile) {
+        Instruction *BranchWithoutUniformityProfile =
+            findBranchWithoutUniformityProfile(Scope->TrueBiasedRegions);
+        if (!BranchWithoutUniformityProfile)
+          BranchWithoutUniformityProfile =
+              findBranchWithoutUniformityProfile(Scope->FalseBiasedRegions);
+        if (BranchWithoutUniformityProfile) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "BranchNotKnownUniform",
+                                            BranchWithoutUniformityProfile)
+                   << "drop scope containing a branch that is not known to be "
+                      "uniform";
+          });
+          continue;
+        }
+      }
+    }
+
     // Filter out the ones with only one region and no subs.
     if (!hasAtLeastTwoBiasedBranches(Scope)) {
       CHR_DEBUG(dbgs() << "Filtered out by biased branches truthy-regions "
