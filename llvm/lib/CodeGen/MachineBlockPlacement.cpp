@@ -50,9 +50,12 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PrintPasses.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
@@ -62,6 +65,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/CodeLayout.h"
@@ -200,6 +204,26 @@ static cl::opt<unsigned> TailDupProfilePercentThreshold(
              "model, the gained fall through number from tail duplication "
              "should be at least this percent of hot count."),
     cl::init(50), cl::Hidden);
+
+// Experimental, opt-in cost models for branch instructions executed by a wave.
+// Keep a lane-count control to isolate the contribution of measured wave
+// visits.
+enum class TailDupProfileCost { Default, LaneBranches, WaveBranches };
+static cl::opt<TailDupProfileCost> TailDupProfileCostModel(
+    "tail-duplication-profile-cost", cl::Hidden,
+    cl::init(TailDupProfileCost::Default),
+    cl::values(clEnumValN(TailDupProfileCost::Default, "default",
+                          "Use the existing taken-branch model"),
+               clEnumValN(TailDupProfileCost::LaneBranches, "lane-branches",
+                          "Use executed branches with lane counts (control)"),
+               clEnumValN(TailDupProfileCost::WaveBranches, "wave-branches",
+                          "Use executed branches with measured wave counts")));
+static cl::opt<bool> PreserveTailWaveCounts(
+    "tail-duplication-preserve-wave-counts", cl::Hidden, cl::init(true),
+    cl::desc(
+        "Preserve unchanged successor wave events after tail duplication"));
+static cl::opt<bool> ReportWaveTailDuplication("report-wave-tail-duplication",
+                                               cl::Hidden, cl::init(false));
 
 // Heuristic for triangle chains.
 static cl::opt<unsigned> TriangleChainCount(
@@ -434,6 +458,17 @@ class MachineBlockPlacement {
   BlockFrequency DupThreshold;
 
   unsigned TailDupSize;
+
+  struct TailWaveRecord {
+    BlockFrequency Frequency;
+    SmallVector<const MachineBasicBlock *, 4> Preds;
+    SmallVector<const MachineBasicBlock *, 2> Succs;
+  };
+  DenseMap<const MachineBasicBlock *, TailWaveRecord> TailWaveCounts;
+  void initTailWaveCounts();
+  std::optional<BlockFrequency> getProfiledTailDupGain(MachineBasicBlock *Pred,
+                                                       MachineBasicBlock *BB,
+                                                       bool HasFallthrough);
 
   /// True:  use block profile count to compute tail duplication cost.
   /// False: use block frequency to compute tail duplication cost.
@@ -3230,6 +3265,7 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
   auto RemovalCallback = [&](MachineBasicBlock *RemBB) {
     // Signal to outer function
     Removed = true;
+    TailWaveCounts.erase(RemBB);
 
     // Remove from the Chain and Chain Map
     if (auto It = BlockToChain.find(RemBB); It != BlockToChain.end()) {
@@ -3295,8 +3331,73 @@ bool MachineBlockPlacement::maybeTailDuplicateBlock(
     if (CandidatePreds.size() < BB->pred_size())
       CandidatePtr = &CandidatePreds;
   }
+  SmallVector<MachineBasicBlock *, 4> PreservedWaveSuccs;
+  SmallVector<MachineBasicBlock *, 4> OriginalTailSuccs;
+  SmallPtrSet<MachineBasicBlock *, 8> SingleSuccPreds;
+  const int TailNumber = BB->getNumber();
+  if (PreserveTailWaveCounts && !IsSimple && !TailWaveCounts.empty() &&
+      TailDupProfileCostModel != TailDupProfileCost::Default) {
+    OriginalTailSuccs.append(BB->succ_begin(), BB->succ_end());
+    for (MachineBasicBlock *Pred : BB->predecessors())
+      if (Pred->succ_size() == 1 && *Pred->succ_begin() == BB)
+        SingleSuccPreds.insert(Pred);
+    for (MachineBasicBlock *Succ : OriginalTailSuccs) {
+      // Never revive a stale record or preserve a block that this rewrite
+      // might itself duplicate/merge. Only predecessor edges may change.
+      auto It = TailWaveCounts.find(Succ);
+      if (Succ != BB && !SingleSuccPreds.contains(Succ) &&
+          It != TailWaveCounts.end() &&
+          llvm::equal(Succ->predecessors(), It->second.Preds) &&
+          llvm::equal(Succ->successors(), It->second.Succs))
+        PreservedWaveSuccs.push_back(Succ);
+    }
+  }
   TailDup.tailDuplicateAndUpdate(IsSimple, BB, LPred, &DuplicatedPreds,
                                  &RemovalCallbackRef, CandidatePtr);
+  // A partial duplication changes BB's population. A predecessor now includes
+  // another block's event. Do not reuse either original measurement.
+  if (!DuplicatedPreds.empty()) {
+    TailWaveCounts.erase(BB);
+    for (MachineBasicBlock *Pred : DuplicatedPreds)
+      TailWaveCounts.erase(Pred);
+  }
+
+  // This is post-RA, non-simple duplication: each unconditional Pred->BB
+  // path executes the same tail instructions in Pred instead. An untouched
+  // successor therefore receives the same machine state and wave visits,
+  // even when those instructions manipulate EXEC. This preserves an existing
+  // event; it neither partitions BB's count nor adds incoming wave counts.
+  // TailDuplicator may also merge BB into its last unconditional predecessor.
+  // Check the complete expected edge rewrite before updating any snapshot.
+  if (!DuplicatedPreds.empty() && !PreservedWaveSuccs.empty() &&
+      llvm::all_of(DuplicatedPreds, [&](MachineBasicBlock *Pred) {
+        return SingleSuccPreds.contains(Pred) &&
+               llvm::equal(Pred->successors(), OriginalTailSuccs);
+      })) {
+    for (MachineBasicBlock *Succ : PreservedWaveSuccs) {
+      auto It = TailWaveCounts.find(Succ);
+      if (It == TailWaveCounts.end() ||
+          !llvm::equal(Succ->successors(), It->second.Succs))
+        continue;
+      SmallPtrSet<const MachineBasicBlock *, 8> Expected;
+      for (const MachineBasicBlock *Pred : It->second.Preds)
+        if (!Removed || Pred != BB)
+          Expected.insert(Pred);
+      for (MachineBasicBlock *Pred : DuplicatedPreds)
+        Expected.insert(Pred);
+      if (!llvm::all_of(Succ->predecessors(),
+                        [&](const MachineBasicBlock *Pred) {
+                          return Expected.erase(Pred);
+                        }) ||
+          !Expected.empty())
+        continue;
+      It->second.Preds.assign(Succ->pred_begin(), Succ->pred_end());
+      if (ReportWaveTailDuplication)
+        errs() << "WAVE_TAIL_PRESERVE\t" << F->getName() << "\t" << TailNumber
+               << "\t" << Succ->getNumber() << "\t"
+               << It->second.Frequency.getFrequency() << "\n";
+    }
+  }
 
   // Update UnscheduledPredecessors to reflect tail-duplication.
   DuplicatedToLPred = false;
@@ -3468,6 +3569,18 @@ void MachineBlockPlacement::findDuplicateCandidates(
 
     assert(OrigCost >= DupCost);
     OrigCost -= DupCost;
+    BlockFrequency OriginalGain = OrigCost;
+    auto ProfileGain = getProfiledTailDupGain(Pred, BB, SuccIt != Succs.end());
+    if (ProfileGain)
+      OrigCost = *ProfileGain;
+    if (ReportWaveTailDuplication)
+      errs() << "WAVE_TAIL_DECISION\t" << F->getName() << "\t"
+             << BB->getNumber() << "\t" << Pred->getNumber() << "\t"
+             << static_cast<unsigned>(TailDupProfileCostModel.getValue())
+             << "\t" << bool(ProfileGain) << "\t" << OriginalGain.getFrequency()
+             << "\t" << OrigCost.getFrequency() << "\t"
+             << BBDupThreshold.getFrequency() << "\t"
+             << (OrigCost > BBDupThreshold) << "\n";
     if (OrigCost > BBDupThreshold) {
       Candidates.push_back(Pred);
       if (SuccIt != Succs.end())
@@ -3483,6 +3596,93 @@ void MachineBlockPlacement::findDuplicateCandidates(
       Candidates.pop_back();
     }
   }
+}
+
+void MachineBlockPlacement::initTailWaveCounts() {
+  TailWaveCounts.clear();
+  const Function &Fn = F->getFunction();
+  if ((TailDupProfileCostModel == TailDupProfileCost::Default &&
+       !ReportWaveTailDuplication) ||
+      !UseProfileCount || !Fn.getParent()->getTargetTriple().isAMDGPU())
+    return;
+  auto Entry = Fn.getEntryCount();
+  SmallVector<uint64_t> Counts;
+  BitVector HasCount;
+  uint64_t EntryWaves = 0;
+  if (!Entry || !*Entry ||
+      !extractMappedBlockWaveCounts(Fn, Counts, HasCount, EntryWaves) ||
+      !EntryWaves)
+    return;
+
+  DenseMap<const BasicBlock *, const MachineBasicBlock *> Unique;
+  for (const MachineBasicBlock &MBB : *F) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    if (!BB || BB->getParent() != &Fn)
+      continue;
+    auto [It, Inserted] = Unique.try_emplace(BB, &MBB);
+    if (!Inserted)
+      It->second = nullptr;
+  }
+  auto MatchingEdges = [&](auto IRBlocks, auto MachineBlocks) {
+    SmallPtrSet<const BasicBlock *, 4> Expected;
+    for (const BasicBlock *BB : IRBlocks)
+      Expected.insert(BB);
+    for (const MachineBasicBlock *MBB : MachineBlocks) {
+      const BasicBlock *BB = MBB->getBasicBlock();
+      if (!BB || Unique.lookup(BB) != MBB || !Expected.erase(BB))
+        return false;
+    }
+    return Expected.empty();
+  };
+  unsigned Index = 0;
+  for (const BasicBlock &BB : Fn) {
+    unsigned I = Index++;
+    const MachineBasicBlock *MBB = Unique.lookup(&BB);
+    if (!HasCount[I] || !MBB ||
+        !MatchingEdges(predecessors(&BB), MBB->predecessors()) ||
+        !MatchingEdges(successors(&BB), MBB->successors()))
+      continue;
+    // Normalize direct wave visits per original invocation into the same
+    // entry-count scale as the existing hot-count threshold. Do not alter
+    // MBFI/MBPI or reconstruct waves through scalar flow equations.
+    uint64_t Frequency =
+        ScaledNumber<uint64_t>::getFraction(Counts[I], EntryWaves)
+            .scale(*Entry);
+    TailWaveRecord Record;
+    Record.Frequency = BlockFrequency(Frequency); // measured zero stays zero
+    Record.Preds.append(MBB->pred_begin(), MBB->pred_end());
+    Record.Succs.append(MBB->succ_begin(), MBB->succ_end());
+    TailWaveCounts.try_emplace(MBB, std::move(Record));
+    if (ReportWaveTailDuplication)
+      errs() << "WAVE_TAIL_MAP\t" << F->getName() << "\t" << MBB->getNumber()
+             << "\t" << Counts[I] << "\t" << EntryWaves << "\t" << *Entry
+             << "\t" << Frequency << "\n";
+  }
+}
+
+std::optional<BlockFrequency> MachineBlockPlacement::getProfiledTailDupGain(
+    MachineBasicBlock *Pred, MachineBasicBlock *BB, bool HasFallthrough) {
+  if (TailDupProfileCostModel == TailDupProfileCost::Default ||
+      !HasFallthrough || Pred->succ_size() != 1 || *Pred->succ_begin() != BB ||
+      BB->succ_empty() || BB->succ_size() > 2)
+    return std::nullopt;
+  auto It = TailWaveCounts.find(Pred);
+  if (It == TailWaveCounts.end() ||
+      !llvm::equal(Pred->predecessors(), It->second.Preds) ||
+      !llvm::equal(Pred->successors(), It->second.Succs))
+    return std::nullopt;
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (TII->analyzeBranch(*BB, TBB, FBB, Cond))
+    return std::nullopt;
+  // Under the existing layout assumption Pred jumps to the shared tail.
+  // Duplicating a direct one/two-successor tail with an available fallthrough
+  // removes that branch instruction; the tail's own conditional still executes.
+  // Count executed branches, without pretending lane bias describes wave edges.
+  // The existing instruction-count penalty and legality/size guards remain.
+  if (TailDupProfileCostModel == TailDupProfileCost::LaneBranches)
+    return getBlockCountOrFrequency(Pred);
+  return It->second.Frequency;
 }
 
 void MachineBlockPlacement::initTailDupThreshold() {
@@ -3590,6 +3790,7 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
 
   // Initialize tail duplication thresholds.
   initTailDupThreshold();
+  initTailWaveCounts();
 
   const bool OptForSize =
       llvm::shouldOptimizeForSize(&MF, PSI, &MBFI->getMBFI());
@@ -3634,6 +3835,13 @@ bool MachineBlockPlacement::run(MachineFunction &MF) {
 
     if (BF.OptimizeFunction(MF, TII, MF.getSubtarget().getRegisterInfo(), MLI,
                             /*AfterPlacement=*/true)) {
+      // Branch folding can split/merge blocks before a second placement run.
+      // No wave-event transfer is defined for that rewrite; do not reuse its
+      // old block identities or revive their cached counts.
+      if (ReportWaveTailDuplication && !TailWaveCounts.empty())
+        errs() << "WAVE_TAIL_INVALIDATE\t" << F->getName()
+               << "\tbranch-folder\t" << TailWaveCounts.size() << "\n";
+      TailWaveCounts.clear();
       // Must redo the post-dominator tree if blocks were changed.
       if (MPDT)
         MPDT->recalculate(MF);
