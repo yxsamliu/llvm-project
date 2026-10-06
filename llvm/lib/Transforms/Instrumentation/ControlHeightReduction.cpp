@@ -58,6 +58,11 @@ static cl::opt<bool> CHRUniformityProfile(
     "chr-uniformity-profile", cl::init(true), cl::Hidden,
     cl::desc("Use branch uniformity profiles to filter CHR candidates"));
 
+static cl::opt<bool> CHRBooleanSelectGuard(
+    "chr-boolean-select-guard", cl::init(true), cl::Hidden,
+    cl::desc(
+        "Avoid Boolean-select CHR when uniformity profiles are available"));
+
 static cl::opt<double> CHRBiasThreshold(
     "chr-bias-threshold", cl::init(0.99), cl::Hidden,
     cl::desc("CHR considers a branch bias greater than this ratio as biased"));
@@ -1345,6 +1350,13 @@ findBranchWithoutUniformityProfile(const DenseSet<Region *> &Regions) {
   return nullptr;
 }
 
+static SelectInst *findBooleanSelect(const DenseSet<SelectInst *> &Selects) {
+  for (SelectInst *SI : Selects)
+    if (SI->getType()->isIntegerTy(1))
+      return SI;
+  return nullptr;
+}
+
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
@@ -1354,6 +1366,25 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
     // increase live ranges and register pressure without eliminating control
     // flow for the wave.
     if (HasUniformityProfile) {
+      if (CHRBooleanSelectGuard) {
+        // This safeguard uses profile availability and select type, not the
+        // measured uniformity classification. Boolean selects may be cheaper
+        // as mask operations than as duplicated control flow.
+        SelectInst *BooleanSelect = findBooleanSelect(Scope->TrueBiasedSelects);
+        if (!BooleanSelect)
+          BooleanSelect = findBooleanSelect(Scope->FalseBiasedSelects);
+        if (BooleanSelect) {
+          ORE.emit([&]() {
+            return OptimizationRemarkMissed(
+                       DEBUG_TYPE, "BooleanSelectWithUniformityProfile",
+                       BooleanSelect)
+                   << "drop scope containing a boolean select with uniformity "
+                      "profile";
+          });
+          continue;
+        }
+      }
+
       if (CHRUniformityProfile) {
         Instruction *BranchWithoutUniformityProfile =
             findBranchWithoutUniformityProfile(Scope->TrueBiasedRegions);
