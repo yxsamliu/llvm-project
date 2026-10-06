@@ -699,54 +699,26 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
 namespace {
 
 struct ProfileSectionCopy {
-  const char *Name;
   const void *DevBegin;
   size_t Size;
-  const void *&CachedDevBegin;
-  char *&CachedHost;
-  size_t &CachedSize;
   UniqueFree Owner;
   char *HostBegin = nullptr;
-  bool Reused = false;
 
-  ProfileSectionCopy(const char *Name, const void *DevBegin, size_t Size,
-                     const void *&CachedDevBegin, char *&CachedHost,
-                     size_t &CachedSize)
-      : Name(Name), DevBegin(DevBegin), Size(Size),
-        CachedDevBegin(CachedDevBegin), CachedHost(CachedHost),
-        CachedSize(CachedSize) {}
-
-  ProfileSectionCopy(const ProfileSectionCopy &) = delete;
-  ProfileSectionCopy &operator=(const ProfileSectionCopy &) = delete;
+  ProfileSectionCopy(const void *DevBegin, size_t Size)
+      : DevBegin(DevBegin), Size(Size) {}
 
   int prepare() {
     if (Size == 0)
       return 0;
-    if (DevBegin == CachedDevBegin && Size == CachedSize) {
-      HostBegin = CachedHost;
-      Reused = true;
-      if (isVerboseMode())
-        PROF_NOTE("Reusing cached %s section (%zu bytes)\n", Name, Size);
-    } else {
-      HostBegin = static_cast<char *>(malloc(Size));
-      Owner.reset(HostBegin);
-    }
+    HostBegin = static_cast<char *>(malloc(Size));
+    Owner.reset(HostBegin);
     return HostBegin ? 0 : -1;
   }
 
   int copy() {
-    if (Size == 0 || Reused)
+    if (Size == 0)
       return 0;
     return memcpyDeviceToHost(HostBegin, DevBegin, Size);
-  }
-
-  void commitCache() {
-    if (Reused || Size == 0)
-      return;
-    CachedDevBegin = DevBegin;
-    CachedHost = HostBegin;
-    CachedSize = Size;
-    Owner.release();
   }
 };
 
@@ -790,7 +762,7 @@ hasCompleteSectionShadows(const OffloadSectionShadowGroup *Sections) {
 
 int __prof_rocm::processDeviceOffloadPrf(
     void *DeviceOffloadPrf, const char *Target,
-    const OffloadSectionShadowGroup *Sections) {
+    const OffloadSectionShadowGroup *Sections, ProfBoundsSet *CollectedBounds) {
   __llvm_profile_gpu_sections HostSections;
 
   if (hipMemcpy(&HostSections, DeviceOffloadPrf, sizeof(HostSections),
@@ -814,7 +786,18 @@ int __prof_rocm::processDeviceOffloadPrf(
   size_t UniformCountersSize =
       (const char *)DevUniformCntsEnd - (const char *)DevUniformCntsBegin;
 
+  // Host registration enumerates kernels, not every surviving instrumented
+  // function. On Linux, copy the complete device sections, as the HSA drain
+  // does, so helpers are collected too. Windows HIP still requires the
+  // symbol-sized copies used by the registered-section path.
+#if defined(__linux__) && !defined(_WIN32)
+  int UseRegisteredSections = 0;
+#else
   int UseRegisteredSections = hasCompleteSectionShadows(Sections);
+#endif
+  if (!UseRegisteredSections && CollectedBounds &&
+      CollectedBounds->contains(DevDataBegin, DevCntsBegin, DevNamesBegin))
+    return 0;
   RegisteredSectionRange *RegisteredRanges = nullptr;
   int NumRegisteredRanges = 0;
 
@@ -844,34 +827,12 @@ int __prof_rocm::processDeviceOffloadPrf(
 
   int ret = -1;
 
-  /* Sections using linker-defined __start_/__stop_ bounds are shared across
-     TU structs in RDC mode. Deduplicate by caching the last copied range. */
-  static const void *CachedDevNamesBegin = nullptr;
-  static char *CachedHostNames = nullptr;
-  static size_t CachedNamesSize = 0;
-
-  static const void *CachedDevCntsBegin = nullptr;
-  static char *CachedHostCnts = nullptr;
-  static size_t CachedCntsSize = 0;
-
-  static const void *CachedDevDataBegin = nullptr;
-  static char *CachedHostData = nullptr;
-  static size_t CachedDataSize = 0;
-
-  static const void *CachedDevUCntsBegin = nullptr;
-  static char *CachedHostUCnts = nullptr;
-  static size_t CachedUCntsSize = 0;
-
-  ProfileSectionCopy Cnts("counters", DevCntsBegin, CountersSize,
-                          CachedDevCntsBegin, CachedHostCnts, CachedCntsSize);
-  ProfileSectionCopy Data("data", DevDataBegin, DataSize, CachedDevDataBegin,
-                          CachedHostData, CachedDataSize);
-  ProfileSectionCopy Names("names", DevNamesBegin, NamesSize,
-                           CachedDevNamesBegin, CachedHostNames,
-                           CachedNamesSize);
-  ProfileSectionCopy UCnts("ucnts", DevUniformCntsBegin, UniformCountersSize,
-                           CachedDevUCntsBegin, CachedHostUCnts,
-                           CachedUCntsSize);
+  // Repeated explicit collections must see newly executed GPU work. Do not
+  // cache counter snapshots across collection calls.
+  ProfileSectionCopy Cnts(DevCntsBegin, CountersSize);
+  ProfileSectionCopy Data(DevDataBegin, DataSize);
+  ProfileSectionCopy Names(DevNamesBegin, NamesSize);
+  ProfileSectionCopy UCnts(DevUniformCntsBegin, UniformCountersSize);
 
   UniqueFree RegisteredRangeOwner;
 
@@ -1002,13 +963,6 @@ int __prof_rocm::processDeviceOffloadPrf(
       PROF_ERR("%s\n", "failed to copy profile sections from device");
       return -1;
     }
-
-    /* Cache buffers so RDC-mode multi-shadow drains can reuse them.
-     * release() prevents the scope guards from freeing what the cache owns. */
-    Cnts.commitCache();
-    Data.commitCache();
-    Names.commitCache();
-    UCnts.commitCache();
   }
 
   if (isVerboseMode())
@@ -1141,6 +1095,8 @@ int __prof_rocm::processDeviceOffloadPrf(
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
   } else {
+    if (!UseRegisteredSections && CollectedBounds)
+      CollectedBounds->record(DevDataBegin, DevCntsBegin, DevNamesBegin);
 #if defined(__linux__) && !defined(_WIN32)
     // Dedup against the supplemental HSA pass: this section is now drained, so
     // the HSA walk must not drain the same device code object again.
@@ -1153,7 +1109,15 @@ int __prof_rocm::processDeviceOffloadPrf(
   return ret;
 }
 
-static int processShadowVariable(int Index, const char *Target) {
+static int processShadowVariable(int Index, const char *Target,
+                                 ProfBoundsSet *CollectedBounds) {
+  // A host-only TU can register a shadow even though the device emitted no
+  // section table. Skip it before a HIP lookup can force that missing symbol.
+  const OffloadSectionShadowGroup *Sections = nullptr;
+  if (Index < CapSectionShadowGroups)
+    Sections = &OffloadSectionShadowGroups[Index];
+  if (!hasCompleteSectionShadows(Sections))
+    return 0;
   void *ShadowVar = OffloadShadowVariables[Index];
   void *DeviceSections = nullptr;
   if (hipGetSymbolAddress(&DeviceSections, ShadowVar) != 0) {
@@ -1162,12 +1126,8 @@ static int processShadowVariable(int Index, const char *Target) {
     return -1;
   }
   /* DeviceSections points at the per-TU sections struct itself. */
-  const OffloadSectionShadowGroup *Sections = nullptr;
-  if (Index < CapSectionShadowGroups)
-    Sections = &OffloadSectionShadowGroups[Index];
-  if (!hasCompleteSectionShadows(Sections))
-    return 0;
-  return processDeviceOffloadPrf(DeviceSections, Target, Sections);
+  return processDeviceOffloadPrf(DeviceSections, Target, Sections,
+                                 CollectedBounds);
 }
 
 static int isHipAvailable(void) {
@@ -1188,6 +1148,10 @@ static int collectHostShadowData(void) {
 
   /* Shadow variables (static-linked kernels): drain from every device. */
   if (NumShadowVariables > 0) {
+    // RDC translation units can reference the same linked sections. Dedup
+    // within this collection only; a later call overwrites the same output
+    // with fresh cumulative counters.
+    ProfBoundsSet CollectedBounds;
     int OrigDevice = -1;
     hipGetDevice(&OrigDevice);
 
@@ -1228,13 +1192,14 @@ static int collectHostShadowData(void) {
           snprintf(TargetWithIdx, sizeof(TargetWithIdx), "%s.%d", ArchName, i);
           Target = TargetWithIdx;
         }
-        if (processShadowVariable(i, Target) != 0)
+        if (processShadowVariable(i, Target, &CollectedBounds) != 0)
           Ret = -1;
       }
     }
 
     if (OrigDevice >= 0)
       hipSetDevice(OrigDevice);
+    free(CollectedBounds.Items);
   }
 
   /* Warn about unprocessed TUs; skip cleared slots (already drained). */
