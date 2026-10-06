@@ -573,6 +573,68 @@ bb2:
   EXPECT_TRUE(PDT.verify());
 }
 
+TEST(BasicBlockUtils, SplitCriticalEdgeSharedLatchMetadata) {
+  for (bool UpdateDT : {false, true}) {
+    for (bool UpdateLI : {false, true}) {
+      for (bool MergeIdenticalEdges : {false, true}) {
+        for (unsigned SuccNum : {0u, 1u, 2u, 3u}) {
+          SCOPED_TRACE(testing::Message()
+                       << "UpdateDT=" << UpdateDT << ", UpdateLI=" << UpdateLI
+                       << ", MergeIdenticalEdges=" << MergeIdenticalEdges
+                       << ", SuccNum=" << SuccNum);
+          LLVMContext C;
+          std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @shared_latch(i1 %enter, i32 %choice) {
+entry:
+  br i1 %enter, label %outer, label %exit
+outer:
+  br label %inner
+inner:
+  switch i32 %choice, label %exit [ i32 0, label %inner
+                                  i32 1, label %inner
+                                  i32 2, label %outer ], !llvm.loop !0
+exit:
+  ret void
+}
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.disable"}
+)IR");
+          Function *F = M->getFunction("shared_latch");
+          BasicBlock *Inner = getBasicBlockByName(*F, "inner");
+          BasicBlock *Outer = getBasicBlockByName(*F, "outer");
+          Instruction *TI = Inner->getTerminator();
+          MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop);
+          DominatorTree DT(*F);
+          LoopInfo LI(DT);
+          ASSERT_EQ(LoopMD, LI.getLoopFor(Inner)->getLoopID());
+          ASSERT_EQ(LoopMD, LI.getLoopFor(Outer)->getLoopID());
+          CriticalEdgeSplittingOptions Options(UpdateDT ? &DT : nullptr,
+                                               UpdateLI ? &LI : nullptr);
+          if (MergeIdenticalEdges)
+            Options.setMergeIdenticalEdges();
+          BasicBlock *Split = SplitCriticalEdge(TI, SuccNum, Options);
+          ASSERT_NE(nullptr, Split);
+          EXPECT_EQ(SuccNum == 0 ? nullptr : LoopMD,
+                    Split->getTerminator()->getMetadata(LLVMContext::MD_loop));
+          // The old terminator still latches at least one of the two loops.
+          EXPECT_EQ(LoopMD, TI->getMetadata(LLVMContext::MD_loop));
+          if (UpdateDT)
+            EXPECT_TRUE(DT.verify());
+          if (UpdateLI) {
+            LI.verify();
+            EXPECT_EQ(LoopMD, LI.getLoopFor(Inner)->getLoopID());
+            EXPECT_EQ(LoopMD, LI.getLoopFor(Outer)->getLoopID());
+          }
+          DominatorTree FreshDT(*F);
+          LoopInfo FreshLI(FreshDT);
+          EXPECT_EQ(LoopMD, FreshLI.getLoopFor(Inner)->getLoopID());
+          EXPECT_EQ(LoopMD, FreshLI.getLoopFor(Outer)->getLoopID());
+        }
+      }
+    }
+  }
+}
+
 TEST(BasicBlockUtils, SplitLoopCriticalEdge) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
