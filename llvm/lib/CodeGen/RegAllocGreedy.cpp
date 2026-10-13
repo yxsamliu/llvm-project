@@ -100,6 +100,12 @@ static cl::opt<std::string> RegionReplayCompact(
     "regalloc-region-replay-compact", cl::Hidden, cl::init(""),
     cl::desc("Diagnostic: use compact fallback at one exactly guarded region"));
 
+static cl::opt<bool> RegionGapPartition(
+    "regalloc-region-gap-partition", cl::Hidden, cl::init(false));
+static cl::opt<std::string> RegionGapSplit(
+    "regalloc-region-gap-split", cl::Hidden, cl::init(""));
+static thread_local unsigned RegionGapApplied = 0;
+
 static cl::opt<unsigned> RegionVerifyDecision(
     "regalloc-region-verify-decision", cl::Hidden, cl::init(0),
     cl::desc("Diagnostic: verify LIS and SlotIndexes around one traced region"));
@@ -1312,7 +1318,92 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Create separate intervals for isolated blocks with multiple uses.
     if (!IntvIn && !IntvOut) {
       LLVM_DEBUG(dbgs() << printMBBReference(*BI.MBB) << " isolated.\n");
-      if (SA->shouldSplitSingleBlock(BI, SingleInstrs))
+      bool GapDone = false;
+      if (!RegionGapSplit.empty() && ActiveRegionTrace &&
+          ActiveRegionTrace->ID == RegionReplayDecision) {
+        SmallVector<MachineInstr *, 32> Accesses;
+        for (MachineInstr &MI : *BI.MBB) {
+          if (MI.isDebugInstr())
+            continue;
+          SlotIndex Idx = LIS->getInstructionIndex(MI);
+          if (Idx < BI.FirstInstr.getBaseIndex() ||
+              Idx > BI.LastInstr.getBoundaryIndex())
+            continue;
+          if (llvm::any_of(MI.operands(), [&](const MachineOperand &MO) {
+                return MO.isReg() && MO.getReg() == Reg;
+              }))
+            Accesses.push_back(&MI);
+        }
+        for (unsigned I = 1; I < Accesses.size(); ++I) {
+          MachineInstr &Left = *Accesses[I - 1], &Right = *Accesses[I];
+          SlotIndex L = LIS->getInstructionIndex(Left);
+          SlotIndex R = LIS->getInstructionIndex(Right);
+          std::string Key;
+          raw_string_ostream OS(Key);
+          OS << BI.MBB->getNumber() << '/' << L << '/' << R;
+          if (Key != RegionGapSplit)
+            continue;
+          const LiveInterval &Parent = SA->getParent();
+          const auto *ParentRC = MRI->getRegClass(Reg);
+          const auto *GapRC = TRI->getLargestLegalSuperClass(ParentRC, *MF);
+          const unsigned CopyOp = TII->getLiveRangeSplitOpcode(Reg, *MF);
+          const auto *DstRC = TII->getRegClass(TII->get(CopyOp), 0);
+          const auto *SrcRC = TII->getRegClass(TII->get(CopyOp), 1);
+          auto Seg = Parent.find(L.getBoundaryIndex());
+          if (Parent.hasSubRanges() || Left.isBundled() || Right.isBundled() ||
+              Left.isPHI() || Right.isPHI() || Left.isTerminator() ||
+              Right.isTerminator() || !(L < R) ||
+              !(BI.FirstInstr.getBaseIndex() < L) ||
+              !(R < BI.LastInstr.getBaseIndex()) ||
+              !(BI.LastInstr < SA->getLastSplitPoint(BI.MBB)) ||
+              Seg == Parent.end() || Seg->start > L.getBoundaryIndex() ||
+              Seg->end < R.getBaseIndex() ||
+              (DstRC && !DstRC->hasSubClassEq(GapRC)) ||
+              (SrcRC && !SrcRC->hasSubClassEq(GapRC)))
+            report_fatal_error("gap split precondition mismatch");
+          SlotIndex EnvelopeStart = L.getBaseIndex();
+          SlotIndex EnvelopeStop = R.getBoundaryIndex();
+          VNInfo Value(0, EnvelopeStart);
+          LiveInterval Envelope(Reg, 0.0f);
+          Envelope.addSegment(
+              LiveRange::Segment(EnvelopeStart, EnvelopeStop, &Value));
+          BitVector Usable;
+          bool HasMask = LIS->checkRegMaskInterference(Envelope, Usable);
+          unsigned Free = 0;
+          for (MCPhysReg P : RegClassInfo.getOrder(GapRC)) {
+            if (ParentRC->contains(P) || MRI->isReserved(P) ||
+                (HasMask && !Usable.test(P)))
+              continue;
+            bool Fixed = false;
+            for (MCRegUnit Unit : TRI->regunits(P))
+              Fixed |= LIS->getRegUnit(Unit).overlaps(EnvelopeStart, EnvelopeStop);
+            if (!Fixed &&
+                !Matrix->checkInterference(EnvelopeStart, EnvelopeStop, P))
+              ++Free;
+          }
+          if (!Free || ++RegionGapApplied != 1)
+            report_fatal_error("gap split storage or application mismatch");
+          errs() << "GAPSPLIT plan decision=" << ActiveRegionTrace->ID
+                 << " parent=" << Reg.virtRegIndex() << " key=" << Key
+                 << " free_alternate=" << Free << " original_accesses="
+                 << Accesses.size() << " left_accesses=" << I
+                 << " right_accesses=" << Accesses.size() - I << '\n';
+
+          SE->openIntv();
+          SlotIndex A = SE->enterIntvBefore(BI.FirstInstr);
+          SlotIndex B = SE->leaveIntvAfter(L);
+          SE->useIntv(A, B);
+          SE->openIntv();
+          SlotIndex C = SE->enterIntvBefore(R);
+          SlotIndex D = SE->leaveIntvAfter(BI.LastInstr);
+          SE->useIntv(C, D);
+          errs() << "GAPSPLIT ranges first=[" << A << ',' << B
+                 << ") second=[" << C << ',' << D << ")\n";
+          GapDone = true;
+          break;
+        }
+      }
+      if (!GapDone && SA->shouldSplitSingleBlock(BI, SingleInstrs))
         SE->splitSingleBlock(BI);
       continue;
     }
@@ -1848,6 +1939,9 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (TraceEnabled && RegionVerifyDecision == Trace.ID)
     MF->verify(LIS, Indexes, "Before selected region split", &errs());
   MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  if (!RegionGapSplit.empty() && TraceEnabled &&
+      Trace.ID == RegionReplayDecision && RegionGapApplied != 1)
+    report_fatal_error("gap split did not match an isolated block");
   for (const auto &P : Projection) {
     MachineInstr *MI = LIS->getInstructionFromIndex(P.Index);
     if (MI != P.MI || !MI || MI->getOpcode() != P.Opcode ||
@@ -2036,7 +2130,13 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
   SmallVector<unsigned, 8> UsedCands;
   // Prepare split editor.
   LiveRangeEdit LREdit(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
-  SE->reset(LREdit, SplitSpillMode);
+  bool GapMode = (RegionGapPartition || !RegionGapSplit.empty()) &&
+                 ActiveRegionTrace &&
+                 ActiveRegionTrace->ID == RegionReplayDecision;
+  SE->reset(LREdit, GapMode ? SplitEditor::SM_Partition : SplitSpillMode);
+  if (GapMode)
+    errs() << "GAPSPLIT mode=partition decision=" << ActiveRegionTrace->ID
+           << " split=" << !RegionGapSplit.empty() << '\n';
 
   // Assign all edge bundles to the preferred candidate, or NoCand.
   BundleCand.assign(Bundles->getNumBundles(), NoCand);
@@ -3699,6 +3799,9 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
+  if ((RegionGapPartition || !RegionGapSplit.empty()) &&
+      RegionReplayCompact.empty())
+    report_fatal_error("gap diagnostic requires guarded compact replay");
   if (!RegionReplayReject.empty() && !RegionReplayCompact.empty())
     report_fatal_error("choose only one region replay action");
   StringRef ReplayKey = RegionReplayCompact.empty()
