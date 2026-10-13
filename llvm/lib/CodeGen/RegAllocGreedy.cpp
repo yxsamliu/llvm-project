@@ -67,6 +67,7 @@
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
@@ -89,7 +90,13 @@ static cl::opt<std::string> RegionTraceFunction(
     cl::desc("Emit region allocation analysis remarks for an exact function "
              "name, or * for all functions"));
 
+static cl::opt<std::string> RegionReplayReject(
+    "regalloc-region-replay-reject", cl::Hidden, cl::init(""),
+    cl::desc("Diagnostic: reject one accepted region only if its recorded key matches"));
+
 namespace {
+thread_local uint64_t RegionReplayDecision = 0;
+thread_local unsigned RegionReplayApplied = 0;
 struct RegionTrace {
   MachineOptimizationRemarkEmitter *ORE;
   MachineFunction *MF;
@@ -1332,15 +1339,16 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
           BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg)),
        NV("Cost", BestCost.getFrequency()), NV("Compact", HasCompact),
        NV("MeasuredWaveBlocks", SpillPlacer->hasMeasuredWaveBlocks())});
+  bool ExtraCompactBundles = false;
   if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
       SpillPlacer->hasMeasuredWaveBlocks()) {
     // doRegionSplit also assigns uncovered compact bundles. The physical
     // candidate's cost is sufficient only when that union adds no bundles.
     const BitVector &Physical = GlobalCand[BestCand].LiveBundles;
-    bool ExtraCompact = llvm::any_of(GlobalCand.front().LiveBundles.set_bits(),
+    ExtraCompactBundles = llvm::any_of(GlobalCand.front().LiveBundles.set_bits(),
                                      [&](int I) { return !Physical.test(I); });
-    Trace.emit("RegionWaveGate", {NV("ExtraCompactBundles", ExtraCompact)});
-    if (!ExtraCompact && isWaveRegionCostHigher(GlobalCand[BestCand])) {
+    Trace.emit("RegionWaveGate", {NV("ExtraCompactBundles", ExtraCompactBundles)});
+    if (!ExtraCompactBundles && isWaveRegionCostHigher(GlobalCand[BestCand])) {
       LLVM_DEBUG(dbgs() << "Wave cost exceeds block splitting\n");
       Trace.emit("RegionOutcome", {NV("Action", "wave-bound-rejected")});
       return MCRegister::NoRegister;
@@ -1351,6 +1359,26 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   // No solutions found, fall back to single block splitting.
   if (!HasCompact && BestCand == NoCand) {
     Trace.emit("RegionOutcome", {NV("Action", "no-region-candidate")});
+    return MCRegister::NoRegister;
+  }
+
+  if (!RegionReplayReject.empty() && TraceEnabled &&
+      Trace.ID == RegionReplayDecision) {
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << Trace.ID << '/' << Trace.VReg << '/' << Trace.Original << '/'
+       << Trace.Stage << '/' << Trace.RegClass << '/'
+       << (BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg))
+       << '/' << SpillCost.getFrequency() << '/' << BestCost.getFrequency()
+       << '/' << unsigned(HasCompact) << '/' << unsigned(ExtraCompactBundles)
+       << '/' << SA->getUseBlocks().size();
+    if (BestCand == NoCand || Key != RegionReplayReject)
+      report_fatal_error("region replay rejection key mismatch");
+    if (++RegionReplayApplied != 1)
+      report_fatal_error("region replay applied more than once");
+    Trace.emit("RegionReplay",
+               {NV("Action", "reject-accepted-region"), NV("Key", Key)});
+    Trace.emit("RegionOutcome", {NV("Action", "replay-rejected")});
     return MCRegister::NoRegister;
   }
 
@@ -3124,6 +3152,15 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
+  if (!RegionReplayReject.empty()) {
+    if (RegionTraceFunction.empty() || RegionTraceFunction == "*")
+      report_fatal_error("region replay requires an exact trace function");
+    if (StringRef(RegionReplayReject).split('/').first.getAsInteger(
+            10, RegionReplayDecision))
+      report_fatal_error("region replay requires a numeric decision ID");
+  }
+  bool ReplayFunction = !RegionReplayReject.empty() &&
+                        RegionTraceFunction == MF->getName();
 
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
@@ -3172,6 +3209,11 @@ bool RAGreedy::run(MachineFunction &mf) {
   SetOfBrokenHints.clear();
 
   allocatePhysRegs();
+  // A later target can belong to a subsequent allocator pass (e.g. VGPRs).
+  // External replay validation must also require exactly one override receipt.
+  if (ReplayFunction && NextRegionTraceID.load() > RegionReplayDecision &&
+      RegionReplayApplied != 1)
+    report_fatal_error("region replay did not reach the selected accepted region");
   tryHintsRecoloring();
 
   if (VerifyEnabled)
