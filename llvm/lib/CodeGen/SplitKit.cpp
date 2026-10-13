@@ -1138,8 +1138,18 @@ void SplitEditor::hoistCopies() {
     MachineBasicBlock *DefMBB = LIS.getMBBFromIndex(ParentVNI->def);
     // Get a less loopy dominator than Dom.first.
     Dom.first = findShallowDominator(Dom.first, DefMBB);
-    if (SpillMode == SM_Speed &&
-        MBFI.getBlockFreq(Dom.first) > Costs[ParentVNI->id]) {
+    BlockFrequency DomFreq = MBFI.getBlockFreq(Dom.first);
+    bool RejectForSpeed =
+        SpillMode == SM_Speed && DomFreq > Costs[ParentVNI->id];
+    LLVM_DEBUG(dbgs() << "Complement hoist for " << printReg(Parent->reg())
+                      << " parent value " << ParentVNI->id << " to "
+                      << printMBBReference(*Dom.first) << ": mode="
+                      << (SpillMode == SM_Speed ? "speed" : "size")
+                      << ", dom-freq=" << DomFreq
+                      << ", back-copy-cost=" << Costs[ParentVNI->id]
+                      << ", decision="
+                      << (RejectForSpeed ? "reject" : "hoist") << '\n');
+    if (RejectForSpeed) {
       NotToHoistSet.insert(ParentVNI->id);
       continue;
     }
