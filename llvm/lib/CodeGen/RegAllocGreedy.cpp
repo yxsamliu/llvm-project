@@ -157,6 +157,8 @@ std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
 
+static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
+
 static cl::list<unsigned> AllocationTraceRoots(
     "regalloc-allocation-trace-root", cl::Hidden, cl::CommaSeparated,
     cl::desc("Diagnostic allocation ancestry roots in exact region trace function"));
@@ -646,6 +648,12 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
 
   // The virtual register number is a tie breaker for same-sized ranges.
   // Give lower vreg numbers higher priority to assign them first.
+
+  if (TraceOrdinaryDecision && RegionTraceFunction == MF->getName())
+    errs() << "ORDINARYDECISION enqueue reg=" << Reg.virtRegIndex()
+           << " root=" << VRM->getOriginal(Reg).virtRegIndex()
+           << " main=" << (&CurQueue == &Queue) << " stage=" << unsigned(Stage)
+           << " priority=" << Ret << " size=" << LI->getSize() << "\n";
   CurQueue.push(std::make_pair(Ret, ~Reg.id()));
 }
 
@@ -733,6 +741,11 @@ const LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
   if (CurQueue.empty())
     return nullptr;
   LiveInterval *LI = &LIS->getInterval(~CurQueue.top().second);
+
+  if (TraceOrdinaryDecision && RegionTraceFunction == MF->getName())
+    errs() << "ORDINARYDECISION dequeue reg=" << LI->reg().virtRegIndex()
+           << " main=" << (&CurQueue == &Queue)
+           << " priority=" << CurQueue.top().first << "\n";
   CurQueue.pop();
   return LI;
 }
@@ -3506,6 +3519,13 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   RecoloringStack RecolorStack;
   MCRegister Reg =
       selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
+  if (TraceOrdinaryDecision && RegionTraceFunction == MF->getName()) {
+    errs() << "ORDINARYDECISION result reg=" << TraceReg.virtRegIndex()
+           << " phys=" << printReg(Reg, TRI) << " children=";
+    for (Register R : NewVRegs) errs() << R.virtRegIndex() << ',';
+    errs() << "\n";
+  }
+
   if (TraceThis) {
     errs() << "ALLOCTRACE result reg=" << TraceReg.virtRegIndex()
            << " phys=" << printReg(Reg, TRI) << " children=";
