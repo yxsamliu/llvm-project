@@ -4147,6 +4147,18 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
           Upper = TailStop;
         }
         MCPhysReg P = Local ? LocalPhys : AltPhys;
+        // Coalesce the incoming transfer when the actual prefix can share
+        // the local assignment. Query real products after native class repair.
+        if (!Local && !LI.empty() && LI.endIndex() <= PrefixStop &&
+            ActualRC->contains(LocalPhys) && !MRI->isReserved(LocalPhys) &&
+            !Matrix->checkInterference(LI, LocalPhys)) {
+          bool Overlap = false;
+          for (unsigned J = 0; J != Products.size(); ++J)
+            if (IntvMap[J] == 1)
+              Overlap |= LI.overlaps(LIS->getInterval(Products[J]));
+          if (!Overlap)
+            P = LocalPhys;
+        }
         if (LI.empty() || LI.hasSubRanges() || LI.beginIndex() < Lower ||
             LI.endIndex() > Upper || !ActualRC->contains(P) ||
             MRI->isReserved(P) || VRM->hasPhys(R) ||
