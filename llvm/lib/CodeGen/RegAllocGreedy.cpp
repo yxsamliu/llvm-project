@@ -1,3 +1,4 @@
+#include <cstring>
 //===- RegAllocGreedy.cpp - greedy register allocator ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -101,6 +102,14 @@ static cl::opt<bool> PriorityDiag("regalloc-priority-diag", cl::Hidden,
 static cl::opt<std::string> PriorityTable("regalloc-priority-table", cl::Hidden,
                                         cl::init(""));
 static thread_local unsigned PriorityInvocation = 0;
+
+// Diagnostic only: select one natively admissible eviction alternative.
+static cl::opt<std::string> EvictionReplayGuard(
+    "regalloc-eviction-replay", cl::Hidden, cl::init(""));
+static cl::opt<std::string> EvictionReplayPhys(
+    "regalloc-eviction-replay-phys", cl::Hidden, cl::init(""));
+static thread_local unsigned EvictionReplayApplied = 0;
+
 static std::map<unsigned, std::pair<unsigned, unsigned>> readPriorityTable() {
   std::map<unsigned, std::pair<unsigned, unsigned>> Table;
   if (PriorityTable.empty())
@@ -998,6 +1007,53 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 
   MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
       VirtReg, Order, CostPerUseLimit, FixedRegisters);
+
+  if (!EvictionReplayGuard.empty() &&
+      MF->getName() == RegionTraceFunction && PriorityInvocation == 3) {
+    SmallVector<StringRef, 8> Parts;
+    StringRef(EvictionReplayGuard).split(Parts, '/');
+    unsigned WantedReg;
+    if (Parts.size() != 8 || Parts[1].getAsInteger(10, WantedReg))
+      report_fatal_error("invalid eviction replay key");
+    if (VirtReg.reg().virtRegIndex() == WantedReg) {
+      float Weight = VirtReg.weight();
+      uint32_t Bits;
+      std::memcpy(&Bits, &Weight, sizeof(Bits));
+      std::string Key =
+          std::to_string(PriorityInvocation) + "/" +
+          std::to_string(WantedReg) + "/" +
+          std::to_string(VRM->getOriginal(VirtReg.reg()).virtRegIndex()) + "/" +
+          std::to_string(ExtraInfo->getStage(VirtReg)) + "/" +
+          std::to_string(VirtReg.getSize()) + "/" + std::to_string(Bits) + "/" +
+          (BestPhys.isValid() ? StringRef(TRI->getName(BestPhys)).lower()
+                             : "noreg") + "/" +
+          std::to_string(CostPerUseLimit);
+      if (Key != EvictionReplayGuard || EvictionReplayApplied != 0)
+        report_fatal_error("eviction replay state mismatch");
+      MCRegister Target;
+      for (MCRegister P : Order)
+        if (StringRef(TRI->getName(P)).equals_insensitive(EvictionReplayPhys))
+          Target = P;
+      if (!Target.isValid() || Target == BestPhys)
+        report_fatal_error("eviction replay alternative not in native order");
+      MCPhysReg One = Target;
+      SmallVector<MCPhysReg, 16> Hints;
+      if (Order.isHint(Target))
+        Hints.push_back(Target);
+      unsigned NumHints = Hints.size();
+      AllocationOrder ProbeOrder(std::move(Hints), NumHints,
+                                 ArrayRef<MCPhysReg>(One), false);
+      MCRegister Allowed = EvictAdvisor->tryFindEvictionCandidate(
+          VirtReg, ProbeOrder, CostPerUseLimit, FixedRegisters);
+      if (Allowed != Target)
+        report_fatal_error("eviction replay alternative rejected by advisor");
+      errs() << "EVICTION_REPLAY key=" << Key << " native="
+             << printReg(BestPhys, TRI) << " replacement="
+             << printReg(Target, TRI) << " native_admissible=1\n";
+      ++EvictionReplayApplied;
+      BestPhys = Target;
+    }
+  }
   if (BestPhys.isValid())
     evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
@@ -4624,6 +4680,11 @@ bool RAGreedy::run(MachineFunction &mf) {
     errs() << "PGO_LINEAGE_BEGIN\t1\t" << MF->getName() << '\n';
   SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
+  if (!EvictionReplayGuard.empty() &&
+      MF->getName() == RegionTraceFunction && PriorityInvocation == 3 &&
+      EvictionReplayApplied != 1)
+    report_fatal_error("eviction replay did not apply exactly once");
+
   if (SpillRecoveryBounded)
     errs() << "SPILLRECOVERY scope-end function=" << MF->getName()
            << " roots=" << RecoveryRun.InitialRoots
