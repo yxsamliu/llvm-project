@@ -12,6 +12,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
+#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -22,6 +25,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/RegionInfo.h"
 #include "llvm/Analysis/RegionIterator.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
@@ -60,8 +64,27 @@ static cl::opt<bool> CHRUniformityProfile(
 
 static cl::opt<bool> CHRBooleanSelectGuard(
     "chr-boolean-select-guard", cl::init(true), cl::Hidden,
-    cl::desc(
-        "Avoid Boolean-select CHR when uniformity profiles are available"));
+    cl::desc("Apply the metadata-triggered Boolean-select CHR safeguard"));
+
+
+// Temporary diagnostic controls, excluded from the working branch.
+static cl::opt<std::string> CHRDiagFunction("chr-diag-function", cl::init(""), cl::Hidden);
+static cl::opt<bool> CHRDiagTrace("chr-diag-trace", cl::init(false), cl::Hidden);
+static cl::opt<bool> CHRDiagSkipAll("chr-diag-skip-all", cl::init(false), cl::Hidden);
+static cl::list<std::string> CHRDiagSkip("chr-diag-skip", cl::CommaSeparated, cl::Hidden);
+static thread_local StringMap<unsigned> CHRDiagPasses;
+
+static cl::opt<bool> CHRBranches(
+    "chr-branches", cl::init(true), cl::Hidden,
+    cl::desc("Consider biased branches for control height reduction"));
+
+static cl::opt<bool> CHRSelects(
+    "chr-selects", cl::init(true), cl::Hidden,
+    cl::desc("Consider biased selects for control height reduction"));
+
+static cl::opt<bool> CHRSelectGuardCost(
+    "chr-select-guard-cost", cl::init(false), cl::Hidden,
+    cl::desc("Compare profiled select savings with target guard costs"));
 
 static cl::opt<double> CHRBiasThreshold(
     "chr-bias-threshold", cl::init(0.99), cl::Hidden,
@@ -293,11 +316,15 @@ class CHRScope {
 };
 
 class CHR {
+  bool DiagSelected = false;
+  unsigned DiagPass = 0, DiagScope = 0;
+  void traceScope(CHRScope *Scope, StringRef Status);
  public:
   CHR(Function &Fin, BlockFrequencyInfo &BFIin, DominatorTree &DTin,
       ProfileSummaryInfo &PSIin, RegionInfo &RIin,
-      OptimizationRemarkEmitter &OREin)
-      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
+      OptimizationRemarkEmitter &OREin, TargetTransformInfo &TTIin)
+      : F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin),
+        TTI(TTIin) {}
 
   ~CHR() {
     for (CHRScope *Scope : Scopes) {
@@ -333,6 +360,8 @@ class CHR {
 
   void classifyBiasedScopes(SmallVectorImpl<CHRScope *> &Scopes);
   void classifyBiasedScopes(CHRScope *Scope, CHRScope *OutermostScope);
+
+  bool hasUnprofitableSelectGuard(CHRScope *Scope);
 
   void filterScopes(SmallVectorImpl<CHRScope *> &Input,
                     SmallVectorImpl<CHRScope *> &Output);
@@ -383,6 +412,7 @@ class CHR {
   ProfileSummaryInfo &PSI;
   RegionInfo &RI;
   OptimizationRemarkEmitter &ORE;
+  TargetTransformInfo &TTI;
   CHRStats Stats;
 
   // A function attachment indicates that uniformity profile data is available.
@@ -782,7 +812,7 @@ CHRScope * CHR::findScope(Region *R) {
     }
   }
 
-  if (Exit) {
+  if (CHRBranches && Exit) {
     // Try to find an if-then block (check if R is an if-then).
     // if (cond) {
     //  ...
@@ -811,7 +841,7 @@ CHRScope * CHR::findScope(Region *R) {
       }
     }
   }
-  {
+  if (CHRSelects) {
     // Try to look for selects in the direct child blocks (as opposed to in
     // subregions) of R.
     // ...
@@ -1357,6 +1387,71 @@ static SelectInst *findBooleanSelect(const DenseSet<SelectInst *> &Selects) {
   return nullptr;
 }
 
+// For a select-only scope in one block, all candidates have the same
+// execution population. The minimum individual preferred probability bounds
+// their conjunction from above; it is not a measurement of the joint outcome.
+// Compare this optimistic saving with the estimated guard work. This does not
+// account for additional hoisting, duplicated code, or register pressure.
+bool CHR::hasUnprofitableSelectGuard(CHRScope *Scope) {
+  if (!CHRSelectGuardCost || !TTI.hasBranchDivergence() ||
+      !Scope->TrueBiasedRegions.empty() || !Scope->FalseBiasedRegions.empty())
+    return false;
+
+  BasicBlock *SelectBlock = nullptr;
+  DenseSet<Value *> Conditions;
+  DenseSet<Value *> NegatedConditions;
+  InstructionCost SelectCost = 0;
+  BranchProbability BestProbability(1, 1);
+  constexpr auto CostKind = TargetTransformInfo::TCK_RecipThroughput;
+  auto AddSelects = [&](const DenseSet<SelectInst *> &Selects, bool Negated) {
+    for (SelectInst *SI : Selects) {
+      if (!SelectBlock)
+        SelectBlock = SI->getParent();
+      if (SI->getParent() != SelectBlock || isa<Constant>(SI->getCondition()))
+        return false;
+      Conditions.insert(SI->getCondition());
+      if (Negated)
+        NegatedConditions.insert(SI->getCondition());
+      SelectCost += TTI.getInstructionCost(SI, CostKind);
+      BestProbability = std::min(BestProbability, SelectBiasMap.lookup(SI));
+    }
+    return true;
+  };
+  if (!AddSelects(Scope->TrueBiasedSelects, false) ||
+      !AddSelects(Scope->FalseBiasedSelects, true) || Conditions.empty())
+    return false;
+
+  Type *CondTy = Type::getInt1Ty(F.getContext());
+  InstructionCost GuardCost = TTI.getCFInstrCost(Instruction::CondBr, CostKind);
+  GuardCost += TTI.getArithmeticInstrCost(Instruction::And, CondTy, CostKind) *
+               (Conditions.size() - 1);
+  GuardCost += TTI.getArithmeticInstrCost(Instruction::Xor, CondTy, CostKind) *
+               NegatedConditions.size();
+  if (!SelectCost.isValid() || !GuardCost.isValid() ||
+      SelectCost.getValue() < 0 || GuardCost.getValue() < 0)
+    return false;
+
+  // Compare without rounding a fractional saving or overflowing 64-bit costs.
+  APInt WeightedSaving(128, SelectCost.getValue());
+  WeightedSaving *= BestProbability.getNumerator();
+  APInt WeightedGuard(128, GuardCost.getValue());
+  WeightedGuard *= BranchProbability::getDenominator();
+  if (WeightedGuard.ult(WeightedSaving))
+    return false;
+
+  ORE.emit([&]() {
+    return OptimizationRemarkMissed(DEBUG_TYPE, "SelectGuardCost",
+                                    SelectBlock->getTerminator())
+           << "select guard cost " << ore::NV("GuardCost", GuardCost)
+           << " is not below optimistic profiled savings from "
+           << ore::NV("SelectCost", SelectCost) << " select cost at probability "
+           << ore::NV("PreferredNumerator", BestProbability.getNumerator())
+           << "/" << ore::NV("PreferredDenominator",
+                              BranchProbability::getDenominator());
+  });
+  return true;
+}
+
 void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
                        SmallVectorImpl<CHRScope *> &Output) {
   for (CHRScope *Scope : Input) {
@@ -1366,23 +1461,21 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
     // increase live ranges and register pressure without eliminating control
     // flow for the wave.
     if (HasUniformityProfile) {
-      if (CHRBooleanSelectGuard) {
-        // This safeguard uses profile availability and select type, not the
-        // measured uniformity classification. Boolean selects may be cheaper
-        // as mask operations than as duplicated control flow.
-        SelectInst *BooleanSelect = findBooleanSelect(Scope->TrueBiasedSelects);
-        if (!BooleanSelect)
-          BooleanSelect = findBooleanSelect(Scope->FalseBiasedSelects);
-        if (BooleanSelect) {
-          ORE.emit([&]() {
-            return OptimizationRemarkMissed(
-                       DEBUG_TYPE, "BooleanSelectWithUniformityProfile",
-                       BooleanSelect)
-                   << "drop scope containing a boolean select with uniformity "
-                      "profile";
-          });
-          continue;
-        }
+      // Boolean selects can lower to cheap mask operations. Avoid replacing
+      // them with control flow and extending predicate live ranges when GPU
+      // uniformity profile data is available.
+      SelectInst *BooleanSelect = findBooleanSelect(Scope->TrueBiasedSelects);
+      if (!BooleanSelect)
+        BooleanSelect = findBooleanSelect(Scope->FalseBiasedSelects);
+      if (CHRBooleanSelectGuard && BooleanSelect) {
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE,
+                                          "BooleanSelectWithUniformityProfile",
+                                          BooleanSelect)
+                 << "drop scope containing a boolean select with uniformity "
+                    "profile";
+        });
+        continue;
       }
 
       if (CHRUniformityProfile) {
@@ -1402,6 +1495,9 @@ void CHR::filterScopes(SmallVectorImpl<CHRScope *> &Input,
         }
       }
     }
+
+    if (hasUnprofitableSelectGuard(Scope))
+      continue;
 
     // Filter out the ones with only one region and no subs.
     if (!hasAtLeastTwoBiasedBranches(Scope)) {
@@ -1766,6 +1862,69 @@ assertBranchOrSelectConditionHoisted(CHRScope *Scope,
   }
 }
 
+
+void CHR::traceScope(CHRScope *Scope, StringRef Status) {
+  if (!DiagSelected || !CHRDiagTrace)
+    return;
+  auto PrintValue = [](const Value *V) {
+    std::string S;
+    raw_string_ostream OS(S);
+    V->print(OS);
+    return S;
+  };
+  auto Operand = [](const Value *V) {
+    std::string S;
+    raw_string_ostream OS(S);
+    V->printAsOperand(OS, false);
+    return S;
+  };
+  SmallVector<uint64_t, 0> Counts;
+  BitVector HasCounts;
+  uint64_t Entry = 0;
+  bool Valid = extractMappedBlockWaveCounts(F, Counts, HasCounts, Entry);
+  DenseMap<const BasicBlock *, uint64_t> Waves;
+  if (Valid) {
+    unsigned I = 0;
+    for (const BasicBlock &BB : F) {
+      if (HasCounts[I]) Waves[&BB] = Counts[I];
+      ++I;
+    }
+  }
+  json::Array Decisions;
+  auto Add = [&](Instruction *I, bool Preferred) {
+    json::Object D{{"ir", PrintValue(I)}, {"block", Operand(I->getParent())},
+                   {"preferred", Preferred}};
+    if (auto It = Waves.find(I->getParent()); It != Waves.end())
+      D["waves"] = It->second;
+    if (auto Count = BFI.getBlockProfileCount(I->getParent()))
+      D["lane_bfi"] = *Count;
+    for (auto [Name, Kind] : {std::pair{"uniformity", LLVMContext::MD_branch_uniformity_profile},
+                             std::pair{"prof", LLVMContext::MD_prof},
+                             std::pair{"block_uniformity", LLVMContext::MD_block_uniformity_profile}}) {
+      if (MDNode *M = I->getMetadata(Kind)) {
+        std::string S;
+        raw_string_ostream OS(S);
+        M->print(OS, F.getParent());
+        D[Name] = std::move(S);
+      }
+    }
+    if (auto *SI = dyn_cast<SelectInst>(I))
+      D["condition"] = PrintValue(SI->getCondition());
+    Decisions.push_back(std::move(D));
+  };
+  for (RegInfo &RI : Scope->CHRRegions) {
+    if (RI.HasBranch)
+      Add(RI.R->getEntry()->getTerminator(), Scope->TrueBiasedRegions.contains(RI.R));
+    for (SelectInst *SI : RI.Selects)
+      Add(SI, Scope->TrueBiasedSelects.contains(SI));
+  }
+  json::Object O{{"function", F.getName()}, {"pass", DiagPass}, {"scope", DiagScope},
+                 {"status", Status}, {"entry", Operand(Scope->getEntryBlock())},
+                 {"exit", Operand(Scope->getExitBlock())}, {"wave_valid", Valid},
+                 {"entry_waves", Entry}, {"decisions", std::move(Decisions)}};
+  errs() << "CHRDIAG " << json::Value(std::move(O)) << "\n";
+}
+
 void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
   CHR_DEBUG(dbgs() << "transformScopes " << *Scope << "\n");
 
@@ -1784,9 +1943,16 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
                                         R->getEntry()->getTerminator())
                << "Reached the duplication threshold for the region";
       });
+      traceScope(Scope, "duplication-threshold");
       return;
     }
   }
+  std::string Key = std::to_string(DiagPass) + ":" + std::to_string(DiagScope);
+  if (DiagSelected && (CHRDiagSkipAll || llvm::is_contained(CHRDiagSkip, Key))) {
+    traceScope(Scope, "diagnostic-skip");
+    return;
+  }
+  traceScope(Scope, "accepted");
   for (RegInfo &RI : Scope->RegInfos) {
     DuplicationCount[RI.R]++;
   }
@@ -2085,6 +2251,7 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
   unsigned I = 0;
   DenseSet<PHINode *> TrivialPHIs;
   for (CHRScope *Scope : CHRScopes) {
+    ++DiagScope;
     transformScopes(Scope, TrivialPHIs);
     CHR_DEBUG(
         std::ostringstream oss;
@@ -2106,6 +2273,8 @@ bool CHR::run() {
   if (!shouldApply(F, PSI))
     return false;
 
+  DiagSelected = !CHRDiagFunction.empty() && F.getName() == CHRDiagFunction;
+  if (DiagSelected) DiagPass = ++CHRDiagPasses[F.getName()];
   CHR_DEBUG(dumpIR(F, "before", nullptr));
 
   bool Changed = false;
@@ -2196,7 +2365,8 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
-  bool Changed = CHR(F, BFI, DT, PSI, RI, ORE).run();
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  bool Changed = CHR(F, BFI, DT, PSI, RI, ORE, TTI).run();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();
