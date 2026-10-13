@@ -21,6 +21,10 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -29,6 +33,76 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
+
+
+// Diagnostic only: keep allocation frozen while testing empty scope overhead.
+static cl::opt<std::string> EmptyExecFunction("empty-exec-function", cl::Hidden,
+                                            cl::init(""));
+static cl::opt<std::string> EmptyExecIRBlock("empty-exec-ir-block", cl::Hidden,
+                                           cl::init(""));
+static cl::opt<bool> RemoveEmptyExec("remove-empty-exec", cl::Hidden,
+                                    cl::init(false));
+
+static bool traceEmptyExecPairs(MachineFunction &MF, const SIRegisterInfo &TRI) {
+  if (EmptyExecFunction.empty() || EmptyExecIRBlock.empty() ||
+      MF.getName() != EmptyExecFunction || !MF.getRegInfo().tracksLiveness())
+    return false;
+  const DISubprogram *SP = MF.getFunction().getSubprogram();
+  if (SP && SP->getUnit() &&
+      SP->getUnit()->getEmissionKind() == DICompileUnit::FullDebug)
+    return false;
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    if (!MBB.getBasicBlock() ||
+        MBB.getBasicBlock()->getName() != EmptyExecIRBlock)
+      continue;
+    LivePhysRegs Live(TRI);
+    Live.addLiveOuts(MBB);
+    SmallVector<std::pair<MachineInstr *, MachineInstr *>, 32> Pairs;
+    unsigned Candidates = 0;
+    for (auto I = MBB.rbegin(), E = MBB.rend(); I != E; ++I) {
+      MachineInstr &Restore = *I;
+      auto Prev = std::next(I);
+      if (Restore.getOpcode() == AMDGPU::S_MOV_B64 && !Restore.isBundled() &&
+          Restore.getNumOperands() == 2 &&
+          Restore.getOperand(0).getReg() == AMDGPU::EXEC &&
+          Restore.getOperand(1).isReg() && Prev != E) {
+        MachineInstr &Save = *Prev;
+        Register Saved = Restore.getOperand(1).getReg();
+        if (Save.getOpcode() == AMDGPU::S_OR_SAVEEXEC_B64 && !Save.isBundled() &&
+            Save.getNumExplicitOperands() == 2 && Saved.isPhysical() &&
+            Save.getOperand(0).getReg() == Saved &&
+            Save.getOperand(1).isImm() && Save.getOperand(1).getImm() == -1 &&
+            !TRI.regsOverlap(Saved, AMDGPU::EXEC) &&
+            !TRI.regsOverlap(Saved, AMDGPU::SCC)) {
+          ++Candidates;
+          bool SavedLive = false;
+          for (MCPhysReg R : Live) {
+            if (TRI.regsOverlap(Saved, R))
+              SavedLive = true;
+          }
+          const bool SCCLive = Live.contains(AMDGPU::SCC);
+          errs() << "EMPTY_EXEC_PAIR\t" << MBB.getNumber() << "\t"
+                 << Candidates << "\t" << Saved.id() << "\t" << SavedLive
+                 << "\t" << SCCLive << "\t" << RemoveEmptyExec << "\n";
+          if (!SavedLive && !SCCLive)
+            Pairs.emplace_back(&Save, &Restore);
+        }
+      }
+      Live.stepBackward(Restore);
+    }
+    errs() << "EMPTY_EXEC_SUMMARY\t" << MBB.getNumber() << "\t" << Candidates
+           << "\t" << Pairs.size() << "\t" << RemoveEmptyExec << "\n";
+    if (RemoveEmptyExec) {
+      for (auto [Save, Restore] : Pairs) {
+        Save->eraseFromParent();
+        Restore->eraseFromParent();
+        Changed = true;
+      }
+    }
+  }
+  return Changed;
+}
 
 STATISTIC(NumModeWritesRemoved,
           "Number of redundant mode register writes removed");
@@ -853,6 +927,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   bool Changed = false;
 
   MF.RenumberBlocks();
+  Changed |= traceEmptyExecPairs(MF, *TRI);
 
   for (MachineBasicBlock &MBB : MF) {
     Changed |= removeRedundantModeWrites(MBB);
