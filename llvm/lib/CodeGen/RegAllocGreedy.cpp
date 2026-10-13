@@ -17,6 +17,7 @@
 #include "RegAllocBase.h"
 #include "SplitKit.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallSet.h"
@@ -136,6 +137,11 @@ static bool traceAllocation(const MachineFunction &MF, const VirtRegMap &VRM,
          llvm::is_contained(AllocationTraceRoots,
                             VRM.getOriginal(Reg).virtRegIndex());
 }
+
+static cl::opt<std::string> LocalSplitReplayKey(
+    "regalloc-local-split-bfi-replay", cl::Hidden, cl::init(""),
+    cl::desc("Diagnostic: use BFI for one exactly matched local split"));
+static thread_local unsigned LocalSplitReplayApplied = 0;
 
 static cl::opt<bool> SpillLineage("regalloc-spill-lineage", cl::Hidden,
                                   cl::init(false));
@@ -2114,9 +2120,44 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
   unsigned BestAfter = 0;
   float BestDiff = 0;
 
-  const float blockFreq =
-      SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
-      (1.0f / MBFI->getEntryFreq().getFrequency());
+  const bool TraceLocal = traceAllocation(*MF, *VRM, VirtReg.reg());
+  const uint64_t PlacementFreq =
+      SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency();
+  const uint64_t BFIFreq = MBFI->getBlockFreq(BI.MBB).getFrequency();
+  const uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
+  uint64_t ChosenFreq = PlacementFreq;
+  std::string LocalKey;
+  if (TraceLocal || !LocalSplitReplayKey.empty()) {
+    raw_string_ostream OS(LocalKey);
+    OS << VirtReg.reg().virtRegIndex() << '/'
+       << VRM->getOriginal(VirtReg.reg()).virtRegIndex() << '/'
+       << unsigned(ExtraInfo->getStage(VirtReg)) << '/'
+       << TRI->getRegClassName(MRI->getRegClass(VirtReg.reg())) << '/'
+       << BI.MBB->getNumber() << '/' << PlacementFreq << '/' << BFIFreq
+       << '/' << EntryFreq << '/' << unsigned(BI.LiveIn) << '/'
+       << unsigned(BI.LiveOut);
+    for (SlotIndex Use : Uses) OS << '/' << Use;
+  }
+  if (!LocalSplitReplayKey.empty()) {
+    unsigned ReplayReg;
+    if (RegionTraceFunction.empty() || RegionTraceFunction == "*" ||
+        StringRef(LocalSplitReplayKey).split('/').first.getAsInteger(10, ReplayReg))
+      report_fatal_error("local replay needs exact function and numeric register");
+    if (RegionTraceFunction == MF->getName() &&
+        ReplayReg == VirtReg.reg().virtRegIndex()) {
+      if (LocalKey != LocalSplitReplayKey)
+        report_fatal_error("local split replay key mismatch");
+      if (++LocalSplitReplayApplied != 1)
+        report_fatal_error("local split replay applied more than once");
+      ChosenFreq = BFIFreq;
+      errs() << "PGO_LOCAL_REPLAY\t" << LocalKey << '\n';
+    }
+  }
+  const float blockFreq = ChosenFreq * (1.0f / EntryFreq);
+  if (TraceLocal)
+    errs() << "PGO_LOCAL_START\t" << LocalKey << "\tfreq_bits="
+           << llvm::bit_cast<uint32_t>(blockFreq) << "\thysteresis_bits="
+           << llvm::bit_cast<uint32_t>(Hysteresis) << '\n';
   SmallVector<float, 8> GapWeight;
 
   for (MCRegister PhysReg : Order) {
@@ -2176,6 +2217,14 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
         // Would this split be possible to allocate?
         // Never allocate all gaps, we wouldn't be making progress.
         LLVM_DEBUG(dbgs() << " w=" << EstWeight);
+        if (TraceLocal)
+          errs() << "PGO_LOCAL_COST\t" << VirtReg.reg().virtRegIndex()
+                 << '\t' << unsigned(PhysReg) << '\t' << SplitBefore << '\t'
+                 << SplitAfter << '\t' << llvm::bit_cast<uint32_t>(EstWeight)
+                 << '\t' << llvm::bit_cast<uint32_t>(MaxGap) << '\t'
+                 << llvm::bit_cast<uint32_t>(BestDiff) << '\t'
+                 << (EstWeight * Hysteresis >= MaxGap) << '\t'
+                 << (EstWeight - MaxGap > BestDiff) << '\n';
         if (EstWeight * Hysteresis >= MaxGap) {
           Shrink = false;
           float Diff = EstWeight - MaxGap;
@@ -2214,6 +2263,10 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
     }
   }
 
+  if (TraceLocal)
+    errs() << "PGO_LOCAL_BEST\t" << VirtReg.reg().virtRegIndex() << '\t'
+           << BestBefore << '\t' << BestAfter << '\t'
+           << llvm::bit_cast<uint32_t>(BestDiff) << '\n';
   // Didn't find any candidates?
   if (BestBefore == NumGaps)
     return MCRegister();
