@@ -1,3 +1,4 @@
+#include "llvm/CodeGen/WaveWorkTrace.h"
 //===-- AMDGPUAsmPrinter.cpp - AMDGPU assembly printer --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -892,6 +893,7 @@ AMDGPUAsmPrinter::getAmdhsaKernelDescriptor(const MachineFunction &MF,
 }
 
 bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
+  printWaveWorkMapping(MF, "final");
   // Init target streamer lazily on the first function so that previous passes
   // can set metadata.
   if (!IsTargetStreamerInitialized)

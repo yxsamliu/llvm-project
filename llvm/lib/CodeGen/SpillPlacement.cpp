@@ -1,3 +1,4 @@
+#include "llvm/CodeGen/WaveWorkTrace.h"
 //===- SpillPlacement.cpp - Optimal Spill Code Placement ------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -56,6 +57,10 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
+
+static cl::opt<std::string> WaveWorkTraceFunction(
+    "wave-work-trace-function", cl::Hidden, cl::init(""),
+    cl::desc("Print independently validated raw wave counts for one function"));
 
 static cl::opt<bool> WaveGuidedSpillPlacement(
     "wave-guided-spill-placement", cl::Hidden, cl::init(true),
@@ -272,8 +277,66 @@ static bool hasMatchingWaveProfileBlock(
          HasMatchingEdges(successors(BB), MBB.successors());
 }
 
+// Diagnostic-only extraction: never changes either consumer's inputs.
+void llvm::printWaveWorkMapping(const MachineFunction &MF, StringRef Phase) {
+  if (WaveWorkTraceFunction.empty() || MF.getName() != WaveWorkTraceFunction)
+    return;
+  SmallVector<uint64_t> Counts;
+  BitVector Present;
+  uint64_t Entry = 0;
+  bool Valid = extractMappedBlockWaveCounts(MF.getFunction(), Counts, Present,
+                                            Entry) && Entry != 0;
+  DenseMap<const BasicBlock *, unsigned> IRIDs;
+  DenseMap<const BasicBlock *, const MachineBasicBlock *> Unique;
+  unsigned Index = 0;
+  for (const BasicBlock &BB : MF.getFunction())
+    IRIDs[&BB] = Index++;
+  for (const MachineBasicBlock &MBB : MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    if (!BB || BB->getParent() != &MF.getFunction())
+      continue;
+    auto [It, Inserted] = Unique.try_emplace(BB, &MBB);
+    if (!Inserted)
+      It->second = nullptr;
+  }
+  errs() << "WAVE_WORK_BEGIN\t" << MF.getName() << "\t" << Valid << "\t"
+         << Entry << "\t" << Phase << "\n";
+  for (const MachineBasicBlock &MBB : MF) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    auto It = IRIDs.find(BB);
+    StringRef Status = "valid";
+    if (!Valid)
+      Status = "unavailable-function-profile";
+    else if (It == IRIDs.end())
+      Status = "no-ir-block";
+    else if (!Present[It->second])
+      Status = "missing-or-invalid-ir-count";
+    else if (Unique.lookup(BB) != &MBB)
+      Status = "nonunique-machine-mapping";
+    else if (!hasMatchingWaveProfileBlock(MBB, Unique))
+      Status = "machine-edge-mismatch";
+    errs() << "WAVE_WORK_BLOCK\t" << MBB.getNumber() << "\t";
+    if (It != IRIDs.end())
+      errs() << It->second;
+    else
+      errs() << "-";
+    errs() << "\t" << Status << "\t";
+    if (Status == "valid")
+      errs() << Counts[It->second];
+    else
+      errs() << "-";
+    errs() << "\n";
+  }
+  errs() << "WAVE_WORK_END\n";
+  if (Phase == "final") {
+    errs() << "# *** IR Dump Before Final emission (wave-work-final) ***:\n";
+    MF.print(errs());
+  }
+}
+
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                          MachineBlockFrequencyInfo *MBFI) {
+  printWaveWorkMapping(mf, "spill-placement");
   MF = &mf;
   this->bundles = Bundles;
   this->MBFI = MBFI;
