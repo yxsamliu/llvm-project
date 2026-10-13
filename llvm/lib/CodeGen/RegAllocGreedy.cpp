@@ -157,6 +157,8 @@ std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
 
+static cl::opt<int> TraceRegionShapeDecision("regalloc-region-shape-decision", cl::Hidden, cl::init(-1));
+
 static cl::opt<bool> TraceRegionVectors("regalloc-region-cost-vector-trace", cl::Hidden, cl::init(false));
 
 static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
@@ -2498,6 +2500,64 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
       dbgs() << " EB#" << I;
     dbgs() << ".\n";
   });
+  if (TraceRegionShapeDecision >= 0 && ActiveRegionTrace &&
+      ActiveRegionTrace->ID == unsigned(TraceRegionShapeDecision)) {
+    auto SavedConstraints = SplitConstraints;
+    SmallVector<int64_t, 0> Counts(MF->getNumBlockIDs(), 0);
+    BlockFrequency ObservedCost;
+    bool Valid = calcSplitConstraints(Cand.Intf, &ObservedCost, &Counts);
+    assert(Valid && "completed candidate must retain valid constraints");
+    addGlobalSplitCost(Cand, &ObservedCost, &Counts);
+    assert(ObservedCost == Cost && "observer must reproduce native cost");
+    errs() << "REGIONSHAPE candidate decision=" << ActiveRegionTrace->ID
+           << " reg=" << ActiveRegionTrace->VReg
+           << " root=" << ActiveRegionTrace->Original
+           << " phys=" << unsigned(PhysReg)
+           << " cost=" << Cost.getFrequency() << " bundles=";
+    for (int N : Cand.LiveBundles.set_bits())
+      errs() << N << ',';
+    errs() << " active=";
+    for (unsigned N : Cand.ActiveBlocks)
+      errs() << N << ',';
+    errs() << '\n';
+    unsigned I = 0;
+    for (const auto &BI : SA->getUseBlocks()) {
+      unsigned N = BI.MBB->getNumber();
+      const auto &BC = SplitConstraints[I];
+      Cand.Intf.moveToBlock(N);
+      errs() << "REGIONSHAPE use decision=" << ActiveRegionTrace->ID
+             << " phys=" << unsigned(PhysReg) << " ordinal=" << I++
+             << " block=" << N << " livein=" << BI.LiveIn
+             << " liveout=" << BI.LiveOut << " first=" << BI.FirstInstr
+             << " last=" << BI.LastInstr << " firstdef=" << BI.FirstDef
+             << " inbundle=" << Bundles->getBundle(N, false)
+             << " outbundle=" << Bundles->getBundle(N, true)
+             << " entry=" << unsigned(BC.Entry) << " exit=" << unsigned(BC.Exit)
+             << " changes=" << BC.ChangesValue
+             << " interference=" << Cand.Intf.hasInterference()
+             << " leave=" << Cand.Intf.first() << " enter=" << Cand.Intf.last()
+             << " lastsplit=" << SA->getLastSplitPoint(N)
+             << " coefficient=" << Counts[N] << '\n';
+    }
+    for (unsigned N : Cand.ActiveBlocks) {
+      Cand.Intf.moveToBlock(N);
+      errs() << "REGIONSHAPE active decision=" << ActiveRegionTrace->ID
+             << " phys=" << unsigned(PhysReg) << " block=" << N
+             << " inbundle=" << Bundles->getBundle(N, false)
+             << " outbundle=" << Bundles->getBundle(N, true)
+             << " interference=" << Cand.Intf.hasInterference()
+             << " leave=" << Cand.Intf.first() << " enter=" << Cand.Intf.last()
+             << " coefficient=" << Counts[N] << '\n';
+    }
+    for (unsigned N = 0; N != Counts.size(); ++N)
+      if (Counts[N])
+        errs() << "REGIONSHAPE term decision=" << ActiveRegionTrace->ID
+               << " phys=" << unsigned(PhysReg) << " block=" << N
+               << " coefficient=" << Counts[N]
+               << " frequency=" << SpillPlacer->getBlockFrequency(N).getFrequency()
+               << '\n';
+    SplitConstraints = std::move(SavedConstraints);
+  }
   EmitCandidate(Cost < BestCost ? "new-best" : "not-better", true);
   if (Cost < BestCost) {
     BestCand = NumCands;
