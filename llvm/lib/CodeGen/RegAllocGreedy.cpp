@@ -200,6 +200,9 @@ static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
 namespace llvm {
 thread_local bool FeasibilityProbe = false;
 }
+static cl::opt<bool> TraceSpillRecoveryQuery("regalloc-spill-recovery-query",
+                                             cl::Hidden, cl::init(false));
+
 static cl::opt<bool> TraceGapQuery("regalloc-gap-query", cl::Hidden, cl::init(false));
 static cl::opt<int> GapQueryBlock("regalloc-gap-query-block", cl::Hidden, cl::init(-1));
 
@@ -3899,6 +3902,165 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // Finally spill VirtReg itself.
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
+  if (TraceSpillRecoveryQuery && RegionTraceFunction == MF->getName()) {
+    Register Reg = VirtReg.reg();
+    const TargetRegisterClass *RC = MRI->getRegClass(Reg);
+    unsigned CopyOp = TII->getLiveRangeSplitOpcode(Reg, *MF);
+    errs() << "SPILLRECOVERY begin reg=" << Reg.virtRegIndex()
+           << " root=" << VRM->getOriginal(Reg).virtRegIndex()
+           << " stage=" << unsigned(Stage)
+           << " class=" << TRI->getRegClassName(RC)
+           << " copy=" << TII->getName(CopyOp)
+           << " point=before-native-spill\n";
+    auto Query = [&]() -> StringRef {
+      if (TII->getName(CopyOp) != "WWM_COPY")
+        return "unsupported-copy-op";
+      if (VirtReg.hasSubRanges() || VirtReg.empty())
+        return "unsupported-interval";
+      if (StringRef(TRI->getRegClassName(RC)) != "VGPR_32")
+        return "unsupported-parent-class";
+      if (VRM->hasPhys(Reg))
+        return "unexpected-assigned-parent";
+      SmallPtrSet<MachineInstr *, 32> Seen;
+      SmallVector<MachineInstr *, 16> Instructions, Accesses, Copies;
+      MachineBasicBlock *MBB = nullptr;
+      for (MachineInstr &MI : MRI->reg_nodbg_instructions(Reg)) {
+        if (!Seen.insert(&MI).second)
+          continue;
+        if (MBB && MBB != MI.getParent())
+          return "multiple-blocks";
+        MBB = MI.getParent();
+        if (MI.isBundled() || MI.isPHI() || MI.isTerminator())
+          return "unsupported-instruction";
+        for (const MachineOperand &MO : MI.operands())
+          if (MO.isReg() && MO.getReg() == Reg &&
+              (MO.isUndef() || MO.getSubReg() || MO.isEarlyClobber()))
+            return "unsupported-operand";
+        Instructions.push_back(&MI);
+        if (MI.getOpcode() == CopyOp)
+          Copies.push_back(&MI);
+        else if (TII->getName(MI.getOpcode()) == "SI_SPILL_S32_TO_VGPR" ||
+                 TII->getName(MI.getOpcode()) == "SI_RESTORE_S32_FROM_VGPR")
+          Accesses.push_back(&MI);
+        else
+          return "unsupported-access";
+      }
+      if (Copies.size() != 2 || Accesses.size() < 2)
+        return "unsupported-access-count";
+      auto Earlier = [&](MachineInstr *A, MachineInstr *B) {
+        return LIS->getInstructionIndex(*A) < LIS->getInstructionIndex(*B);
+      };
+      llvm::sort(Instructions, Earlier);
+      llvm::sort(Accesses, Earlier);
+      llvm::sort(Copies, Earlier);
+      if (Copies.front() != Instructions.front() ||
+          Copies.back() != Instructions.back() ||
+          !Copies.front()->definesRegister(Reg, TRI) ||
+          !Copies.back()->readsRegister(Reg, TRI))
+        return "unsupported-boundary-copies";
+      SlotIndex First = LIS->getInstructionIndex(*Accesses.front());
+      SlotIndex Last = LIS->getInstructionIndex(*Accesses.back());
+      SlotIndex Entry = LIS->getInstructionIndex(*Copies.front());
+      SlotIndex Exit = LIS->getInstructionIndex(*Copies.back());
+      if (VirtReg.beginIndex() != Entry.getRegSlot() ||
+          VirtReg.endIndex() != Exit.getRegSlot())
+        return "unsupported-boundary-liveness";
+      SlotIndex PreviousEnd = VirtReg.beginIndex();
+      for (const LiveRange::Segment &S : VirtReg.segments) {
+        if (S.start != PreviousEnd)
+          return "disconnected-interval";
+        PreviousEnd = S.end;
+      }
+      SlotIndex LocalStart = First.getPrevIndex().getBoundaryIndex();
+      SlotIndex LocalStop = Last.getNextIndex().getBaseIndex();
+      SlotIndex PrefixStart = Entry.getBaseIndex();
+      SlotIndex PrefixStop = First.getBaseIndex();
+      SlotIndex TailStart = Last.getBaseIndex();
+      SlotIndex TailStop = Exit.getBoundaryIndex();
+      if (!(PrefixStart < LocalStart && LocalStart < PrefixStop &&
+            PrefixStop < TailStart && TailStart < LocalStop &&
+            LocalStop < TailStop))
+        return "no-interior-copy-envelope";
+      const TargetRegisterClass *AltRC =
+          TRI->getLargestLegalSuperClass(RC, *MF);
+      const TargetRegisterClass *DstRC = TII->getRegClass(TII->get(CopyOp), 0);
+      const TargetRegisterClass *SrcRC = TII->getRegClass(TII->get(CopyOp), 1);
+      if (!AltRC || (DstRC && !DstRC->hasSubClassEq(AltRC)) ||
+          (SrcRC && !SrcRC->hasSubClassEq(AltRC)))
+        return "unsupported-copy-class";
+      auto Free = [&](StringRef Kind, SlotIndex Start, SlotIndex Stop,
+                      MCPhysReg P) {
+        VNInfo V(0, Start);
+        LiveInterval Hyp(Reg, 0.0f);
+        Hyp.addSegment(LiveRange::Segment(Start, Stop, &V));
+        BitVector Usable;
+        bool Mask =
+            LIS->checkRegMaskInterference(Hyp, Usable) && !Usable.test(P);
+        bool Reserved = MRI->isReserved(P), Fixed = false;
+        for (MCRegUnit Unit : TRI->regunits(P))
+          Fixed |= LIS->getRegUnit(Unit).overlaps(Start, Stop);
+        // This overload uses a fresh virtual-range query, without vreg caches.
+        bool Virtual = Matrix->checkInterference(Start, Stop, P);
+        bool Available = !Reserved && !Mask && !Fixed && !Virtual;
+        errs() << "SPILLRECOVERY option reg=" << Reg.virtRegIndex()
+               << " kind=" << Kind << " phys=" << printReg(P, TRI) << " range=["
+               << Start << ',' << Stop << ") reserved=" << Reserved
+               << " mask=" << Mask << " fixed=" << Fixed
+               << " virtual=" << Virtual << " free=" << Available << '\n';
+        return Available;
+      };
+      SmallVector<MCPhysReg, 16> LocalOptions, AltOptions;
+      unsigned Whole = 0;
+      for (MCPhysReg P : RegClassInfo.getOrder(RC)) {
+        Whole += Free("whole", PrefixStart, TailStop, P);
+        if (Free("local", LocalStart, LocalStop, P))
+          LocalOptions.push_back(P);
+      }
+      for (MCPhysReg P : RegClassInfo.getOrder(AltRC)) {
+        if (RC->contains(P))
+          continue;
+        bool Prefix = Free("prefix", PrefixStart, PrefixStop, P);
+        bool Tail = Free("tail", TailStart, TailStop, P);
+        if (Prefix && Tail)
+          AltOptions.push_back(P);
+      }
+      unsigned Pairs = 0;
+      for (MCPhysReg P : LocalOptions)
+        for (MCPhysReg Q : AltOptions)
+          Pairs += !TRI->regsOverlap(P, Q);
+      unsigned Reads = 0, Writes = 0;
+      for (MachineInstr *MI : Accesses) {
+        unsigned R = 0, D = 0;
+        for (const MachineOperand &MO : MI->operands()) {
+          if (!MO.isReg() || MO.getReg() != Reg)
+            continue;
+          R += MO.readsReg();
+          D += MO.isDef();
+        }
+        Reads += R;
+        Writes += D;
+        errs() << "SPILLRECOVERY access reg=" << Reg.virtRegIndex()
+               << " block=" << MBB->getNumber()
+               << " index=" << LIS->getInstructionIndex(*MI)
+               << " opcode=" << TII->getName(MI->getOpcode()) << " reads=" << R
+               << " writes=" << D << '\n';
+      }
+      errs() << "SPILLRECOVERY plan reg=" << Reg.virtRegIndex()
+             << " root=" << VRM->getOriginal(Reg).virtRegIndex()
+             << " block=" << MBB->getNumber()
+             << " alt_class=" << TRI->getRegClassName(AltRC)
+             << " accesses=" << Accesses.size() << " reads=" << Reads
+             << " writes=" << Writes << " copies=" << Copies.size()
+             << " whole_options=" << Whole
+             << " local_options=" << LocalOptions.size()
+             << " alternate_options=" << AltOptions.size() << " pairs=" << Pairs
+             << '\n';
+      return "supported";
+    };
+    StringRef Status = Query();
+    errs() << "SPILLRECOVERY end reg=" << Reg.virtRegIndex()
+           << " status=" << Status << '\n';
+  }
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   if (traceAllocation(*MF, *VRM, VirtReg.reg()))
     printAllocationInterval("spill", VirtReg, *VRM, *MRI, *TRI, Stage);
