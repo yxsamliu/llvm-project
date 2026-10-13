@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GCNHazardRecognizer.h"
+#include "llvm/IR/BasicBlock.h"
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPUWaitcntUtils.h"
 #include "GCNSubtarget.h"
@@ -26,6 +27,19 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "gcn-hazard-recognizer"
+
+// Scoped late diagnostic: allocation and scheduling remain unchanged.
+static cl::opt<std::string> HazardProbeFunction("hazard-probe-function", cl::Hidden,
+                                              cl::init(""));
+static cl::opt<bool> HazardProbeSkipSpillDef("hazard-probe-skip-spill-def",
+                                          cl::Hidden, cl::init(false));
+static bool hazardProbeSelected(const MachineInstr &MI) {
+  const MachineBasicBlock &MBB = *MI.getParent();
+  if (HazardProbeFunction.empty() ||
+      MBB.getParent()->getName() != HazardProbeFunction)
+    return false;
+  return MBB.getNumber() == 24 || MBB.getNumber() == 25;
+}
 // Opt-in debug type for the per-candidate co-execution slot traces, which are
 // far too noisy for the normal debug output. Pass both types to get everything.
 #define DEBUG_TYPE_VERBOSE "gcn-hazard-recognizer-verbose"
@@ -686,6 +700,8 @@ void GCNHazardRecognizer::runOnInstruction(MachineInstr *MI) {
   assert(isHazardRecognizerMode());
 
   unsigned NumPreNoops = PreEmitNoops(MI);
+
+
   EmitNoops(NumPreNoops);
   if (MI->isInsideBundle())
     insertNoopsInBundle(MI, TII, NumPreNoops);
@@ -701,6 +717,11 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   CurrCycleInstr = MI;
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
+  if (hazardProbeSelected(*MI) && std::max(W, NopPadding.getValue())) {
+    errs() << "HAZARD_NOP\t" << MI->getParent()->getNumber() << "\t"
+           << std::max(W, NopPadding.getValue()) << "\t";
+    MI->print(errs());
+  }
   CurrCycleInstr = nullptr;
   return std::max(W, NopPadding.getValue());
 }
@@ -1576,10 +1597,25 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     Register UseReg;
-    auto IsVALUDefSGPRFn = [&UseReg, TRI](const MachineInstr &MI) {
+    auto IsVALUDefSGPRFn = [&UseReg, TRI, this, VALU](const MachineInstr &MI) {
       if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
         return false;
-      return MI.modifiesRegister(UseReg, TRI);
+      bool Matches = MI.modifiesRegister(UseReg, TRI);
+      if (Matches && isHazardRecognizerMode() && hazardProbeSelected(*VALU) &&
+          MI.getOpcode() == AMDGPU::V_WRITELANE_B32 &&
+          TRI->isSGPRReg(MF.getRegInfo(), UseReg)) {
+        // V_WRITELANE only writes its VGPR destination. The SGPR super-def
+        // is spill liveness bookkeeping, preserved on the instruction.
+        errs() << "HAZARD_SPILL_DEF\t" << VALU->getParent()->getNumber()
+               << "\t" << UseReg.id() << "\t" << HazardProbeSkipSpillDef
+               << "\tproducer=";
+        MI.print(errs());
+        errs() << "HAZARD_SPILL_USE\t";
+        VALU->print(errs());
+        if (HazardProbeSkipSpillDef)
+          return false;
+      }
+      return Matches;
     };
 
     for (const MachineOperand &Use : VALU->explicit_uses()) {
