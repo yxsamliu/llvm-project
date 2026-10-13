@@ -164,6 +164,12 @@ static cl::opt<int> TraceRegionShapeDecision("regalloc-region-shape-decision", c
 
 static cl::opt<bool> TraceRegionVectors("regalloc-region-cost-vector-trace", cl::Hidden, cl::init(false));
 
+static cl::opt<std::string> EvictionFallbackKey(
+    "regalloc-eviction-fallback-key", cl::Hidden, cl::init(""));
+static cl::opt<bool> EvictionFallbackApply(
+    "regalloc-eviction-fallback-apply", cl::Hidden, cl::init(false));
+static thread_local unsigned EvictionFallbackObserved = 0;
+
 static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
 
 static cl::list<unsigned> AllocationTraceRoots(
@@ -968,6 +974,50 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 
   MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
       VirtReg, Order, CostPerUseLimit, FixedRegisters);
+  if (BestPhys.isValid() && !EvictionFallbackKey.empty() &&
+      RegionTraceFunction == MF->getName()) {
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << VirtReg.reg().virtRegIndex() << ':'
+       << VRM->getOriginal(VirtReg.reg()).virtRegIndex() << ':'
+       << unsigned(ExtraInfo->getStage(VirtReg)) << ':'
+       << TRI->getRegClassName(MRI->getRegClass(VirtReg.reg())) << ':'
+       << printReg(BestPhys, TRI) << ':';
+    OS.flush();
+    if (StringRef(EvictionFallbackKey).starts_with(Key)) {
+      auto WeightBits = [](const LiveInterval &LI) {
+        float Weight = LI.weight();
+        uint32_t Bits;
+        std::memcpy(&Bits, &Weight, sizeof(Bits));
+        return Bits;
+      };
+      SmallVector<const LiveInterval *, 8> Victims;
+      for (MCRegUnit Unit : TRI->regunits(BestPhys)) {
+        ArrayRef<const LiveInterval *> Interferences =
+            Matrix->query(VirtReg, Unit).interferingVRegs();
+        for (const LiveInterval *LI : Interferences)
+          if (!llvm::is_contained(Victims, LI))
+            Victims.push_back(LI);
+      }
+      llvm::sort(Victims, [](const LiveInterval *A, const LiveInterval *B) {
+        return A->reg().virtRegIndex() < B->reg().virtRegIndex();
+      });
+      OS << VirtReg.getSize() << ':' << WeightBits(VirtReg) << ':';
+      for (const LiveInterval *LI : Victims)
+        OS << LI->reg().virtRegIndex() << '/'
+           << VRM->getOriginal(LI->reg()).virtRegIndex() << '/'
+           << unsigned(ExtraInfo->getStage(*LI)) << '/' << WeightBits(*LI)
+           << ',';
+      OS.flush();
+      if (Key != EvictionFallbackKey || !NewVRegs.empty() ||
+          CostPerUseLimit != uint8_t(~0u) || ++EvictionFallbackObserved != 1)
+        report_fatal_error("eviction fallback state mismatch");
+      errs() << "EVICTIONFALLBACK key=" << Key
+             << " apply=" << EvictionFallbackApply << '\n';
+      if (EvictionFallbackApply)
+        return MCRegister();
+    }
+  }
   if (BestPhys.isValid())
     evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
