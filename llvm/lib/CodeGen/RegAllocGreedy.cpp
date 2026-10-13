@@ -157,6 +157,8 @@ std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
 
+static cl::opt<bool> TraceRegionVectors("regalloc-region-cost-vector-trace", cl::Hidden, cl::init(false));
+
 static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
 
 static cl::list<unsigned> AllocationTraceRoots(
@@ -1746,6 +1748,57 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
           BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg)),
        NV("Cost", BestCost.getFrequency()), NV("Compact", HasCompact),
        NV("MeasuredWaveBlocks", SpillPlacer->hasMeasuredWaveBlocks())});
+
+  if (TraceRegionVectors && TraceEnabled) {
+    auto SavedConstraints = SplitConstraints;
+    errs() << "REGIONVECTOR start decision=" << Trace.ID
+           << " reg=" << Trace.VReg << " root=" << Trace.Original
+           << " stage=" << Trace.Stage << " class=" << Trace.RegClass
+           << " compact=" << HasCompact << " physical=" << (BestCand != NoCand)
+           << " selected_cost=" << BestCost.getFrequency()
+           << " block_cost=" << SpillCost.getFrequency() << "\n";
+    auto EmitTerms = [&](StringRef Kind, ArrayRef<int64_t> Counts) {
+      for (unsigned N = 0; N != Counts.size(); ++N)
+        if (Counts[N])
+          errs() << "REGIONVECTOR term decision=" << Trace.ID
+                 << " kind=" << Kind << " block=" << N
+                 << " count=" << Counts[N]
+                 << " frequency=" << SpillPlacer->getBlockFrequency(N).getFrequency()
+                 << " bfi=" << MBFI->getBlockFreq(MF->getBlockNumbered(N)).getFrequency()
+                 << "\n";
+    };
+    auto EmitCandidate = [&](StringRef Kind, GlobalSplitCandidate &Cand) {
+      SmallVector<int64_t, 0> Counts(MF->getNumBlockIDs(), 0);
+      BlockFrequency Cost;
+      bool Valid = calcSplitConstraints(Cand.Intf, &Cost, &Counts);
+      if (Valid)
+        addGlobalSplitCost(Cand, &Cost, &Counts);
+      errs() << "REGIONVECTOR candidate decision=" << Trace.ID
+             << " kind=" << Kind << " valid=" << Valid
+             << " phys=" << unsigned(Cand.PhysReg)
+             << " cost=" << Cost.getFrequency()
+             << " bundles=" << Cand.LiveBundles.count()
+             << " active_blocks=" << Cand.ActiveBlocks.size() << "\n";
+      EmitTerms(Kind, Counts);
+    };
+    SmallVector<int64_t, 0> BlockCounts(MF->getNumBlockIDs(), 0);
+    for (const auto &BI : SA->getUseBlocks())
+      BlockCounts[BI.MBB->getNumber()] +=
+          1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef);
+    EmitTerms("block", BlockCounts);
+    if (HasCompact)
+      EmitCandidate("compact", GlobalCand.front());
+    if (BestCand != NoCand)
+      EmitCandidate("physical", GlobalCand[BestCand]);
+    unsigned Extra = 0;
+    if (HasCompact && BestCand != NoCand)
+      for (int I : GlobalCand.front().LiveBundles.set_bits())
+        Extra += !GlobalCand[BestCand].LiveBundles.test(I);
+    errs() << "REGIONVECTOR end decision=" << Trace.ID
+           << " extra_compact_bundles=" << Extra << "\n";
+    SplitConstraints = std::move(SavedConstraints);
+  }
+
   if (BestCand != NoCand && traceAllocation(*MF, *VRM, VirtReg.reg())) {
     auto SavedConstraints = SplitConstraints;
     SmallVector<int64_t, 0> Counts(MF->getNumBlockIDs(), 0);
