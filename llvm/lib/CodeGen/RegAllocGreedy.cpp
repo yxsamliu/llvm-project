@@ -4476,6 +4476,8 @@ bool RAGreedy::hasVirtRegAlloc() {
   return false;
 }
 
+static cl::opt<bool> TraceOrdinaryFixed("regalloc-ordinary-fixed-trace", cl::Hidden, cl::init(false));
+
 bool RAGreedy::run(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
@@ -4554,6 +4556,46 @@ bool RAGreedy::run(MachineFunction &mf) {
                                             *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
+
+  if (TraceOrdinaryFixed && RegionTraceFunction == MF->getName()) {
+    unsigned Selected = 0;
+    errs() << "ORDINARYFIXED scope function=" << MF->getName() << "\n";
+    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+      Register Reg = Register::index2VirtReg(I);
+      if (MRI->reg_nodbg_empty(Reg) || !shouldAllocateRegister(Reg) ||
+          StringRef(TRI->getRegClassName(MRI->getRegClass(Reg))) !=
+              "AV_128_Align2" || !LIS->hasInterval(Reg))
+        continue;
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      ++Selected;
+      errs() << "ORDINARYFIXED interval reg=" << I << " weight=" << LI.weight()
+             << " subranges=" << LI.hasSubRanges() << " segments=";
+      for (const auto &S : LI.segments)
+        errs() << S.start << "-" << S.end << ",";
+      errs() << "\n";
+      for (const auto &SR : LI.subranges()) {
+        errs() << "ORDINARYFIXED subrange reg=" << I << " mask=" << SR.LaneMask
+               << " segments=";
+        for (const auto &S : SR.segments)
+          errs() << S.start << "-" << S.end << ",";
+        errs() << "\n";
+      }
+      SmallSet<unsigned, 16> Blocks;
+      for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg))
+        Blocks.insert(MO.getParent()->getParent()->getNumber());
+      for (unsigned N : Blocks)
+        errs() << "ORDINARYFIXED block reg=" << I << " block=" << N
+               << " bfi=" << MBFI->getBlockFreq(MF->getBlockNumbered(N)).getFrequency()
+               << "\n";
+      auto Order = AllocationOrder::create(Reg, *VRM, RegClassInfo, Matrix);
+      for (MCRegister Phys : Order)
+        errs() << "ORDINARYFIXED option reg=" << I
+               << " phys=" << printReg(Phys, TRI)
+               << " kind=" << unsigned(Matrix->checkInterference(LI, Phys))
+               << "\n";
+    }
+    errs() << "ORDINARYFIXED end selected=" << Selected << "\n";
+  }
 
   LLVM_DEBUG(LIS->dump());
 
