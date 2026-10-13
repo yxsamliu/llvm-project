@@ -97,6 +97,9 @@ static cl::opt<std::string> RegionTraceFunction(
 
 // Exact-replay diagnostic: exchange only original intervals' first queue keys.
 // A table row is vreg, expected native priority, replacement priority.
+static cl::opt<bool> LocalSplitTrace("regalloc-local-split-trace", cl::Hidden,
+                                    cl::init(false));
+
 static cl::opt<bool> PriorityDiag("regalloc-priority-diag", cl::Hidden,
                                 cl::init(false));
 static cl::opt<std::string> PriorityTable("regalloc-priority-table", cl::Hidden,
@@ -3076,6 +3079,26 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency() *
       (1.0f / MBFI->getEntryFreq().getFrequency());
   SmallVector<float, 8> GapWeight;
+  const bool TraceLocal = LocalSplitTrace &&
+      traceAllocation(*MF, *VRM, VirtReg.reg());
+  MCRegister TraceBestPhys;
+  auto TraceBits = [](float F) { return llvm::bit_cast<uint32_t>(F); };
+  if (TraceLocal) {
+    errs() << "LOCALSPLIT begin reg=" << VirtReg.reg().virtRegIndex()
+           << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
+           << " stage=" << unsigned(ExtraInfo->getStage(VirtReg))
+           << " block=" << BI.MBB->getNumber()
+           << " livein=" << BI.LiveIn << " liveout=" << BI.LiveOut
+           << " progress=" << ProgressRequired
+           << " freq=" << SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency()
+           << " mbfi=" << MBFI->getBlockFreq(BI.MBB).getFrequency()
+           << " entry=" << MBFI->getEntryFreq().getFrequency()
+           << " blockfreq_bits=" << TraceBits(blockFreq)
+           << " hysteresis_bits=" << TraceBits(Hysteresis)
+           << " uses=";
+    for (SlotIndex U : Uses) errs() << U << ',';
+    errs() << '\n';
+  }
 
   for (MCRegister PhysReg : Order) {
     assert(PhysReg);
@@ -3087,6 +3110,13 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
     if (Matrix->checkRegMaskInterference(VirtReg, PhysReg))
       for (unsigned Gap : RegMaskGaps)
         GapWeight[Gap] = huge_valf;
+
+    if (TraceLocal) {
+      errs() << "LOCALSPLIT gaps reg=" << VirtReg.reg().virtRegIndex()
+             << " phys=" << printReg(PhysReg, TRI) << " bits=";
+      for (float F : GapWeight) errs() << TraceBits(F) << ',';
+      errs() << '\n';
+    }
 
     // Try to find the best sequence of gaps to close.
     // The new spill weight must be larger than any gap interference.
@@ -3120,6 +3150,14 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       // Legally, without causing looping?
       bool Legal = !ProgressRequired || NewGaps < NumGaps;
 
+      if (TraceLocal)
+        errs() << "LOCALSPLIT step reg=" << VirtReg.reg().virtRegIndex()
+               << " phys=" << printReg(PhysReg, TRI)
+               << " before=" << SplitBefore << " after=" << SplitAfter
+               << " livebefore=" << LiveBefore << " liveafter=" << LiveAfter
+               << " newgaps=" << NewGaps << " legal=" << Legal
+               << " max_bits=" << TraceBits(MaxGap)
+               << " best_bits=" << TraceBits(BestDiff) << '\n';
       if (Legal && MaxGap < huge_valf) {
         // Estimate the new spill weight. Each instruction reads or writes the
         // register. Conservatively assume there are no read-modify-write
@@ -3134,6 +3172,15 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
         // Would this split be possible to allocate?
         // Never allocate all gaps, we wouldn't be making progress.
         LLVM_DEBUG(dbgs() << " w=" << EstWeight);
+        if (TraceLocal)
+          errs() << "LOCALSPLIT candidate reg=" << VirtReg.reg().virtRegIndex()
+                 << " phys=" << printReg(PhysReg, TRI)
+                 << " before=" << SplitBefore << " after=" << SplitAfter
+                 << " est_bits=" << TraceBits(EstWeight)
+                 << " diff_bits=" << TraceBits(EstWeight - MaxGap)
+                 << " accept=" << (EstWeight * Hysteresis >= MaxGap)
+                 << " update=" << (EstWeight * Hysteresis >= MaxGap &&
+                                    EstWeight - MaxGap > BestDiff) << '\n';
         if (EstWeight * Hysteresis >= MaxGap) {
           Shrink = false;
           float Diff = EstWeight - MaxGap;
@@ -3142,6 +3189,7 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
             BestDiff = Hysteresis * Diff;
             BestBefore = SplitBefore;
             BestAfter = SplitAfter;
+            if (TraceLocal) TraceBestPhys = PhysReg;
           }
         }
       }
@@ -3171,6 +3219,12 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       MaxGap = std::max(MaxGap, GapWeight[SplitAfter++]);
     }
   }
+
+  if (TraceLocal)
+    errs() << "LOCALSPLIT chosen reg=" << VirtReg.reg().virtRegIndex()
+           << " phys=" << printReg(TraceBestPhys, TRI)
+           << " before=" << BestBefore << " after=" << BestAfter
+           << " threshold_bits=" << TraceBits(BestDiff) << '\n';
 
   // Didn't find any candidates?
   if (BestBefore == NumGaps)
