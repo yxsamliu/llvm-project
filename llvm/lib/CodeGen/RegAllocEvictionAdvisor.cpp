@@ -24,8 +24,31 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
+#include <algorithm>
+#include <cstring>
 
 using namespace llvm;
+
+static cl::opt<std::string> EvictionTraceFunction(
+    "regalloc-eviction-trace-function", cl::Hidden, cl::init(""));
+static cl::list<unsigned> EvictionTraceRoots(
+    "regalloc-eviction-trace-root", cl::Hidden, cl::CommaSeparated);
+
+static bool traceEviction(const MachineFunction &MF, const VirtRegMap &VRM,
+                          const LiveInterval &LI) {
+  if (MF.getName() != EvictionTraceFunction || EvictionTraceFunction.empty())
+    return false;
+  unsigned Root = VRM.getOriginal(LI.reg()).virtRegIndex();
+  return std::find(EvictionTraceRoots.begin(), EvictionTraceRoots.end(), Root) !=
+         EvictionTraceRoots.end();
+}
+
+static uint32_t evictionWeightBits(float Weight) {
+  uint32_t Bits;
+  std::memcpy(&Bits, &Weight, sizeof(Bits));
+  return Bits;
+}
+
 
 static cl::opt<RegAllocEvictionAdvisorAnalysisLegacy::AdvisorMode> Mode(
     "regalloc-enable-advisor", cl::Hidden,
@@ -255,9 +278,36 @@ bool DefaultEvictionAdvisor::canEvictHintInterference(
 bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
     const LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
     EvictionCost &MaxCost, const SmallVirtRegSet &FixedRegisters) const {
+  const bool Trace = traceEviction(MF, *VRM, VirtReg);
+  const EvictionCost TraceLimit = MaxCost;
+  EvictionCost Cost;
+  auto Finish = [&](bool Accepted, const char *Reason,
+                    const LiveInterval *Intf = nullptr, int Urgent = -1) {
+    if (Trace) {
+      errs() << "EVICTTRACE candidate reg=" << VirtReg.reg().virtRegIndex()
+             << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
+             << " phys=" << printReg(PhysReg, TRI) << " hint=" << IsHint
+             << " accepted=" << Accepted << " reason=" << Reason
+             << " request_weight_bits=" << evictionWeightBits(VirtReg.weight())
+             << " cost_hints=" << Cost.BrokenHints
+             << " cost_weight_bits=" << evictionWeightBits(Cost.MaxWeight)
+             << " limit_hints=" << TraceLimit.BrokenHints
+             << " limit_weight_bits=" << evictionWeightBits(TraceLimit.MaxWeight);
+      if (Intf)
+        errs() << " victim=" << Intf->reg().virtRegIndex()
+               << " victimroot=" << VRM->getOriginal(Intf->reg()).virtRegIndex()
+               << " victim_stage=" << unsigned(RA.getExtraInfo().getStage(*Intf))
+               << " victim_weight_bits=" << evictionWeightBits(Intf->weight())
+               << " request_cascade=" << RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg())
+               << " victim_cascade=" << RA.getExtraInfo().getCascade(Intf->reg())
+               << " urgent=" << Urgent;
+      errs() << '\n';
+    }
+    return Accepted;
+  };
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg)
-    return false;
+    return Finish(false, "fixed_interference");
 
   bool IsLocal = VirtReg.empty() || LIS->intervalIsInOneMBB(VirtReg);
 
@@ -270,13 +320,12 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   // anything, and it can be evicted by anything.
   unsigned Cascade = RA.getExtraInfo().getCascadeOrCurrentNext(VirtReg.reg());
 
-  EvictionCost Cost;
   for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, Unit);
     // If there is 10 or more interferences, chances are one is heavier.
     const auto &Interferences = Q.interferingVRegs(EvictInterferenceCutoff);
     if (Interferences.size() >= EvictInterferenceCutoff)
-      return false;
+      return Finish(false, "interference_cutoff");
 
     // Check if any interfering live range is heavier than MaxWeight.
     for (const LiveInterval *Intf : reverse(Interferences)) {
@@ -287,21 +336,21 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       // of last-chance recoloring and this virtual register is one that we
       // have scavenged a physical register for.
       if (FixedRegisters.count(Intf->reg()))
-        return false;
+        return Finish(false, "fixed_vreg", Intf);
 
       // Never evict spill products. They cannot split or spill.
       if (RA.getExtraInfo().getStage(*Intf) == RS_Done)
-        return false;
+        return Finish(false, "done_stage", Intf);
 
       bool Urgent = isUrgentEviction(VirtReg, *Intf);
       // Only evict older cascades or live ranges without a cascade.
       unsigned IntfCascade = RA.getExtraInfo().getCascade(Intf->reg());
       if (Cascade == IntfCascade)
-        return false;
+        return Finish(false, "same_cascade", Intf, Urgent);
 
       if (Cascade < IntfCascade) {
         if (!Urgent)
-          return false;
+          return Finish(false, "newer_cascade", Intf, Urgent);
         // We permit breaking cascades for urgent evictions. It should be the
         // last resort, though, so make it really expensive.
         Cost.BrokenHints += 10 * MRI->getRegClass(Intf->reg())->getCopyCost();
@@ -315,21 +364,22 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
       Cost.MaxWeight = std::max(Cost.MaxWeight, Intf->weight());
       // Abort if this would be too expensive.
       if (Cost >= MaxCost)
-        return false;
+        return Finish(false, "cost_limit", Intf, Urgent);
       if (Urgent)
         continue;
       // Apply the eviction policy for non-urgent evictions.
       if (!shouldEvict(VirtReg, IsHint, *Intf, BreaksHint))
-        return false;
+        return Finish(false, "weight_policy", Intf, Urgent);
       // If !MaxCost.isMax(), then we're just looking for a cheap register.
       // Evicting another local live range in this case could lead to suboptimal
       // coloring.
       if (!MaxCost.isMax() && IsLocal && LIS->intervalIsInOneMBB(*Intf) &&
           (!EnableLocalReassign || !canReassign(*Intf, PhysReg))) {
-        return false;
+        return Finish(false, "local_reassignment", Intf, Urgent);
       }
     }
   }
+  Finish(true, "accepted");
   MaxCost = Cost;
   return true;
 }
@@ -337,13 +387,24 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
 MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     const LiveInterval &VirtReg, const AllocationOrder &Order,
     uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
+  const bool Trace = traceEviction(MF, *VRM, VirtReg);
+  if (Trace)
+    errs() << "EVICTTRACE search reg=" << VirtReg.reg().virtRegIndex()
+           << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
+           << " cost_per_use_limit=" << unsigned(CostPerUseLimit) << '\n';
+  auto Finish = [&](MCRegister Result, const char *Reason) {
+    if (Trace)
+      errs() << "EVICTTRACE result reg=" << VirtReg.reg().virtRegIndex()
+             << " phys=" << printReg(Result, TRI) << " reason=" << Reason << '\n';
+    return Result;
+  };
   // Keep track of the cheapest interference seen so far.
   EvictionCost BestCost;
   BestCost.setMax();
   MCRegister BestPhys;
   auto MaybeOrderLimit = getOrderLimit(VirtReg, Order, CostPerUseLimit);
   if (!MaybeOrderLimit)
-    return MCRegister::NoRegister;
+    return Finish(MCRegister::NoRegister, "no_order_limit");
   unsigned OrderLimit = *MaybeOrderLimit;
 
   // When we are just looking for a reduced cost per use, don't break any
@@ -357,9 +418,15 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
        ++I) {
     MCRegister PhysReg = *I;
     assert(PhysReg);
-    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg) ||
-        !canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
-                                         FixedRegisters))
+    if (!canAllocatePhysReg(CostPerUseLimit, PhysReg)) {
+      if (Trace)
+        errs() << "EVICTTRACE skip reg=" << VirtReg.reg().virtRegIndex()
+               << " phys=" << printReg(PhysReg, TRI)
+               << " reason=physical_cost\n";
+      continue;
+    }
+    if (!canEvictInterferenceBasedOnCost(VirtReg, PhysReg, false, BestCost,
+                                        FixedRegisters))
       continue;
 
     // Best so far.
@@ -369,5 +436,5 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     if (I.isHint())
       break;
   }
-  return BestPhys;
+  return Finish(BestPhys, "searched");
 }
