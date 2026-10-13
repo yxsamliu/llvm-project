@@ -180,6 +180,9 @@ static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
 namespace llvm {
 thread_local bool FeasibilityProbe = false;
 }
+static cl::opt<bool> TraceRecoveryCost("regalloc-recovery-cost-trace", cl::Hidden,
+                                      cl::init(false));
+
 static cl::opt<bool> TraceFeasibility("regalloc-feasibility-trace", cl::Hidden,
                                     cl::init(false));
 
@@ -1494,6 +1497,75 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                  << " count=" << Counts[N] << " frequency="
                  << SpillPlacer->getBlockFrequency(N).getFrequency() << '\n';
     }
+    SplitConstraints = std::move(SavedConstraints);
+  }
+  // Observe the native transfer model for both existing candidates. Restore
+  // the shared constraints; do not alter the placement solution or decision.
+  if (TraceRecoveryCost && TraceEnabled && HasCompact &&
+      traceAllocation(*MF, *VRM, VirtReg.reg())) {
+    auto SavedConstraints = SplitConstraints;
+    SmallVector<int64_t, 0> CompactCounts(MF->getNumBlockIDs(), 0);
+    SmallVector<int64_t, 0> PhysicalCounts(MF->getNumBlockIDs(), 0);
+    auto EmitCost = [&](StringRef Kind, GlobalSplitCandidate &Cand,
+                        SmallVectorImpl<int64_t> &Counts) {
+      BlockFrequency Cost;
+      bool Valid = calcSplitConstraints(Cand.Intf, &Cost, &Counts);
+      SmallVector<int64_t, 0> LocalCounts(Counts.begin(), Counts.end());
+      uint64_t LocalCost = Cost.getFrequency();
+      if (Valid)
+        addGlobalSplitCost(Cand, &Cost, &Counts);
+      errs() << "RECOVERYCOST candidate decision=" << Trace.ID
+             << " reg=" << Trace.VReg << " root=" << Trace.Original
+             << " kind=" << Kind << " valid=" << Valid
+             << " phys=" << unsigned(Cand.PhysReg)
+             << " local_cost=" << LocalCost
+             << " cost=" << Cost.getFrequency()
+             << " bundles=" << Cand.LiveBundles.count()
+             << " active_blocks=" << Cand.ActiveBlocks.size() << '\n';
+      for (unsigned N = 0; N != Counts.size(); ++N)
+        if (Counts[N])
+          errs() << "RECOVERYCOST term decision=" << Trace.ID
+                 << " kind=" << Kind << " block=" << N
+                 << " local=" << LocalCounts[N]
+                 << " global=" << Counts[N] - LocalCounts[N]
+                 << " total=" << Counts[N]
+                 << " frequency="
+                 << SpillPlacer->getBlockFrequency(N).getFrequency()
+                 << " bfi=" << MBFI->getBlockFreq(MF->getBlockNumbered(N)).getFrequency()
+                 << " through=" << SA->getThroughBlocks().test(N) << '\n';
+      return Valid;
+    };
+    bool CompactValid = EmitCost("compact", GlobalCand.front(), CompactCounts);
+    unsigned Extra = 0;
+    if (BestCand != NoCand) {
+      const auto &PhysicalBundles = GlobalCand[BestCand].LiveBundles;
+      for (int I : GlobalCand.front().LiveBundles.set_bits())
+        Extra += !PhysicalBundles.test(I);
+      bool PhysicalValid = EmitCost("physical", GlobalCand[BestCand], PhysicalCounts);
+      if (PhysicalValid && CompactValid) {
+        for (unsigned N = 0; N != PhysicalCounts.size(); ++N)
+          PhysicalCounts[N] -= CompactCounts[N];
+        SpillPlacement::WaveCostDiagnostic D;
+        bool Higher = SpillPlacer->isWaveCostDifferencePositive(PhysicalCounts, &D);
+        errs() << "RECOVERYCOST wave decision=" << Trace.ID
+               << " status=" << D.Status << " physical_higher=" << Higher
+               << " positive=" << D.Positive << " negative=" << D.Negative
+               << " entry=" << D.EntryWaveCount << '\n';
+        for (const auto &Term : D.Terms)
+          errs() << "RECOVERYCOST wave-term decision=" << Trace.ID
+                 << " block=" << Term.Block << " coefficient=" << Term.Coefficient
+                 << " count_or_bound=" << Term.Frequency
+                 << " source=" << Term.Source << '\n';
+      }
+    }
+    errs() << "RECOVERYCOST comparison decision=" << Trace.ID
+           << " reg=" << Trace.VReg << " root=" << Trace.Original
+           << " selected_physical=" << (BestCand != NoCand)
+           << " extra_compact_bundles=" << Extra
+           << " selected_cost=" << BestCost.getFrequency()
+           << " block_cost=" << SpillCost.getFrequency()
+           << " use_blocks=" << SA->getUseBlocks().size()
+           << " through_blocks=" << SA->getNumThroughBlocks() << '\n';
     SplitConstraints = std::move(SavedConstraints);
   }
   bool ExtraCompactBundles = false;
