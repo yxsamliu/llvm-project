@@ -27,6 +27,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -43,6 +44,9 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "amdgpu-rewrite-agpr-copy-mfma"
+
+static cl::opt<std::string> TraceUnspillFunction("trace-unspill-function", cl::Hidden, cl::init(""));
+static cl::opt<int> TraceUnspillSlot("trace-unspill-slot", cl::Hidden, cl::init(-1));
 
 DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
               "Controls which MFMA chains are rewritten to AGPR form");
@@ -611,9 +615,38 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
                       << " by reassigning\n");
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
-
+    bool Trace = TraceUnspillFunction == MF.getName() && Slot == TraceUnspillSlot;
+    if (Trace) {
+      errs() << "UNSPILL slot=" << Slot << " class=" << TRI.getRegClassName(RC)
+             << " references=" << SpillReferences->second.size()
+             << " options=" << AllocOrder.size() << " interval=" << *LI << '\n';
+      for (const MachineInstr *MI : SpillReferences->second)
+        errs() << "UNSPILL reference index=" << LIS.getInstructionIndex(*MI)
+               << " block=" << MI->getParent()->getNumber() << " " << *MI;
+    }
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+      auto Kind = LRM.checkInterference(*LI, PhysReg);
+      if (Trace) {
+        errs() << "UNSPILL option phys=" << printReg(PhysReg, &TRI)
+               << " kind=" << unsigned(Kind) << '\n';
+        SmallPtrSet<const LiveInterval *, 8> Seen;
+        for (MCRegUnit Unit : TRI.regunits(PhysReg)) {
+          LiveIntervalUnion::Query Query(*LI, LRM.getLiveUnions()[unsigned(Unit)]);
+          for (const LiveInterval *Other : Query.interferingVRegs()) {
+            errs() << "UNSPILL blocker phys=" << printReg(PhysReg, &TRI)
+                   << " unit=" << unsigned(Unit) << " reg="
+                   << Other->reg().virtRegIndex() << " interval=" << *Other << '\n';
+            if (PhysReg != AMDGPU::VGPR147 || !Seen.insert(Other).second)
+              continue;
+            for (const MachineInstr &MI : MRI.reg_nodbg_instructions(Other->reg()))
+              errs() << "UNSPILL blocker-instruction reg="
+                     << Other->reg().virtRegIndex() << " index="
+                     << LIS.getInstructionIndex(MI) << " block="
+                     << MI.getParent()->getNumber() << " " << MI;
+          }
+        }
+      }
+      if (Kind != LiveRegMatrix::IK_Free)
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
