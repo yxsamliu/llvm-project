@@ -68,6 +68,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
@@ -89,7 +90,13 @@ static cl::opt<std::string> RegionTraceFunction(
     cl::desc("Emit region allocation analysis remarks for an exact function "
              "name, or * for all functions"));
 
+static cl::opt<std::string> RegionReplayFirstAccept(
+    "regalloc-region-replay-first-accept", cl::Hidden, cl::init(""),
+    cl::desc("Diagnostic: accept the first region wave rejection only if its "
+             "recorded decision key matches"));
+
 namespace {
+thread_local unsigned RegionReplayApplied = 0;
 struct RegionTrace {
   MachineOptimizationRemarkEmitter *ORE;
   MachineFunction *MF;
@@ -98,6 +105,7 @@ struct RegionTrace {
   unsigned Original;
   unsigned Stage;
   StringRef RegClass;
+  uint64_t BlockCost = 0, CandidateCost = 0;
 
   void emit(const char *Name, std::initializer_list<ore::NV> Fields) const {
     if (!ORE)
@@ -1306,6 +1314,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                       << printBlockFreq(*MBFI, BestCost) << '\n');
   }
 
+  Trace.BlockCost = SpillCost.getFrequency();
   Trace.emit("RegionStart", {NV("BlockSplitCost", SpillCost.getFrequency()),
                              NV("InitialCeiling", BestCost.getFrequency()),
                              NV("Compact", HasCompact),
@@ -1325,6 +1334,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
 
+  Trace.CandidateCost = BestCost.getFrequency();
   Trace.emit(
       "RegionBest",
       {NV("CandidatePresent", BestCand != NoCand),
@@ -1400,6 +1410,24 @@ bool RAGreedy::isWaveRegionCostHigher(GlobalSplitCandidate &Cand) {
           "RegionWaveTerm",
           {NV("Block", Term.Block), NV("Coefficient", Term.Coefficient),
            NV("CountOrBound", Term.Frequency), NV("Source", Term.Source)});
+    if (!RegionReplayFirstAccept.empty() && ActiveRegionTrace->ID == 0) {
+      const RegionTrace &Trace = *ActiveRegionTrace;
+      std::string Key;
+      raw_string_ostream OS(Key);
+      OS << Trace.VReg << '/' << Trace.Original << '/' << Trace.Stage << '/'
+         << Trace.RegClass << '/' << unsigned(Cand.PhysReg) << '/'
+         << Trace.BlockCost << '/' << Trace.CandidateCost << '/'
+         << Diagnostic.Positive << '/' << Diagnostic.Negative << '/'
+         << Diagnostic.EntryWaveCount;
+      if (!Higher || StringRef(Diagnostic.Status) != "complete" ||
+          Key != RegionReplayFirstAccept)
+        report_fatal_error("region replay decision key mismatch");
+      if (++RegionReplayApplied != 1)
+        report_fatal_error("region replay applied more than once");
+      Trace.emit("RegionReplay",
+                 {NV("Action", "accept-wave-rejected"), NV("Key", Key)});
+      return false;
+    }
   }
   return Higher;
 }
@@ -3124,6 +3152,11 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
+  if (!RegionReplayFirstAccept.empty() &&
+      (RegionTraceFunction.empty() || RegionTraceFunction == "*"))
+    report_fatal_error("region replay requires an exact trace function");
+  bool ReplayFunction = !RegionReplayFirstAccept.empty() &&
+                        RegionTraceFunction == MF->getName();
 
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
@@ -3172,6 +3205,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   SetOfBrokenHints.clear();
 
   allocatePhysRegs();
+  if (ReplayFunction && RegionReplayApplied != 1)
+    report_fatal_error("region replay did not reach the first wave rejection");
   tryHintsRecoloring();
 
   if (VerifyEnabled)
