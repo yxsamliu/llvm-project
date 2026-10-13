@@ -28,6 +28,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -47,6 +48,8 @@ using namespace llvm;
 
 static cl::opt<std::string> TraceUnspillFunction("trace-unspill-function", cl::Hidden, cl::init(""));
 static cl::opt<int> TraceUnspillSlot("trace-unspill-slot", cl::Hidden, cl::init(-1));
+
+static cl::opt<bool> LocalUnspillRescue("unspill-local-rescue", cl::Hidden, cl::init(false));
 
 DEBUG_COUNTER(RewriteAGPRCopyMFMACounter, DEBUG_TYPE,
               "Controls which MFMA chains are rewritten to AGPR form");
@@ -624,6 +627,8 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
         errs() << "UNSPILL reference index=" << LIS.getInstructionIndex(*MI)
                << " block=" << MI->getParent()->getNumber() << " " << *MI;
     }
+    LiveRange AccessRange;
+    VNInfo AccessValue(0, SlotIndex());
     for (MCPhysReg PhysReg : AllocOrder) {
       auto Kind = LRM.checkInterference(*LI, PhysReg);
       if (Trace) {
@@ -646,8 +651,64 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
           }
         }
       }
-      if (Kind != LiveRegMatrix::IK_Free)
-        continue;
+      bool Rescued = false;
+      if (Kind != LiveRegMatrix::IK_Free) {
+        // Reached only after every earlier native option failed. Keep every
+        // native success unchanged, including the original placement control.
+        if (!LocalUnspillRescue || !Trace || PhysReg != AllocOrder.back())
+          continue;
+        auto &Refs = SpillReferences->second;
+        const DISubprogram *SP = MF.getFunction().getSubprogram();
+        bool DebugSafe = !SP || (SP->getUnit() &&
+            SP->getUnit()->getEmissionKind() == DICompileUnit::LineTablesOnly);
+        bool Eligible = DebugSafe && RC == &AMDGPU::VGPR_32RegClass &&
+            MFI.getObjectSize(Slot) == 4 && !Refs.empty();
+        SlotIndex Begin, End, Previous;
+        MachineBasicBlock *Block = Refs.empty() ? nullptr : Refs.front()->getParent();
+        for (MachineInstr *MI : Refs) {
+          unsigned Opc = MI->getOpcode();
+          SlotIndex Idx = LIS.getInstructionIndex(*MI);
+          Eligible &= MI->getParent() == Block && !MI->isBundled() &&
+              (Opc == AMDGPU::SI_SPILL_WWM_V32_SAVE ||
+               Opc == AMDGPU::SI_SPILL_WWM_V32_RESTORE) &&
+              MI->getOperand(0).isReg() && !MI->getOperand(0).getSubReg() &&
+              MI->getOperand(1).isFI() && MI->getOperand(1).getIndex() == Slot &&
+              MI->getOperand(3).isImm() && MI->getOperand(3).getImm() == 0 &&
+              (!Previous.isValid() || Previous < Idx);
+          if (!Begin.isValid()) Begin = Idx.getBaseIndex();
+          End = Idx.getDeadSlot();
+          Previous = Idx;
+        }
+        Eligible &= !Refs.empty() && Refs.front()->mayStore() &&
+                    Refs.back()->mayLoad() && Begin.isValid() && Begin < End;
+        errs() << "LOCALUNSPILL eligibility slot=" << Slot
+               << " eligible=" << Eligible << " debug_safe=" << DebugSafe
+               << " refs=" << Refs.size() << " begin=" << Begin
+               << " end=" << End << '\n';
+        if (!Eligible) continue;
+        AccessValue.def = Begin;
+        AccessRange.addSegment(LiveRange::Segment(Begin, End, &AccessValue));
+        if (!LI->covers(AccessRange))
+          report_fatal_error("local unspill envelope escapes original range");
+        for (MCPhysReg Candidate : AllocOrder) {
+          // The larger native range certifies regmask and fixed-unit legality.
+          if (LRM.checkInterference(*LI, Candidate) != LiveRegMatrix::IK_VirtReg)
+            continue;
+          bool Blocked = false;
+          for (MCRegUnit Unit : TRI.regunits(Candidate)) {
+            LiveIntervalUnion::Query Q(AccessRange,
+                                      LRM.getLiveUnions()[unsigned(Unit)]);
+            Blocked |= Q.checkInterference();
+          }
+          if (Blocked) continue;
+          PhysReg = Candidate;
+          Rescued = true;
+          errs() << "LOCALUNSPILL selected slot=" << Slot << " phys="
+                 << printReg(PhysReg, &TRI) << '\n';
+          break;
+        }
+        if (!Rescued) continue;
+      }
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
                         << printReg(PhysReg, &TRI) << '\n');
@@ -677,6 +738,24 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
         }
       });
 
+      if (Rescued) {
+        auto Verify = [&](const LiveInterval &CheckLI) {
+          if (!AccessRange.covers(CheckLI) ||
+              LRM.checkInterference(CheckLI, PhysReg) != LiveRegMatrix::IK_Free)
+            report_fatal_error("local unspill reconstructed interval is invalid");
+          errs() << "LOCALUNSPILL component slot=" << Slot << " "
+                 << CheckLI << '\n';
+        };
+        Verify(NewLI);
+        for (LiveInterval *SplitLI : SplitLIs) Verify(*SplitLI);
+        for (unsigned I = 0; I < SplitLIs.size(); ++I) {
+          if (NewLI.overlaps(*SplitLIs[I]))
+            report_fatal_error("local unspill components overlap");
+          for (unsigned J = I + 1; J < SplitLIs.size(); ++J)
+            if (SplitLIs[I]->overlaps(*SplitLIs[J]))
+              report_fatal_error("local unspill components overlap");
+        }
+      }
       LRM.assign(NewLI, PhysReg);
       for (LiveInterval *SplitLI : SplitLIs) {
         VRM.grow();
