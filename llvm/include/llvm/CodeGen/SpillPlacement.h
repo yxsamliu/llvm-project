@@ -168,7 +168,22 @@ public:
   /// no finite upper bound. Spill-placement floors and scaling are excluded.
   /// This orders modeled spill executions in the training run, not a runtime
   /// profitability guarantee. Return false if arithmetic is not representable.
+  // Optional diagnostic output from the existing evaluation. Partial sums on
+  // an unavailable bound must not be interpreted as a complete comparison.
+  struct WaveCostDiagnostic {
+    struct Term {
+      unsigned Block;
+      int64_t Coefficient;
+      uint64_t Frequency;
+      const char *Source;
+    };
+    const char *Status = "not-evaluated";
+    uint64_t Positive = 0, Negative = 0, EntryWaveCount = 0;
+    SmallVector<Term> Terms;
+  };
   LLVM_ABI bool isWaveCostDifferencePositive(ArrayRef<int64_t> Coefficients);
+  LLVM_ABI bool isWaveCostDifferencePositive(ArrayRef<int64_t> Coefficients,
+                                             WaveCostDiagnostic *Diagnostic);
 
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &Inv);

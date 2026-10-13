@@ -68,16 +68,55 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstdint>
+#include <initializer_list>
 #include <utility>
 
 using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
+
+// Diagnostic only: identities are local to this compilation. Virtual-register
+// numbers and decision ordinals do not identify corresponding counterfactuals.
+static cl::opt<std::string> RegionTraceFunction(
+    "regalloc-region-trace-function", cl::Hidden, cl::init(""),
+    cl::desc("Emit region allocation analysis remarks for an exact function "
+             "name, or * for all functions"));
+
+namespace {
+struct RegionTrace {
+  MachineOptimizationRemarkEmitter *ORE;
+  MachineFunction *MF;
+  unsigned VReg;
+  uint64_t ID;
+  unsigned Original;
+  unsigned Stage;
+  StringRef RegClass;
+
+  void emit(const char *Name, std::initializer_list<ore::NV> Fields) const {
+    if (!ORE)
+      return;
+    ORE->emit([&]() {
+      MachineOptimizationRemarkAnalysis R(DEBUG_TYPE, Name, DebugLoc(),
+                                          &MF->front());
+      R << ore::NV("Decision", ID) << ore::NV("VReg", VReg)
+        << ore::NV("OriginalVReg", Original) << ore::NV("Stage", Stage)
+        << ore::NV("RegClass", RegClass);
+      for (const auto &Field : Fields)
+        R << Field;
+      return R;
+    });
+  }
+};
+thread_local RegionTrace *ActiveRegionTrace = nullptr;
+std::atomic<uint64_t> NextRegionTraceID{0};
+} // namespace
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
@@ -1231,8 +1270,24 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
 MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                                     AllocationOrder &Order,
                                     SmallVectorImpl<Register> &NewVRegs) {
-  if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
+  bool TraceEnabled =
+      !RegionTraceFunction.empty() &&
+      (RegionTraceFunction == "*" || RegionTraceFunction == MF->getName()) &&
+      ORE->allowExtraAnalysis(DEBUG_TYPE);
+  RegionTrace Trace{TraceEnabled ? ORE : nullptr,
+                    MF,
+                    VirtReg.reg().virtRegIndex(),
+                    TraceEnabled ? NextRegionTraceID.fetch_add(1) : 0,
+                    VRM->getOriginal(VirtReg.reg()).virtRegIndex(),
+                    unsigned(ExtraInfo->getStage(VirtReg)),
+                    TRI->getRegClassName(MRI->getRegClass(VirtReg.reg()))};
+  SaveAndRestore<RegionTrace *> TraceScope(ActiveRegionTrace,
+                                           TraceEnabled ? &Trace : nullptr);
+  using ore::NV;
+  if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg)) {
+    Trace.emit("RegionOutcome", {NV("Action", "target-rejected")});
     return MCRegister::NoRegister;
+  }
   unsigned NumCands = 0;
   BlockFrequency SpillCost = calcBlockSplitCost();
   BlockFrequency BestCost;
@@ -1251,9 +1306,32 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                       << printBlockFreq(*MBFI, BestCost) << '\n');
   }
 
+  Trace.emit("RegionStart", {NV("BlockSplitCost", SpillCost.getFrequency()),
+                             NV("InitialCeiling", BestCost.getFrequency()),
+                             NV("Compact", HasCompact),
+                             NV("UseBlocks", SA->getUseBlocks().size()),
+                             NV("Units", "spill-placement-frequency")});
+  if (TraceEnabled)
+    for (const auto &BI : SA->getUseBlocks())
+      Trace.emit("RegionUseBlock",
+                 {NV("Block", BI.MBB->getNumber()),
+                  NV("BFI", MBFI->getBlockFreq(BI.MBB).getFrequency()),
+                  NV("PlacementFrequency",
+                     SpillPlacer->getBlockFrequency(BI.MBB->getNumber())
+                         .getFrequency()),
+                  NV("SpillMultiplicity",
+                     1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef))});
+
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
 
+  Trace.emit(
+      "RegionBest",
+      {NV("CandidatePresent", BestCand != NoCand),
+       NV("PhysReg",
+          BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg)),
+       NV("Cost", BestCost.getFrequency()), NV("Compact", HasCompact),
+       NV("MeasuredWaveBlocks", SpillPlacer->hasMeasuredWaveBlocks())});
   if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
       SpillPlacer->hasMeasuredWaveBlocks()) {
     // doRegionSplit also assigns uncovered compact bundles. The physical
@@ -1261,16 +1339,30 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     const BitVector &Physical = GlobalCand[BestCand].LiveBundles;
     bool ExtraCompact = llvm::any_of(GlobalCand.front().LiveBundles.set_bits(),
                                      [&](int I) { return !Physical.test(I); });
+    Trace.emit("RegionWaveGate", {NV("ExtraCompactBundles", ExtraCompact)});
     if (!ExtraCompact && isWaveRegionCostHigher(GlobalCand[BestCand])) {
       LLVM_DEBUG(dbgs() << "Wave cost exceeds block splitting\n");
+      Trace.emit("RegionOutcome", {NV("Action", "wave-bound-rejected")});
       return MCRegister::NoRegister;
     }
+  } else {
+    Trace.emit("RegionWaveGate", {NV("GateEntered", false)});
   }
   // No solutions found, fall back to single block splitting.
-  if (!HasCompact && BestCand == NoCand)
+  if (!HasCompact && BestCand == NoCand) {
+    Trace.emit("RegionOutcome", {NV("Action", "no-region-candidate")});
     return MCRegister::NoRegister;
+  }
 
-  return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  Trace.emit("RegionOutcome", {NV("Action", "region-split")});
+  size_t OldSize = NewVRegs.size();
+  MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  if (TraceEnabled)
+    for (Register Reg : ArrayRef(NewVRegs).drop_front(OldSize))
+      Trace.emit("RegionChild",
+                 {NV("ChildVReg", Reg.virtRegIndex()),
+                  NV("ChildStage", unsigned(ExtraInfo->getStage(Reg)))});
+  return Result;
 }
 
 bool RAGreedy::isWaveRegionCostHigher(GlobalSplitCandidate &Cand) {
@@ -1278,8 +1370,12 @@ bool RAGreedy::isWaveRegionCostHigher(GlobalSplitCandidate &Cand) {
   // candidates overwrite SplitConstraints, so reconstruct its constraints
   // without changing the spill placement solution or live bundles.
   SmallVector<int64_t> CostDifference(MF->getNumBlockIDs(), 0);
-  if (!calcSplitConstraints(Cand.Intf, nullptr, &CostDifference))
+  if (!calcSplitConstraints(Cand.Intf, nullptr, &CostDifference)) {
+    if (ActiveRegionTrace)
+      ActiveRegionTrace->emit("RegionWaveBound",
+                              {ore::NV("Status", "constraints-unavailable")});
     return false;
+  }
   addGlobalSplitCost(Cand, nullptr, &CostDifference);
 
   // Use-block entries are not unique by block; accumulate every term.
@@ -1287,7 +1383,25 @@ bool RAGreedy::isWaveRegionCostHigher(GlobalSplitCandidate &Cand) {
     CostDifference[BI.MBB->getNumber()] -=
         1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef);
   }
-  return SpillPlacer->isWaveCostDifferencePositive(CostDifference);
+  SpillPlacement::WaveCostDiagnostic Diagnostic;
+  bool Higher = SpillPlacer->isWaveCostDifferencePositive(
+      CostDifference, ActiveRegionTrace ? &Diagnostic : nullptr);
+  if (ActiveRegionTrace) {
+    using ore::NV;
+    ActiveRegionTrace->emit("RegionWaveBound",
+                            {NV("Status", Diagnostic.Status),
+                             NV("Higher", Higher),
+                             NV("Positive", Diagnostic.Positive),
+                             NV("Negative", Diagnostic.Negative),
+                             NV("EntryWaveCount", Diagnostic.EntryWaveCount),
+                             NV("Units", "raw-wave-spill-execution-bound")});
+    for (const auto &Term : Diagnostic.Terms)
+      ActiveRegionTrace->emit(
+          "RegionWaveTerm",
+          {NV("Block", Term.Block), NV("Coefficient", Term.Coefficient),
+           NV("CountOrBound", Term.Frequency), NV("Source", Term.Source)});
+  }
+  return Higher;
 }
 
 unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
@@ -1321,13 +1435,24 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
 
   SpillPlacer->prepare(Cand.LiveBundles);
   BlockFrequency Cost;
+  auto EmitCandidate = [&](StringRef Status, bool HasCost) {
+    if (ActiveRegionTrace)
+      ActiveRegionTrace->emit("RegionCandidate",
+                              {ore::NV("PhysReg", unsigned(PhysReg)),
+                               ore::NV("Status", Status),
+                               ore::NV("CostAvailable", HasCost),
+                               ore::NV("Cost", Cost.getFrequency()),
+                               ore::NV("Ceiling", BestCost.getFrequency())});
+  };
   if (!addSplitConstraints(Cand.Intf, Cost)) {
+    EmitCandidate("no-positive-bundles", false);
     LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI) << "\tno positive bundles\n");
     return BestCand;
   }
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
                     << "\tstatic = " << printBlockFreq(*MBFI, Cost));
   if (Cost >= BestCost) {
+    EmitCandidate("static-cost-pruned", true);
     LLVM_DEBUG({
       if (BestCand == NoCand)
         dbgs() << " worse than no bundles\n";
@@ -1338,6 +1463,7 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
     return BestCand;
   }
   if (!growRegion(Cand)) {
+    EmitCandidate("cannot-grow-region", false);
     LLVM_DEBUG(dbgs() << ", cannot spill all interferences.\n");
     return BestCand;
   }
@@ -1346,6 +1472,7 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
 
   // No live bundles, defer to splitSingleBlocks().
   if (!Cand.LiveBundles.any()) {
+    EmitCandidate("no-live-bundles", false);
     LLVM_DEBUG(dbgs() << " no bundles.\n");
     return BestCand;
   }
@@ -1357,6 +1484,7 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
       dbgs() << " EB#" << I;
     dbgs() << ".\n";
   });
+  EmitCandidate(Cost < BestCost ? "new-best" : "not-better", true);
   if (Cost < BestCost) {
     BestCand = NumCands;
     BestCost = Cost;

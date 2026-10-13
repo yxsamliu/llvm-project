@@ -376,8 +376,25 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
 
 bool SpillPlacement::isWaveCostDifferencePositive(
     ArrayRef<int64_t> Coefficients) {
+  return isWaveCostDifferencePositive(Coefficients, nullptr);
+}
+
+bool SpillPlacement::isWaveCostDifferencePositive(
+    ArrayRef<int64_t> Coefficients, WaveCostDiagnostic *Diagnostic) {
+  if (Diagnostic)
+    *Diagnostic = {};
+  auto Finish = [&](const char *Status, uint64_t Positive, uint64_t Negative,
+                    bool Result) {
+    if (Diagnostic) {
+      Diagnostic->Status = Status;
+      Diagnostic->Positive = Positive;
+      Diagnostic->Negative = Negative;
+      Diagnostic->EntryWaveCount = NormalizationWaveCount;
+    }
+    return Result;
+  };
   if (!hasMeasuredWaveBlocks())
-    return false;
+    return Finish("no-measured-blocks", 0, 0, false);
   assert(Coefficients.size() == BlockFrequencies.size());
   if (AcyclicBlocks.empty()) {
     AcyclicBlocks.resize(MF->getNumBlockIDs());
@@ -394,27 +411,35 @@ bool SpillPlacement::isWaveCostDifferencePositive(
     if (!C)
       continue;
     uint64_t Frequency = 0;
+    const char *Source = "unknown-lower-bound-zero";
     if (MeasuredWaveBlocks.test(I)) {
       Frequency = MeasuredWaveCounts[I];
+      Source = Frequency ? "measured-nonzero" : "measured-zero";
     } else if (C < 0) {
-      if (!AcyclicBlocks.test(I))
-        return false;
+      if (!AcyclicBlocks.test(I)) {
+        if (Diagnostic)
+          Diagnostic->Terms.push_back({I, C, 0, "unknown-cyclic-unbounded"});
+        return Finish("unknown-cyclic-bound", Positive, Negative, false);
+      }
       Frequency = NormalizationWaveCount;
+      Source = "acyclic-entry-upper-bound";
     }
+    if (Diagnostic)
+      Diagnostic->Terms.push_back({I, C, Frequency, Source});
     // Reject potentially saturated counters and unrepresentable arithmetic.
     if (Frequency == UINT64_MAX || C == INT64_MIN)
-      return false;
+      return Finish("unrepresentable-input", Positive, Negative, false);
     std::optional<uint64_t> Product =
         checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
     if (!Product)
-      return false;
+      return Finish("product-overflow", Positive, Negative, false);
     uint64_t &Sum = C < 0 ? Negative : Positive;
     std::optional<uint64_t> Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
     if (!Total)
-      return false;
+      return Finish("sum-overflow", Positive, Negative, false);
     Sum = *Total;
   }
-  return Positive > Negative;
+  return Finish("complete", Positive, Negative, Positive > Negative);
 }
 
 /// activate - mark node n as active if it wasn't already.
