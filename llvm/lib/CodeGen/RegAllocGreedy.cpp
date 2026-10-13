@@ -203,6 +203,13 @@ thread_local bool FeasibilityProbe = false;
 static cl::opt<bool> TraceSpillRecoveryQuery("regalloc-spill-recovery-query",
                                              cl::Hidden, cl::init(false));
 
+// Exact replay only: one native spill request may construct a recovery.
+static cl::opt<std::string> SpillRecoveryGuard("regalloc-spill-recovery-guard",
+                                               cl::Hidden, cl::init(""));
+static cl::opt<bool> SpillRecoveryApply("regalloc-spill-recovery-apply",
+                                        cl::Hidden, cl::init(false));
+static thread_local unsigned SpillRecoveryApplied = 0;
+
 static cl::opt<bool> TraceGapQuery("regalloc-gap-query", cl::Hidden, cl::init(false));
 static cl::opt<int> GapQueryBlock("regalloc-gap-query-block", cl::Hidden, cl::init(-1));
 
@@ -3902,6 +3909,7 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   // Finally spill VirtReg itself.
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
+  bool RecoveredSpill = false;
   if (TraceSpillRecoveryQuery && RegionTraceFunction == MF->getName()) {
     Register Reg = VirtReg.reg();
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
@@ -4055,12 +4063,147 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
              << " local_options=" << LocalOptions.size()
              << " alternate_options=" << AltOptions.size() << " pairs=" << Pairs
              << '\n';
-      return "supported";
+      if (SpillRecoveryGuard.empty() || !Pairs)
+        return "supported";
+      std::string Key;
+      raw_string_ostream K(Key);
+      K << Reg.virtRegIndex() << ':' << VRM->getOriginal(Reg).virtRegIndex()
+        << ':' << unsigned(Stage) << ':' << MBB->getNumber() << ':' << First
+        << ':' << Last << ':' << Accesses.size() << ':' << Reads << ':'
+        << Writes;
+      if (Key != SpillRecoveryGuard || Depth || !NewVRegs.empty())
+        report_fatal_error("spill recovery exact request guard mismatch");
+      errs() << "SPILLRECOVERY guard key=" << Key << '\n';
+      if (!SpillRecoveryApply)
+        return "supported";
+
+      // This bounded diagnostic consumes the witnessed pair immediately.
+      // It deliberately does not make descendants eligible for another split.
+      if (++SpillRecoveryApplied != 1)
+        report_fatal_error("spill recovery applied more than once");
+      MCPhysReg LocalPhys = 0, AltPhys = 0;
+      for (MCPhysReg P : LocalOptions) {
+        for (MCPhysReg Q : AltOptions)
+          if (!TRI->regsOverlap(P, Q)) {
+            LocalPhys = P;
+            AltPhys = Q;
+            break;
+          }
+        if (LocalPhys)
+          break;
+      }
+      if (!LocalPhys || !AltPhys)
+        report_fatal_error("spill recovery lost qualified pair");
+      SmallVector<std::pair<MachineOperand *, bool>, 24> OriginalOperands;
+      for (MachineInstr *MI : Accesses)
+        for (MachineOperand &MO : MI->operands())
+          if (MO.isReg() && MO.getReg() == Reg)
+            OriginalOperands.emplace_back(&MO, MO.isDef());
+
+      MF->verify(LIS, Indexes, "Before spill recovery", &errs());
+      SA->analyze(&VirtReg);
+      SmallVector<Register, 4> Products;
+      SmallVector<unsigned, 4> IntvMap;
+      {
+        LiveRangeEdit Edit(&VirtReg, Products, *MF, *LIS, VRM, this,
+                           &DeadRemats);
+        SE->reset(Edit, SplitEditor::SM_Partition);
+        SE->openIntv();
+        SlotIndex Start = SE->enterIntvBefore(First);
+        SlotIndex Stop = SE->leaveIntvAfter(Last);
+        SE->useIntv(Start, Stop);
+        SE->finish(&IntvMap);
+        DebugVars->splitRegister(Reg, Edit.regs(), *LIS);
+      }
+      // Keep the native parent's interval lifetime, as other SplitKit callers
+      // do, but require all its non-debug operands to have been transferred.
+      if (!MRI->reg_nodbg_empty(Reg) || Products.size() != 3 ||
+          IntvMap.size() != Products.size())
+        report_fatal_error("spill recovery unexpected product shape");
+      Register LocalReg;
+      unsigned Locals = 0, Prefixes = 0, Tails = 0;
+      SmallVector<MCPhysReg, 4> Assignment;
+      Matrix->invalidateVirtRegs();
+      for (unsigned I = 0; I != Products.size(); ++I) {
+        Register R = Products[I];
+        LiveInterval &LI = LIS->getInterval(R);
+        const TargetRegisterClass *ActualRC = MRI->getRegClass(R);
+        bool Local = IntvMap[I] == 1;
+        SlotIndex Lower, Upper;
+        if (Local) {
+          ++Locals;
+          LocalReg = R;
+          Lower = LocalStart;
+          Upper = LocalStop;
+          if (ActualRC != RC)
+            report_fatal_error("spill recovery changed local class");
+        } else if (!LI.empty() && LI.endIndex() <= PrefixStop) {
+          ++Prefixes;
+          Lower = PrefixStart;
+          Upper = PrefixStop;
+        } else {
+          ++Tails;
+          Lower = TailStart;
+          Upper = TailStop;
+        }
+        MCPhysReg P = Local ? LocalPhys : AltPhys;
+        if (LI.empty() || LI.hasSubRanges() || LI.beginIndex() < Lower ||
+            LI.endIndex() > Upper || !ActualRC->contains(P) ||
+            MRI->isReserved(P) || VRM->hasPhys(R) ||
+            Matrix->checkInterference(LI, P))
+          report_fatal_error("spill recovery actual interval is not available");
+        if (!Local)
+          for (MachineInstr &MI : MRI->reg_nodbg_instructions(R))
+            if (MI.getOpcode() != CopyOp)
+              report_fatal_error("spill recovery complement is not copy-only");
+        ExtraInfo->setStage(LI, RS_Spill);
+        Assignment.push_back(P);
+        errs() << "SPILLRECOVERY product parent=" << Reg.virtRegIndex()
+               << " reg=" << R.virtRegIndex() << " map=" << IntvMap[I]
+               << " kind="
+               << (Local                         ? "local"
+                   : LI.endIndex() <= PrefixStop ? "prefix"
+                                                 : "tail")
+               << " phys=" << printReg(P, TRI)
+               << " class=" << TRI->getRegClassName(ActualRC)
+               << " stage=" << unsigned(ExtraInfo->getStage(LI))
+               << " interval=" << LI << '\n';
+      }
+      if (Locals != 1 || Prefixes != 1 || Tails != 1)
+        report_fatal_error("spill recovery incomplete interval partition");
+      for (auto [MO, Def] : OriginalOperands)
+        if (MO->getReg() != LocalReg || MO->isDef() != Def)
+          report_fatal_error("spill recovery changed original access identity");
+      for (unsigned I = 0; I != Products.size(); ++I)
+        for (unsigned J = 0; J != I; ++J)
+          if (TRI->regsOverlap(Assignment[I], Assignment[J]) &&
+              LIS->getInterval(Products[I])
+                  .overlaps(LIS->getInterval(Products[J])))
+            report_fatal_error("spill recovery products interfere");
+      MF->verify(LIS, Indexes, "After spill recovery split", &errs());
+      for (unsigned I = 0; I != Products.size(); ++I) {
+        LiveInterval &LI = LIS->getInterval(Products[I]);
+        if (Matrix->checkInterference(LI, Assignment[I]))
+          report_fatal_error("spill recovery assignment lost availability");
+        Matrix->assign(LI, Assignment[I]);
+        if (Register Hint = MRI->getSimpleHint(Products[I]))
+          if (Hint != Assignment[I])
+            SetOfBrokenHints.insert(&LI);
+      }
+      MF->verify(LIS, Indexes, "After spill recovery assignment", &errs());
+      errs() << "SPILLRECOVERY applied parent=" << Reg.virtRegIndex()
+             << " products=" << Products.size()
+             << " original_operands=" << OriginalOperands.size()
+             << " queued=" << NewVRegs.size() << '\n';
+      RecoveredSpill = true;
+      return "recovered";
     };
     StringRef Status = Query();
     errs() << "SPILLRECOVERY end reg=" << Reg.virtRegIndex()
            << " status=" << Status << '\n';
   }
+  if (RecoveredSpill)
+    return MCRegister();
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   if (traceAllocation(*MF, *VRM, VirtReg.reg()))
     printAllocationInterval("spill", VirtReg, *VRM, *MRI, *TRI, Stage);
@@ -4279,6 +4422,9 @@ bool RAGreedy::run(MachineFunction &mf) {
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
+  if (SpillRecoveryApply &&
+      (!TraceSpillRecoveryQuery || SpillRecoveryGuard.empty()))
+    report_fatal_error("spill recovery requires query and exact guard");
   TII = MF->getSubtarget().getInstrInfo();
   if ((RegionGapPartition || !RegionGapSplit.empty()) &&
       RegionReplayCompact.empty())
