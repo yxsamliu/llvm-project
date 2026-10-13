@@ -108,6 +108,17 @@ static cl::opt<bool> RegionGapPartition(
 static cl::opt<std::string> RegionGapSplit(
     "regalloc-region-gap-split", cl::Hidden, cl::init(""));
 static thread_local unsigned RegionGapApplied = 0;
+static cl::opt<std::string> RestrictedRecoveryGuard(
+    "regalloc-restricted-recovery-guard", cl::Hidden, cl::init(""));
+static cl::opt<unsigned> RestrictedRecoveryBlock(
+    "regalloc-restricted-recovery-block", cl::Hidden, cl::init(~0u));
+static cl::opt<bool> RestrictedRecoveryApply(
+    "regalloc-restricted-recovery-apply", cl::Hidden, cl::init(false));
+static cl::opt<bool> RestrictedRecoveryPartition(
+    "regalloc-restricted-recovery-partition", cl::Hidden, cl::init(false));
+static thread_local unsigned RestrictedRecoveryObserved = 0;
+static thread_local unsigned RestrictedRecoveryApplied = 0;
+
 
 static cl::opt<unsigned> RegionVerifyDecision(
     "regalloc-region-verify-decision", cl::Hidden, cl::init(0),
@@ -1411,12 +1422,127 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
       continue;
     }
 
+
+    bool Restricted = !RestrictedRecoveryGuard.empty() && ActiveRegionTrace &&
+                      ActiveRegionTrace->ID == RegionVerifyDecision &&
+                      Number == RestrictedRecoveryBlock;
+    SmallVector<MachineInstr *, 16> RestrictedAccesses;
+    SlotIndex RestrictedFirst, RestrictedLast;
+    if (Restricted) {
+      const LiveInterval &Parent = SA->getParent();
+      const auto *RC = MRI->getRegClass(Reg);
+      const auto *AltRC = TRI->getLargestLegalSuperClass(RC, *MF);
+      if (!IntvIn || IntvIn != IntvOut || !IntfIn || !IntfOut ||
+          !(IntfIn < IntfOut) || Parent.hasSubRanges())
+        report_fatal_error("restricted recovery needs a simple physical middle");
+      for (MachineInstr &MI : *BI.MBB) {
+        if (MI.isDebugInstr())
+          continue;
+        SlotIndex Idx = LIS->getInstructionIndex(MI);
+        if (Idx < IntfIn.getBaseIndex() || Idx >= IntfOut.getBoundaryIndex())
+          continue;
+        bool Access = false;
+        for (const MachineOperand &MO : MI.operands()) {
+          if (!MO.isReg() || MO.getReg() != Reg)
+            continue;
+          if (MO.isUndef() || MO.getSubReg() || MO.isEarlyClobber())
+            report_fatal_error("unsupported restricted recovery operand");
+          Access = true;
+        }
+        if (!Access)
+          continue;
+        if (MI.isBundled() || MI.isPHI() || MI.isTerminator())
+          report_fatal_error("unsupported restricted recovery instruction");
+        RestrictedAccesses.push_back(&MI);
+      }
+      if (RestrictedAccesses.size() < 2)
+        report_fatal_error("restricted recovery needs original accesses");
+      RestrictedFirst = LIS->getInstructionIndex(*RestrictedAccesses.front());
+      RestrictedLast = LIS->getInstructionIndex(*RestrictedAccesses.back());
+      if (!(IntfIn.getBoundaryIndex() < RestrictedFirst) ||
+          !(RestrictedLast.getBoundaryIndex() < IntfOut) ||
+          !(SA->getFirstSplitPoint(Number) < RestrictedFirst) ||
+          !(RestrictedLast.getNextIndex() < SA->getLastSplitPoint(Number)))
+        report_fatal_error("restricted recovery has no interior copy sites");
+      unsigned CopyOp = TII->getLiveRangeSplitOpcode(Reg, *MF);
+      const auto *DstRC = TII->getRegClass(TII->get(CopyOp), 0);
+      const auto *SrcRC = TII->getRegClass(TII->get(CopyOp), 1);
+      if ((DstRC && !DstRC->hasSubClassEq(AltRC)) ||
+          (SrcRC && !SrcRC->hasSubClassEq(AltRC)))
+        report_fatal_error("restricted recovery copy class mismatch");
+
+      // Conservative original-index envelopes enclose the four native copies.
+      SlotIndex LocalStart = RestrictedFirst.getPrevIndex().getBoundaryIndex();
+      SlotIndex LocalStop = RestrictedLast.getNextIndex().getBaseIndex();
+      SlotIndex PrefixStart = IntfIn.getPrevIndex().getBoundaryIndex();
+      SlotIndex PrefixStop = RestrictedFirst.getBaseIndex();
+      SlotIndex TailStart = RestrictedLast.getBaseIndex();
+      SlotIndex TailStop = IntfOut.getNextIndex().getBaseIndex();
+      auto Free = [&](SlotIndex Start, SlotIndex Stop, MCPhysReg P) {
+        if (MRI->isReserved(P))
+          return false;
+        VNInfo V(0, Start);
+        LiveInterval Hyp(Reg, 0.0f);
+        Hyp.addSegment(LiveRange::Segment(Start, Stop, &V));
+        BitVector Usable;
+        if (LIS->checkRegMaskInterference(Hyp, Usable) && !Usable.test(P))
+          return false;
+        for (MCRegUnit Unit : TRI->regunits(P))
+          if (LIS->getRegUnit(Unit).overlaps(Start, Stop))
+            return false;
+        return !Matrix->checkInterference(Start, Stop, P);
+      };
+      SmallVector<MCPhysReg, 16> LocalOptions, AltOptions;
+      for (MCPhysReg P : RegClassInfo.getOrder(RC))
+        if (Free(LocalStart, LocalStop, P))
+          LocalOptions.push_back(P);
+      for (MCPhysReg P : RegClassInfo.getOrder(AltRC))
+        if (!RC->contains(P) && Free(PrefixStart, PrefixStop, P) &&
+            Free(TailStart, TailStop, P))
+          AltOptions.push_back(P);
+      unsigned Pairs = 0;
+      for (MCPhysReg P : LocalOptions)
+        for (MCPhysReg Q : AltOptions)
+          Pairs += !TRI->regsOverlap(P, Q);
+      errs() << "RESTRICTRECOVERY plan decision=" << ActiveRegionTrace->ID
+             << " parent=" << Reg.virtRegIndex() << " block=" << Number
+             << " intv=" << IntvIn << " interference=[" << IntfIn << ','
+             << IntfOut << ") local=[" << LocalStart << ',' << LocalStop
+             << ") prefix=[" << PrefixStart << ',' << PrefixStop << ") tail=["
+             << TailStart << ',' << TailStop << ") accesses="
+             << RestrictedAccesses.size() << " local_options=" << LocalOptions.size()
+             << " alternate_options=" << AltOptions.size() << " pairs=" << Pairs
+             << " copy=" << TII->getName(CopyOp) << '\n';
+      for (MCPhysReg P : LocalOptions)
+        errs() << "RESTRICTRECOVERY option kind=local phys="
+               << printReg(P, TRI) << '\n';
+      for (MCPhysReg P : AltOptions)
+        errs() << "RESTRICTRECOVERY option kind=alternate phys="
+               << printReg(P, TRI) << '\n';
+      for (MachineInstr *MI : RestrictedAccesses)
+        errs() << "RESTRICTRECOVERY original index=" << LIS->getInstructionIndex(*MI)
+               << " " << *MI;
+      if (!Pairs || ++RestrictedRecoveryObserved != 1)
+        report_fatal_error("restricted recovery unavailable or repeated");
+    }
+
     if (IntvIn && IntvOut)
       SE->splitLiveThroughBlock(Number, IntvIn, IntfIn, IntvOut, IntfOut);
     else if (IntvIn)
       SE->splitRegInBlock(BI, IntvIn, IntfIn);
     else
       SE->splitRegOutBlock(BI, IntvOut, IntfOut);
+
+    if (Restricted && RestrictedRecoveryApply) {
+      if (!RestrictedRecoveryPartition || ++RestrictedRecoveryApplied != 1)
+        report_fatal_error("restricted recovery requires native partition mode");
+      unsigned Local = SE->openIntv();
+      SlotIndex A = SE->enterIntvBefore(RestrictedFirst);
+      SlotIndex B = SE->leaveIntvAfter(RestrictedLast);
+      SE->useIntv(A, B);
+      errs() << "RESTRICTRECOVERY applied decision=" << ActiveRegionTrace->ID
+             << " local=" << Local << " range=[" << A << ',' << B << ")\n";
+    }
   }
 
   // Handle live-through blocks. The relevant live-through blocks are stored in
@@ -2095,6 +2221,22 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     BestCand = NoCand;
   }
 
+  if (!RestrictedRecoveryGuard.empty() && TraceEnabled &&
+      Trace.ID == RegionVerifyDecision) {
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << Trace.ID << '/' << Trace.VReg << '/' << Trace.Original << '/'
+       << Trace.Stage << '/' << Trace.RegClass << '/'
+       << (BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg))
+       << '/' << SpillCost.getFrequency() << '/' << BestCost.getFrequency()
+       << '/' << unsigned(HasCompact) << '/' << unsigned(ExtraCompactBundles)
+       << '/' << SA->getUseBlocks().size();
+    if (Key != RestrictedRecoveryGuard || BestCand == NoCand ||
+        !RegionReplayCompact.empty() || !RegionGapSplit.empty())
+      report_fatal_error("restricted recovery guard mismatch");
+    errs() << "RESTRICTRECOVERY guard=" << Key << " block="
+           << RestrictedRecoveryBlock << '\n';
+  }
   Trace.emit("RegionOutcome", {NV("Action", "region-split")});
   if (traceSpillLineage(*MF))
     errs() << "PGO_LINEAGE_REGION\t" << Trace.ID << '\t' << Trace.VReg
@@ -2104,6 +2246,11 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (TraceEnabled && RegionVerifyDecision == Trace.ID)
     MF->verify(LIS, Indexes, "Before selected region split", &errs());
   MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  if (!RestrictedRecoveryGuard.empty() && TraceEnabled &&
+      Trace.ID == RegionVerifyDecision &&
+      (RestrictedRecoveryObserved != 1 ||
+       RestrictedRecoveryApplied != unsigned(RestrictedRecoveryApply)))
+    report_fatal_error("restricted recovery did not match");
   if (!RegionGapSplit.empty() && TraceEnabled &&
       Trace.ID == RegionReplayDecision && RegionGapApplied != 1)
     report_fatal_error("gap split did not match an isolated block");
@@ -2298,7 +2445,14 @@ MCRegister RAGreedy::doRegionSplit(const LiveInterval &VirtReg,
   bool GapMode = (RegionGapPartition || !RegionGapSplit.empty()) &&
                  ActiveRegionTrace &&
                  ActiveRegionTrace->ID == RegionReplayDecision;
-  SE->reset(LREdit, GapMode ? SplitEditor::SM_Partition : SplitSpillMode);
+  bool RestrictedPartition = RestrictedRecoveryPartition &&
+                             !RestrictedRecoveryGuard.empty() && ActiveRegionTrace &&
+                             ActiveRegionTrace->ID == RegionVerifyDecision;
+  SE->reset(LREdit, (GapMode || RestrictedPartition)
+                       ? SplitEditor::SM_Partition : SplitSpillMode);
+  if (RestrictedPartition)
+    errs() << "RESTRICTRECOVERY mode=partition decision="
+           << ActiveRegionTrace->ID << '\n';
   if (GapMode)
     errs() << "GAPSPLIT mode=partition decision=" << ActiveRegionTrace->ID
            << " split=" << !RegionGapSplit.empty() << '\n';
