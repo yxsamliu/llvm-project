@@ -23,10 +23,14 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "si-lower-wwm-copies"
+
+static cl::opt<bool> WWMSkipIdentity("wwm-copy-skip-identity", cl::Hidden, cl::init(false));
+static cl::opt<std::string> WWMCopyDiagFunction("wwm-copy-diag-function", cl::Hidden, cl::init(""));
 
 namespace {
 
@@ -156,9 +160,34 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
       const DebugLoc &DL = MI.getDebugLoc();
       MachineBasicBlock::iterator InsertPt = MI.getIterator();
       Register RegForExecCopy = MFI->getSGPRForEXECCopy();
-      TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
-                                 isSCCLiveAtMI(MI), Indexes);
-      TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
+      auto AssignedReg = [&](Register Reg) -> Register {
+        if (Reg.isPhysical()) return Reg;
+        return VRM && VRM->hasPhys(Reg) ? Register(VRM->getPhys(Reg))
+                                      : Register();
+      };
+      Register Dst = AssignedReg(MI.getOperand(0).getReg());
+      Register Src = AssignedReg(MI.getOperand(1).getReg());
+      bool Identity = Dst && Src && Dst == Src &&
+                      !MI.getOperand(0).getSubReg() &&
+                      !MI.getOperand(1).getSubReg() &&
+                      !MI.getOperand(1).isUndef();
+      bool Selected = MF.getName() == WWMCopyDiagFunction;
+      bool Skip = Selected && WWMSkipIdentity && Identity;
+      if (Selected) {
+        errs() << "WWM_COPY_DIAG bb=" << MBB.getNumber()
+               << " dst=" << MI.getOperand(0).getReg().id()
+               << " src=" << MI.getOperand(1).getReg().id()
+               << " physdst=" << printReg(Dst, TRI)
+               << " physsrc=" << printReg(Src, TRI)
+               << " identity=" << Identity << " skip=" << Skip << " idx=";
+        if (LIS) errs() << LIS->getInstructionIndex(MI);
+        errs() << "\n";
+      }
+      if (!Skip) {
+        TII->insertScratchExecCopy(MF, MBB, InsertPt, DL, RegForExecCopy,
+                                   isSCCLiveAtMI(MI), Indexes);
+        TII->restoreExec(MF, MBB, ++InsertPt, DL, RegForExecCopy, Indexes);
+      }
       addToWWMSpills(MF, MI.getOperand(0).getReg());
       LLVM_DEBUG(dbgs() << "WWM copy manipulation for " << MI);
 
