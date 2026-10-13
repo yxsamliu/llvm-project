@@ -157,6 +157,9 @@ std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
 
+static cl::opt<std::string> TiedPhysicalKey("regalloc-tied-physical-key", cl::Hidden, cl::init(""));
+static cl::opt<bool> TiedPhysicalApply("regalloc-tied-physical-apply", cl::Hidden, cl::init(false));
+thread_local unsigned TiedPhysicalObserved = 0;
 static cl::opt<int> TraceRegionShapeDecision("regalloc-region-shape-decision", cl::Hidden, cl::init(-1));
 
 static cl::opt<bool> TraceRegionVectors("regalloc-region-cost-vector-trace", cl::Hidden, cl::init(false));
@@ -1742,6 +1745,57 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
 
   unsigned BestCand = calculateRegionSplitCost(VirtReg, Order, BestCost,
                                                NumCands, false /*IgnoreCSR*/);
+
+  if (!TiedPhysicalKey.empty() && TraceEnabled && Trace.ID == 176) {
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << Trace.ID << '/' << Trace.VReg << '/' << Trace.Original << '/'
+       << Trace.Stage << '/' << Trace.RegClass << '/'
+       << (BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg))
+       << '/' << SpillCost.getFrequency() << '/' << BestCost.getFrequency()
+       << '/' << unsigned(HasCompact) << '/' << SA->getUseBlocks().size()
+       << "/7285";
+    if (BestCand == NoCand || Key != TiedPhysicalKey ||
+        !RegionReplayReject.empty() || !RegionReplayCompact.empty())
+      report_fatal_error("tied physical replay key mismatch");
+    if (++TiedPhysicalObserved != 1)
+      report_fatal_error("tied physical replay repeated");
+    errs() << "PHYSREPLAY reached key=" << Key << '\n';
+    unsigned Alternate = NoCand;
+    for (unsigned I = 0; I != NumCands; ++I)
+      if (unsigned(GlobalCand[I].PhysReg) == 7285) {
+        if (Alternate != NoCand)
+          report_fatal_error("duplicate tied physical candidate");
+        Alternate = I;
+      }
+    if (Alternate == NoCand)
+      report_fatal_error("tied physical candidate no longer retained");
+    auto &Native = GlobalCand[BestCand];
+    auto &Alt = GlobalCand[Alternate];
+    if (Native.LiveBundles != Alt.LiveBundles ||
+        Native.ActiveBlocks != Alt.ActiveBlocks)
+      report_fatal_error("tied physical region mismatch");
+    auto SavedConstraints = SplitConstraints;
+    SmallVector<int64_t, 0> NativeCounts(MF->getNumBlockIDs(), 0);
+    SmallVector<int64_t, 0> AltCounts(MF->getNumBlockIDs(), 0);
+    BlockFrequency NativeCost, AltCost;
+    if (!calcSplitConstraints(Native.Intf, &NativeCost, &NativeCounts))
+      report_fatal_error("native tied physical constraints invalid");
+    addGlobalSplitCost(Native, &NativeCost, &NativeCounts);
+    if (!calcSplitConstraints(Alt.Intf, &AltCost, &AltCounts))
+      report_fatal_error("alternate tied physical constraints invalid");
+    addGlobalSplitCost(Alt, &AltCost, &AltCounts);
+    SplitConstraints = std::move(SavedConstraints);
+    if (NativeCost != BestCost || AltCost != BestCost || NativeCounts != AltCounts)
+      report_fatal_error("tied physical cost vector mismatch");
+    errs() << "PHYSREPLAY qualified native=" << unsigned(Native.PhysReg)
+           << " alternate=" << unsigned(Alt.PhysReg)
+           << " cost=" << AltCost.getFrequency() << '\n';
+    if (TiedPhysicalApply) {
+      errs() << "PHYSREPLAY applied alternate=7285\n";
+      BestCand = Alternate;
+    }
+  }
 
   Trace.emit(
       "RegionBest",
