@@ -180,6 +180,9 @@ static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
 namespace llvm {
 thread_local bool FeasibilityProbe = false;
 }
+static cl::opt<bool> TraceGapQuery("regalloc-gap-query", cl::Hidden, cl::init(false));
+static cl::opt<int> GapQueryBlock("regalloc-gap-query-block", cl::Hidden, cl::init(-1));
+
 static cl::opt<bool> TraceRemainderProjection(
     "regalloc-remainder-projection", cl::Hidden, cl::init(false));
 
@@ -1707,6 +1710,94 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                  << " compact_route=" << CompactRoute << '\n';
         }
       }
+  }
+
+
+  if (TraceGapQuery && TraceEnabled && Trace.ID == RegionVerifyDecision &&
+      traceAllocation(*MF, *VRM, VirtReg.reg())) {
+    const auto *ParentRC = MRI->getRegClass(VirtReg.reg());
+    const auto *GapRC = TRI->getLargestLegalSuperClass(ParentRC, *MF);
+    const unsigned CopyOp = TII->getLiveRangeSplitOpcode(VirtReg.reg(), *MF);
+    const auto *DstRC = TII->getRegClass(TII->get(CopyOp), 0);
+    const auto *SrcRC = TII->getRegClass(TII->get(CopyOp), 1);
+    const bool CopyClassesOK =
+        (!DstRC || DstRC->hasSubClassEq(GapRC)) &&
+        (!SrcRC || SrcRC->hasSubClassEq(GapRC));
+    for (MachineBasicBlock &MBB : *MF) {
+      if (MBB.getNumber() != GapQueryBlock)
+        continue;
+      SmallVector<MachineInstr *, 32> Accesses;
+      for (MachineInstr &MI : MBB) {
+        if (MI.isDebugInstr())
+          continue;
+        if (llvm::any_of(MI.operands(), [&](const MachineOperand &MO) {
+              return MO.isReg() && MO.getReg() == VirtReg.reg();
+            }))
+          Accesses.push_back(&MI);
+      }
+      for (unsigned I = 1; I < Accesses.size(); ++I) {
+        MachineInstr &Left = *Accesses[I - 1], &Right = *Accesses[I];
+        SlotIndex L = LIS->getInstructionIndex(Left);
+        SlotIndex R = LIS->getInstructionIndex(Right);
+        SlotIndex Start = L.getBoundaryIndex(), Stop = R.getBaseIndex();
+        auto Segment = VirtReg.find(Start);
+        bool Continuous = Segment != VirtReg.end() &&
+                          Segment->start <= Start && Segment->end >= Stop;
+        bool Supported = !VirtReg.hasSubRanges() && CopyClassesOK &&
+                         !Left.isBundled() && !Right.isBundled() &&
+                         !Left.isPHI() && !Right.isPHI() &&
+                         !Left.isTerminator() && !Right.isTerminator() &&
+                         Start < Stop && Continuous &&
+                         R < SA->getLastSplitPoint(MBB.getNumber());
+        errs() << "GAPQUERY gap decision=" << Trace.ID << " reg=" << Trace.VReg
+               << " block=" << MBB.getNumber() << " ordinal=" << I - 1
+               << " left=" << L << " right=" << R
+               << " continuous=" << Continuous << " supported=" << Supported
+               << " parent_class=" << TRI->getRegClassName(ParentRC)
+               << " gap_class=" << TRI->getRegClassName(GapRC)
+               << " copy_opcode=" << TII->getName(CopyOp)
+               << " copy_classes_ok=" << CopyClassesOK
+               << " left_opcode=" << TII->getName(Left.getOpcode())
+               << " right_opcode=" << TII->getName(Right.getOpcode()) << '\n';
+        if (!Supported)
+          continue;
+
+        // Conservative envelope includes both ordinary copy insertion sites.
+        // Do not use Matrix's vreg-keyed mask cache or address-keyed query cache.
+        SlotIndex EnvelopeStart = L.getBaseIndex();
+        SlotIndex EnvelopeStop = R.getBoundaryIndex();
+        VNInfo Value(0, EnvelopeStart);
+        LiveInterval Envelope(VirtReg.reg(), 0.0f);
+        Envelope.addSegment(
+            LiveRange::Segment(EnvelopeStart, EnvelopeStop, &Value));
+        BitVector Usable;
+        bool HasMask = LIS->checkRegMaskInterference(Envelope, Usable);
+        unsigned Options = 0, Free = 0;
+        for (MCPhysReg Reg : RegClassInfo.getOrder(GapRC)) {
+          MCRegister Phys(Reg);
+          bool Reserved = MRI->isReserved(Phys);
+          bool Mask = HasMask && !Usable.test(Reg);
+          bool Fixed = false;
+          for (MCRegUnit Unit : TRI->regunits(Phys))
+            Fixed |= LIS->getRegUnit(Unit).overlaps(EnvelopeStart, EnvelopeStop);
+          bool Virtual = Matrix->checkInterference(EnvelopeStart, EnvelopeStop,
+                                                   Phys);
+          bool Available = !Reserved && !Mask && !Fixed && !Virtual;
+          ++Options;
+          Free += Available;
+          errs() << "GAPQUERY option decision=" << Trace.ID
+                 << " ordinal=" << I - 1 << " phys=" << printReg(Phys, TRI)
+                 << " parent_member=" << ParentRC->contains(Phys)
+                 << " reserved=" << Reserved << " mask=" << Mask
+                 << " fixed=" << Fixed << " virtual=" << Virtual
+                 << " free=" << Available << '\n';
+        }
+        errs() << "GAPQUERY finish decision=" << Trace.ID
+               << " ordinal=" << I - 1 << " envelope_start=" << EnvelopeStart
+               << " envelope_stop=" << EnvelopeStop << " options=" << Options
+               << " free=" << Free << '\n';
+      }
+    }
   }
 
   if (!RegionReplayReject.empty() && TraceEnabled &&
