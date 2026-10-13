@@ -100,6 +100,9 @@ static cl::opt<std::string> RegionReplayCompact(
     "regalloc-region-replay-compact", cl::Hidden, cl::init(""),
     cl::desc("Diagnostic: use compact fallback at one exactly guarded region"));
 
+static cl::opt<bool> TraceRecoveryScreen(
+    "regalloc-recovery-screen", cl::Hidden, cl::init(false));
+
 static cl::opt<bool> RegionGapPartition(
     "regalloc-region-gap-partition", cl::Hidden, cl::init(false));
 static cl::opt<std::string> RegionGapSplit(
@@ -1803,6 +1806,168 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
       }
   }
 
+
+
+  if (TraceRecoveryScreen && TraceEnabled && HasCompact) {
+    const auto *ParentRC = MRI->getRegClass(VirtReg.reg());
+    const auto *GapRC = TRI->getLargestLegalSuperClass(ParentRC, *MF);
+    unsigned CopyOp = TII->getLiveRangeSplitOpcode(VirtReg.reg(), *MF);
+    const auto *DstRC = TII->getRegClass(TII->get(CopyOp), 0);
+    const auto *SrcRC = TII->getRegClass(TII->get(CopyOp), 1);
+    bool ClassesOK = (!DstRC || DstRC->hasSubClassEq(GapRC)) &&
+                     (!SrcRC || SrcRC->hasSubClassEq(GapRC));
+    unsigned Isolated = 0, Gaps = 0, Candidates = 0;
+    auto FreeOptions = [&](SlotIndex Start, SlotIndex Stop,
+                           const TargetRegisterClass *RC, bool Alternate) {
+      SmallVector<MCPhysReg, 32> Free;
+      VNInfo Value(0, Start);
+      LiveInterval Envelope(VirtReg.reg(), 0.0f);
+      Envelope.addSegment(LiveRange::Segment(Start, Stop, &Value));
+      BitVector Usable;
+      bool HasMask = LIS->checkRegMaskInterference(Envelope, Usable);
+      for (MCPhysReg P : RegClassInfo.getOrder(RC)) {
+        if ((Alternate && ParentRC->contains(P)) || MRI->isReserved(P) ||
+            (HasMask && !Usable.test(P)))
+          continue;
+        bool Fixed = false;
+        for (MCRegUnit Unit : TRI->regunits(P))
+          Fixed |= LIS->getRegUnit(Unit).overlaps(Start, Stop);
+        if (!Fixed && !Matrix->checkInterference(Start, Stop, P))
+          Free.push_back(P);
+      }
+      return Free;
+    };
+    if (!VirtReg.hasSubRanges() && ClassesOK) {
+      for (const auto &BI : SA->getUseBlocks()) {
+        unsigned N = BI.MBB->getNumber();
+        const BitVector &Compact = GlobalCand.front().LiveBundles;
+        if ((BI.LiveIn && Compact.test(Bundles->getBundle(N, false))) ||
+            (BI.LiveOut && Compact.test(Bundles->getBundle(N, true))) ||
+            !SA->shouldSplitSingleBlock(
+                BI, RegClassInfo.isProperSubClass(ParentRC)) ||
+            !(BI.LastInstr < SA->getLastSplitPoint(N)))
+          continue;
+        ++Isolated;
+        SmallVector<MachineInstr *, 32> Accesses;
+        for (MachineInstr &MI : *BI.MBB) {
+          if (MI.isDebugInstr())
+            continue;
+          SlotIndex Idx = LIS->getInstructionIndex(MI);
+          if (Idx < BI.FirstInstr.getBaseIndex() ||
+              Idx > BI.LastInstr.getBoundaryIndex())
+            continue;
+          if (llvm::any_of(MI.operands(), [&](const MachineOperand &MO) {
+                return MO.isReg() && MO.getReg() == VirtReg.reg();
+              }))
+            Accesses.push_back(&MI);
+        }
+        if (Accesses.size() < 4 || Accesses.front()->isBundled() ||
+            Accesses.back()->isBundled() || Accesses.front()->isPHI() ||
+            Accesses.back()->isPHI() || Accesses.front()->isTerminator() ||
+            Accesses.back()->isTerminator())
+          continue;
+        SlotIndex First = LIS->getInstructionIndex(*Accesses.front());
+        SlotIndex Last = LIS->getInstructionIndex(*Accesses.back());
+        // Neighboring original indexes enclose newly inserted split copies.
+        SlotIndex Start = First.getPrevIndex().getBoundaryIndex();
+        SlotIndex Stop = Last.getNextIndex().getBaseIndex();
+        if (!(Start < First) || !(Last.getBoundaryIndex() < Stop))
+          continue;
+        auto WholeFree = FreeOptions(Start, Stop, ParentRC, false);
+        SmallVector<int64_t, 0> WaveCounts(MF->getNumBlockIDs(), 0);
+        WaveCounts[N] = 1;
+        SpillPlacement::WaveCostDiagnostic Wave;
+        SpillPlacer->isWaveCostDifferencePositive(WaveCounts, &Wave);
+        errs() << "RECOVERYSCAN block decision=" << Trace.ID
+               << " parent=" << Trace.VReg << " root=" << Trace.Original
+               << " stage=" << Trace.Stage << " block=" << N
+               << " parent_class=" << TRI->getRegClassName(ParentRC)
+               << " gap_class=" << TRI->getRegClassName(GapRC)
+               << " copy_opcode=" << TII->getName(CopyOp)
+               << " first=" << First << " last=" << Last
+               << " start=" << Start << " stop=" << Stop
+               << " accesses=" << Accesses.size()
+               << " whole_free=" << WholeFree.size()
+               << " physical_present=" << (BestCand != NoCand)
+               << " wave_status=" << Wave.Status << '\n';
+        for (const auto &Term : Wave.Terms)
+          errs() << "RECOVERYSCAN frequency decision=" << Trace.ID
+                 << " block=" << N << " term_block=" << Term.Block
+                 << " count_or_bound=" << Term.Frequency
+                 << " source=" << Term.Source << '\n';
+        for (unsigned I = 2; I + 1 < Accesses.size(); ++I) {
+          MachineInstr &Left = *Accesses[I - 1], &Right = *Accesses[I];
+          SlotIndex L = LIS->getInstructionIndex(Left);
+          SlotIndex R = LIS->getInstructionIndex(Right);
+          auto Segment = VirtReg.find(L.getBoundaryIndex());
+          if (Left.isBundled() || Right.isBundled() ||
+              Left.isPHI() || Right.isPHI() ||
+              Left.isTerminator() || Right.isTerminator() ||
+              !(L.getBoundaryIndex() < R.getBaseIndex()) ||
+              Segment == VirtReg.end() ||
+              Segment->start > L.getBoundaryIndex() ||
+              Segment->end < R.getBaseIndex())
+            continue;
+          ++Gaps;
+          SlotIndex LeftStop = L.getNextIndex().getBaseIndex();
+          SlotIndex RightStart = R.getPrevIndex().getBoundaryIndex();
+          if (!(Start < LeftStop) || !(RightStart < Stop))
+            continue;
+          auto LeftFree = FreeOptions(Start, LeftStop, ParentRC, false);
+          auto RightFree = FreeOptions(RightStart, Stop, ParentRC, false);
+          SmallVector<MCPhysReg, 32> SideFree;
+          for (MCPhysReg P : LeftFree)
+            if (llvm::is_contained(RightFree, P) &&
+                !llvm::is_contained(WholeFree, P))
+              SideFree.push_back(P);
+          if (SideFree.empty())
+            continue;
+          auto GapFree = FreeOptions(L.getBaseIndex(), R.getBoundaryIndex(),
+                                     GapRC, true);
+          unsigned Compatible = 0;
+          MCPhysReg FirstSide = 0, FirstGap = 0;
+          for (MCPhysReg P : SideFree)
+            for (MCPhysReg Q : GapFree)
+              if (!TRI->regsOverlap(P, Q)) {
+                if (!Compatible) {
+                  FirstSide = P;
+                  FirstGap = Q;
+                }
+                ++Compatible;
+              }
+          if (!Compatible)
+            continue;
+          ++Candidates;
+          errs() << "RECOVERYSCAN candidate decision=" << Trace.ID
+                 << " parent=" << Trace.VReg << " root=" << Trace.Original
+                 << " block=" << N << " left=" << L << " right=" << R
+                 << " start=" << Start << " left_stop=" << LeftStop
+                 << " right_start=" << RightStart << " stop=" << Stop
+                 << " gap_start=" << L.getBaseIndex()
+                 << " gap_stop=" << R.getBoundaryIndex()
+                 << " left_accesses=" << I
+                 << " right_accesses=" << Accesses.size() - I
+                 << " side_options=" << SideFree.size()
+                 << " alternate_options=" << GapFree.size()
+                 << " compatible_pairs=" << Compatible
+                 << " first_side=" << printReg(FirstSide, TRI)
+                 << " first_gap=" << printReg(FirstGap, TRI) << '\n';
+          for (MCPhysReg P : SideFree)
+            errs() << "RECOVERYSCAN side decision=" << Trace.ID
+                   << " block=" << N << " left=" << L << " right=" << R
+                   << " phys=" << printReg(P, TRI) << '\n';
+        }
+      }
+    }
+    errs() << "RECOVERYSCAN decision decision=" << Trace.ID
+           << " parent=" << Trace.VReg << " root=" << Trace.Original
+           << " stage=" << Trace.Stage
+           << " parent_class=" << TRI->getRegClassName(ParentRC)
+           << " gap_class=" << TRI->getRegClassName(GapRC)
+           << " has_subranges=" << VirtReg.hasSubRanges()
+           << " classes_ok=" << ClassesOK << " isolated_blocks=" << Isolated
+           << " supported_gaps=" << Gaps << " candidates=" << Candidates << '\n';
+  }
 
   if (TraceGapQuery && TraceEnabled && Trace.ID == RegionVerifyDecision &&
       traceAllocation(*MF, *VRM, VirtReg.reg())) {
