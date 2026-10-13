@@ -80,6 +80,8 @@
 #include <cstdint>
 #include <initializer_list>
 #include <utility>
+#include <fstream>
+#include <map>
 
 using namespace llvm;
 
@@ -91,6 +93,29 @@ static cl::opt<std::string> RegionTraceFunction(
     "regalloc-region-trace-function", cl::Hidden, cl::init(""),
     cl::desc("Emit region allocation analysis remarks for an exact function "
              "name, or * for all functions"));
+
+// Exact-replay diagnostic: exchange only original intervals' first queue keys.
+// A table row is vreg, expected native priority, replacement priority.
+static cl::opt<bool> PriorityDiag("regalloc-priority-diag", cl::Hidden,
+                                cl::init(false));
+static cl::opt<std::string> PriorityTable("regalloc-priority-table", cl::Hidden,
+                                        cl::init(""));
+static thread_local unsigned PriorityInvocation = 0;
+static std::map<unsigned, std::pair<unsigned, unsigned>> readPriorityTable() {
+  std::map<unsigned, std::pair<unsigned, unsigned>> Table;
+  if (PriorityTable.empty())
+    return Table;
+  std::ifstream Input(PriorityTable);
+  if (!Input)
+    report_fatal_error("cannot read priority table");
+  unsigned Reg, Expected, Replacement;
+  while (Input >> Reg >> Expected >> Replacement)
+    if (!Table.emplace(Reg, std::make_pair(Expected, Replacement)).second)
+      report_fatal_error("duplicate priority table entry");
+  if (!Input.eof())
+    report_fatal_error("invalid priority table");
+  return Table;
+}
 
 static cl::opt<std::string> RegionReplayReject(
     "regalloc-region-replay-reject", cl::Hidden, cl::init(""),
@@ -499,6 +524,8 @@ RAGreedy::RequiredAnalyses::RequiredAnalyses(Pass &P) {
 }
 
 bool RAGreedyLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (PriorityDiag && RegionTraceFunction == MF.getName())
+    ++PriorityInvocation;
   RAGreedy::RequiredAnalyses Analyses(*this);
   RAGreedy Impl(Analyses, F);
   return Impl.run(MF);
@@ -636,12 +663,36 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
   assert(Reg.isVirtual() && "Can only enqueue virtual registers");
 
   auto Stage = ExtraInfo->getOrInitStage(Reg);
+  bool Initial = Stage == RS_New && VRM->getOriginal(Reg) == Reg;
   if (Stage == RS_New) {
     Stage = RS_Assign;
     ExtraInfo->setStage(Reg, Stage);
   }
 
   unsigned Ret = PriorityAdvisor->getPriority(*LI);
+  if (PriorityDiag && RegionTraceFunction == MF->getName()) {
+    unsigned Native = Ret;
+    static const auto Table = readPriorityTable();
+    if (PriorityInvocation == 3 && Initial) {
+      auto It = Table.find(Reg.virtRegIndex());
+      if (It != Table.end()) {
+        if (Native != It->second.first)
+          report_fatal_error("priority table native key mismatch");
+        Ret = It->second.second;
+        errs() << "PRIORITY_OVERRIDE reg=" << Reg.virtRegIndex()
+               << " native=" << Native << " used=" << Ret << '\n';
+      }
+    }
+    errs() << "PRIORITY invocation=" << PriorityInvocation
+           << " reg=" << Reg.virtRegIndex()
+           << " root=" << VRM->getOriginal(Reg).virtRegIndex()
+           << " initial=" << Initial << " stage=" << unsigned(Stage)
+           << " size=" << LI->getSize() << " native=" << Native
+           << " used=" << Ret << " class="
+           << TRI->getRegClassName(MRI->getRegClass(Reg))
+           << " hint=" << VRM->hasKnownPreference(Reg) << '\n';
+  }
+
 
   // The virtual register number is a tie breaker for same-sized ranges.
   // Give lower vreg numbers higher priority to assign them first.
@@ -3505,6 +3556,11 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
   RecoloringStack RecolorStack;
   MCRegister Reg =
       selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
+  if (PriorityDiag && RegionTraceFunction == MF->getName())
+    errs() << "PRIORITY_RESULT invocation=" << PriorityInvocation
+           << " reg=" << TraceReg.virtRegIndex()
+           << " root=" << VRM->getOriginal(TraceReg).virtRegIndex()
+           << " phys=" << printReg(Reg, TRI) << '\n';
   if (TraceThis) {
     errs() << "ALLOCTRACE result reg=" << TraceReg.virtRegIndex()
            << " phys=" << printReg(Reg, TRI) << " children=";
