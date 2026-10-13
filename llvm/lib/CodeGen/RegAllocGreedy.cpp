@@ -752,6 +752,7 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
   // incoming accesses keep the ordinary eviction decision.
   if (BestPhys.isValid() && WaveColdEvictVeto &&
       MF->getName() == WaveSpillDiagFunction &&
+      VirtReg.reg() == Register::index2VirtReg(55434) &&
       SpillPlacer->hasMeasuredWaveBlocks()) {
     auto IsWWMCarrier = [&](const LiveInterval &LI) {
       for (const MachineOperand &MO : MRI->reg_nodbg_operands(LI.reg())) {
@@ -802,7 +803,7 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
              Matrix->query(VirtReg, Unit).interferingVRegs()) {
           std::optional<bool> Activity =
               HasPositiveMeasuredAccess(*Intf, false);
-          if (Activity && *Activity &&
+          if (Intf->reg() == Register::index2VirtReg(55384) && Activity && *Activity &&
               ExtraInfo->getStage(*Intf) == RS_Split2 &&
               IsWWMCarrier(*Intf)) {
             HotVictim = true;
