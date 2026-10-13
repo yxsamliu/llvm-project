@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CalcSpillWeights.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
@@ -28,6 +31,16 @@
 #include <tuple>
 
 using namespace llvm;
+static cl::opt<std::string> WeightTraceFunction("spill-weight-trace-function", cl::Hidden);
+static cl::list<unsigned> WeightTraceRoots("spill-weight-trace-root", cl::Hidden, cl::CommaSeparated);
+static bool traceWeight(const MachineFunction &MF, const VirtRegMap &VRM, Register Reg) {
+  if (WeightTraceFunction.empty() ||
+      (WeightTraceFunction != "*" && WeightTraceFunction != MF.getName()))
+    return false;
+  return llvm::is_contained(WeightTraceRoots, VRM.getOriginal(Reg).virtRegIndex());
+}
+static uint32_t weightBits(float F) { return llvm::bit_cast<uint32_t>(F); }
+
 
 #define DEBUG_TYPE "calcspillweights"
 
@@ -220,10 +233,13 @@ bool VirtRegAuxInfo::isLiveAtStatepointVarArg(LiveInterval &LI) {
 
 void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   float Weight = weightCalcHelper(LI);
-  // Check if unspillable.
-  if (Weight < 0)
-    return;
-  LI.setWeight(Weight);
+  // Preserve the original negative sentinel check.
+  if (!(Weight < 0))
+    LI.setWeight(Weight);
+  if (traceWeight(MF, VRM, LI.reg()))
+    errs() << "WEIGHTTRACE end reg=" << LI.reg().virtRegIndex()
+           << " result_bits=" << weightBits(LI.weight())
+           << " computed_bits=" << weightBits(Weight) << '\n';
 }
 
 static bool canMemFoldInlineAsm(LiveInterval &LI,
@@ -243,6 +259,13 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   MachineBasicBlock *MBB = nullptr;
   float TotalWeight = 0;
+  bool TraceWeight = traceWeight(MF, VRM, LI.reg());
+  unsigned TraceReg = LI.reg().virtRegIndex();
+  if (TraceWeight)
+    errs() << "WEIGHTTRACE begin reg=" << TraceReg
+           << " root=" << VRM.getOriginal(LI.reg()).virtRegIndex()
+           << " prior_bits=" << weightBits(LI.weight())
+           << " size=" << LI.getSize() << " instr_dist=" << SlotIndex::InstrDist << '\n';
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
 
@@ -300,16 +323,25 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
                      DestRegOp->getSubReg() == SrcRegOp->getSubReg();
     }
 
-    if (identityCopy || MI->isImplicitDef())
+    if (identityCopy || MI->isImplicitDef()) {
+      if (TraceWeight)
+        errs() << "WEIGHTTRACE skip reg=" << TraceReg << " ordinal=" << NumInstr
+               << " reason=" << (identityCopy ? "identity" : "implicit") << '\n';
       continue;
-    if (!Visited.insert(MI).second)
+    }
+    if (!Visited.insert(MI).second) {
+      if (TraceWeight)
+        errs() << "WEIGHTTRACE skip reg=" << TraceReg << " ordinal=" << NumInstr
+               << " reason=duplicate\n";
       continue;
+    }
 
     // For terminators that produce values, ask the backend if the register is
     // not spillable.
     if (TII.isUnspillableTerminator(MI) &&
         MI->definesRegister(LI.reg(), /*TRI=*/nullptr)) {
       LI.markNotSpillable();
+      if (TraceWeight) errs() << "WEIGHTTRACE stop reg=" << TraceReg << " reason=terminator\n";
       return -1.0f;
     }
 
@@ -330,10 +362,28 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
                                              getCachedOptimizeForSize());
 
       // Give extra weight to what looks like a loop induction variable update.
-      if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB))
+      float TraceBaseWeight = Weight;
+      unsigned TraceLoopFactor = 1;
+      if (Writes && IsExiting && LIS.isLiveOutOfMBB(LI, MBB)) {
         Weight *= 3;
-
+        TraceLoopFactor = 3;
+      }
       TotalWeight += Weight;
+      if (TraceWeight)
+        errs() << "WEIGHTTRACE inst reg=" << TraceReg << " ordinal=" << NumInstr
+               << " block=" << MBB->getNumber() << " opcode=" << TII.getName(MI->getOpcode())
+               << " reads=" << Reads << " writes=" << Writes
+               << " mbfi=" << MBFI.getBlockFreq(MBB).getFrequency()
+               << " entry=" << MBFI.getEntryFreq()
+               << " freq_bits=" << weightBits(MBFI.getBlockFreqRelativeToEntryBlock(MBB))
+               << " optsize=" << getCachedOptimizeForSize()
+               << " base_bits=" << weightBits(TraceBaseWeight)
+               << " loop_factor=" << TraceLoopFactor
+               << " adjusted_bits=" << weightBits(Weight)
+               << " total_bits=" << weightBits(TotalWeight) << '\n';
+    } else if (TraceWeight) {
+      errs() << "WEIGHTTRACE skip reg=" << TraceReg << " ordinal=" << NumInstr
+             << " reason=unspillable\n";
     }
 
     // Get allocation hints from copies.
@@ -367,9 +417,14 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
     TotalWeight *= 1.01F;
   }
 
+  if (TraceWeight)
+    errs() << "WEIGHTTRACE hints reg=" << TraceReg << " present=" << !Hint.empty()
+           << " total_bits=" << weightBits(TotalWeight) << '\n';
   // If the live interval was already unspillable, leave it that way.
-  if (!IsSpillable)
+  if (!IsSpillable) {
+    if (TraceWeight) errs() << "WEIGHTTRACE stop reg=" << TraceReg << " reason=already_unspillable\n";
     return -1.0;
+  }
 
   // Mark li as unspillable if all live ranges are tiny and the interval
   // is not live at any reg mask.  If the interval is live at a reg mask
@@ -383,6 +438,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
       !LI.isLiveAtIndexes(LIS.getRegMaskSlots()) &&
       !isLiveAtStatepointVarArg(LI) && !canMemFoldInlineAsm(LI, MRI)) {
     LI.markNotSpillable();
+    if (TraceWeight) errs() << "WEIGHTTRACE stop reg=" << TraceReg << " reason=zero_length\n";
     return -1.0;
   }
 
@@ -390,12 +446,20 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   // it is a preferred candidate for spilling.
   // FIXME: this gets much more complicated once we support non-trivial
   // re-materialization.
-  if (isRematerializable(LI, LIS, VRM, MRI, *MF.getSubtarget().getInstrInfo()))
+  bool TraceRemat = isRematerializable(LI, LIS, VRM, MRI, *MF.getSubtarget().getInstrInfo());
+  if (TraceRemat)
     TotalWeight *= 0.5F;
 
   // Finally, we scale the weight by the scale factor of register class.
   const TargetRegisterClass *RC = MRI.getRegClass(LI.reg());
-  TotalWeight *= TRI.getSpillWeightScaleFactor(RC);
-
-  return normalize(TotalWeight, LI.getSize(), NumInstr);
+  float TraceScale = TRI.getSpillWeightScaleFactor(RC);
+  TotalWeight *= TraceScale;
+  float TraceResult = normalize(TotalWeight, LI.getSize(), NumInstr);
+  if (TraceWeight)
+    errs() << "WEIGHTTRACE normalize reg=" << TraceReg
+           << " size=" << LI.getSize() << " num_instr=" << NumInstr
+           << " remat=" << TraceRemat << " scale_bits=" << weightBits(TraceScale)
+           << " total_bits=" << weightBits(TotalWeight)
+           << " result_bits=" << weightBits(TraceResult) << '\n';
+  return TraceResult;
 }
