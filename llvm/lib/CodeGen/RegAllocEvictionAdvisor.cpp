@@ -28,6 +28,7 @@
 #include <cstring>
 
 using namespace llvm;
+namespace llvm { extern thread_local bool FeasibilityProbe; }
 
 static cl::opt<std::string> EvictionTraceFunction(
     "regalloc-eviction-trace-function", cl::Hidden, cl::init(""));
@@ -36,6 +37,7 @@ static cl::list<unsigned> EvictionTraceRoots(
 
 static bool traceEviction(const MachineFunction &MF, const VirtRegMap &VRM,
                           const LiveInterval &LI) {
+  if (FeasibilityProbe) return true;
   if (MF.getName() != EvictionTraceFunction || EvictionTraceFunction.empty())
     return false;
   unsigned Root = VRM.getOriginal(LI.reg()).virtRegIndex();
@@ -284,7 +286,7 @@ bool DefaultEvictionAdvisor::canEvictInterferenceBasedOnCost(
   auto Finish = [&](bool Accepted, const char *Reason,
                     const LiveInterval *Intf = nullptr, int Urgent = -1) {
     if (Trace) {
-      errs() << "EVICTTRACE candidate reg=" << VirtReg.reg().virtRegIndex()
+      errs() << (FeasibilityProbe ? "FEASTRACE candidate reg=" : "EVICTTRACE candidate reg=") << VirtReg.reg().virtRegIndex()
              << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
              << " phys=" << printReg(PhysReg, TRI) << " hint=" << IsHint
              << " accepted=" << Accepted << " reason=" << Reason
@@ -389,12 +391,12 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     uint8_t CostPerUseLimit, const SmallVirtRegSet &FixedRegisters) const {
   const bool Trace = traceEviction(MF, *VRM, VirtReg);
   if (Trace)
-    errs() << "EVICTTRACE search reg=" << VirtReg.reg().virtRegIndex()
+    errs() << (FeasibilityProbe ? "FEASTRACE search reg=" : "EVICTTRACE search reg=") << VirtReg.reg().virtRegIndex()
            << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
            << " cost_per_use_limit=" << unsigned(CostPerUseLimit) << '\n';
   auto Finish = [&](MCRegister Result, const char *Reason) {
     if (Trace)
-      errs() << "EVICTTRACE result reg=" << VirtReg.reg().virtRegIndex()
+      errs() << (FeasibilityProbe ? "FEASTRACE result reg=" : "EVICTTRACE result reg=") << VirtReg.reg().virtRegIndex()
              << " phys=" << printReg(Result, TRI) << " reason=" << Reason << '\n';
     return Result;
   };
@@ -420,7 +422,7 @@ MCRegister DefaultEvictionAdvisor::tryFindEvictionCandidate(
     assert(PhysReg);
     if (!canAllocatePhysReg(CostPerUseLimit, PhysReg)) {
       if (Trace)
-        errs() << "EVICTTRACE skip reg=" << VirtReg.reg().virtRegIndex()
+        errs() << (FeasibilityProbe ? "FEASTRACE skip reg=" : "EVICTTRACE skip reg=") << VirtReg.reg().virtRegIndex()
                << " phys=" << printReg(PhysReg, TRI)
                << " reason=physical_cost\n";
       continue;

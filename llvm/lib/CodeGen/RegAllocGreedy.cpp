@@ -22,6 +22,8 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
@@ -164,6 +166,70 @@ static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
          << TRI.getRegClassName(MRI.getRegClass(LI.reg()))
          << " weight=" << LI.weight() << " stack="
          << VRM.getStackSlot(LI.reg()) << " interval=" << LI << '\n';
+}
+
+
+namespace llvm {
+thread_local bool FeasibilityProbe = false;
+}
+static cl::opt<bool> TraceFeasibility("regalloc-feasibility-trace", cl::Hidden,
+                                    cl::init(false));
+
+static void printFeasibility(StringRef Point, unsigned Parent, uint64_t Decision,
+                             const LiveInterval &LI, const RAGreedy &RA,
+                             RegAllocEvictionAdvisor &Advisor) {
+  auto *VRM = RA.getVirtRegMap();
+  auto &MF = VRM->getMachineFunction();
+  if (!TraceFeasibility || !traceAllocation(MF, *VRM, LI.reg()) ||
+      RA.getExtraInfo().getStage(LI) < RS_Spill || VRM->hasPhys(LI.reg()))
+    return;
+  auto *Matrix = RA.getInterferenceMatrix();
+  auto &MRI = MF.getRegInfo();
+  const auto *TRI = MF.getSubtarget().getRegisterInfo();
+  const auto &Info = RA.getExtraInfo();
+  // These synchronous probes must not add ordinary debug or advisor records.
+  SaveAndRestore<bool> Quiet(DebugFlag, false);
+  SaveAndRestore<bool> ProbeScope(FeasibilityProbe, true);
+  errs() << "FEASTRACE snapshot point=" << Point
+         << " parent=" << Parent << " decision=" << Decision
+         << " reg=" << LI.reg().virtRegIndex()
+         << " root=" << VRM->getOriginal(LI.reg()).virtRegIndex()
+         << " stage=" << unsigned(Info.getStage(LI))
+         << " class=" << TRI->getRegClassName(MRI.getRegClass(LI.reg()))
+         << " weight_bits=" << llvm::bit_cast<uint32_t>(LI.weight())
+         << " size=" << LI.getSize()
+         << " cascade=" << Info.getCascadeOrCurrentNext(LI.reg())
+         << " queue_size=" << RA.getQueueSize()
+         << " fixed_count=0 cost_per_use_limit=255\n";
+  auto Order = AllocationOrder::create(LI.reg(), *VRM, RA.getRegClassInfo(), Matrix);
+  MCRegister FirstFree;
+  for (MCRegister Phys : Order) {
+    auto Kind = Matrix->checkInterference(LI, Phys);
+    if (Kind == LiveRegMatrix::IK_Free && !FirstFree) FirstFree = Phys;
+    errs() << "FEASTRACE option reg=" << LI.reg().virtRegIndex()
+           << " phys=" << printReg(Phys, TRI)
+           << " kind=" << unsigned(Kind) << " hint=" << Order.isHint(Phys) << '\n';
+    SmallPtrSet<const LiveInterval *, 32> Seen;
+    for (MCRegUnit Unit : TRI->regunits(Phys))
+      for (const LiveInterval *Intf : Matrix->query(LI, Unit).interferingVRegs()) {
+        if (!Seen.insert(Intf).second) continue;
+        errs() << "FEASTRACE interference reg=" << LI.reg().virtRegIndex()
+               << " phys=" << printReg(Phys, TRI)
+               << " victim=" << Intf->reg().virtRegIndex()
+               << " victimroot=" << VRM->getOriginal(Intf->reg()).virtRegIndex()
+               << " stage=" << unsigned(Info.getStage(*Intf))
+               << " weight_bits=" << llvm::bit_cast<uint32_t>(Intf->weight())
+               << " cascade=" << Info.getCascade(Intf->reg()) << '\n';
+      }
+  }
+  MCRegister Eviction;
+  if (!FirstFree) {
+    SmallVirtRegSet Fixed;
+    Eviction = Advisor.tryFindEvictionCandidate(LI, Order, 255, Fixed);
+  }
+  errs() << "FEASTRACE finish reg=" << LI.reg().virtRegIndex()
+         << " free=" << printReg(FirstFree, TRI)
+         << " eviction=" << printReg(Eviction, TRI) << '\n';
 }
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
@@ -1330,6 +1396,12 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
     // Other intervals are treated as new. This includes local intervals created
     // for blocks with multiple uses, and anything created by DCE.
   }
+
+  for (unsigned I = 0; I < LREdit.size(); ++I)
+    if (IntvMap[I] == 0)
+      printFeasibility("region", Reg.virtRegIndex(),
+                       ActiveRegionTrace ? ActiveRegionTrace->ID : 0,
+                       LIS->getInterval(LREdit.get(I)), *this, *EvictAdvisor);
 
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "After splitting live range around region",
@@ -2647,6 +2719,7 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
         }
     }
   }
+  printFeasibility("attempt", TraceReg.virtRegIndex(), 0, VirtReg, *this, *EvictAdvisor);
   CutOffInfo = CO_None;
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
@@ -2663,6 +2736,11 @@ MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
         printAllocationInterval("child", LIS->getInterval(R), *VRM, *MRI,
                                 *TRI, ExtraInfo->getOrInitStage(R));
   }
+  if (TraceThis)
+    for (Register R : NewVRegs)
+      if (LIS->hasInterval(R))
+        printFeasibility("handoff", TraceReg.virtRegIndex(), 0,
+                         LIS->getInterval(R), *this, *EvictAdvisor);
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
     uint8_t CutOffEncountered = CutOffInfo & (CO_Depth | CO_Interf);
     if (CutOffEncountered == CO_Depth)
