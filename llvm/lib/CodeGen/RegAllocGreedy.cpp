@@ -125,6 +125,29 @@ thread_local RegionTrace *ActiveRegionTrace = nullptr;
 std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
+
+static cl::list<unsigned> AllocationTraceRoots(
+    "regalloc-allocation-trace-root", cl::Hidden, cl::CommaSeparated,
+    cl::desc("Diagnostic allocation ancestry roots in exact region trace function"));
+
+static bool traceAllocation(const MachineFunction &MF, const VirtRegMap &VRM,
+                            Register Reg) {
+  return RegionTraceFunction == MF.getName() &&
+         llvm::is_contained(AllocationTraceRoots,
+                            VRM.getOriginal(Reg).virtRegIndex());
+}
+
+static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
+    const VirtRegMap &VRM, const MachineRegisterInfo &MRI,
+    const TargetRegisterInfo &TRI, unsigned Stage) {
+  errs() << "ALLOCTRACE " << Event << " reg=" << LI.reg().virtRegIndex()
+         << " root=" << VRM.getOriginal(LI.reg()).virtRegIndex()
+         << " stage=" << Stage << " class="
+         << TRI.getRegClassName(MRI.getRegClass(LI.reg()))
+         << " weight=" << LI.weight() << " stack="
+         << VRM.getStackSlot(LI.reg()) << " interval=" << LI << '\n';
+}
+
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
 STATISTIC(NumLocalSplits,  "Number of split local live ranges");
 STATISTIC(NumEvicted,      "Number of interferences evicted");
@@ -689,6 +712,16 @@ void RAGreedy::evictInterference(const LiveInterval &VirtReg,
     if (!VRM->hasPhys(Intf->reg()))
       continue;
 
+    if (traceAllocation(*MF, *VRM, VirtReg.reg()) ||
+        traceAllocation(*MF, *VRM, Intf->reg())) {
+      errs() << "ALLOCTRACE evict aggressor=" << VirtReg.reg().virtRegIndex()
+             << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
+             << " victim=" << Intf->reg().virtRegIndex()
+             << " victimroot=" << VRM->getOriginal(Intf->reg()).virtRegIndex()
+             << " phys=" << printReg(PhysReg, TRI) << '\n';
+      printAllocationInterval("aggressor", VirtReg, *VRM, *MRI, *TRI,
+                              ExtraInfo->getStage(VirtReg));
+    }
     Matrix->unassign(*Intf);
     assert((ExtraInfo->getCascade(Intf->reg()) < Cascade ||
             (Cascade < ExtraInfo->getCascade(Intf->reg()) &&
@@ -1233,6 +1266,17 @@ void RAGreedy::splitAroundRegion(LiveRangeEdit &LREdit,
   DebugVars->splitRegister(Reg, LREdit.regs(), *LIS);
 
   unsigned OrigBlocks = SA->getNumLiveBlocks();
+  if (traceAllocation(*MF, *VRM, Reg)) {
+    errs() << "ALLOCTRACE region parent=" << Reg.virtRegIndex()
+           << " original_blocks=" << OrigBlocks << " globals=" << NumGlobalIntvs
+           << '\n';
+    for (unsigned I = 0; I < LREdit.size(); ++I) {
+      const auto &LI = LIS->getInterval(LREdit.get(I));
+      errs() << "ALLOCTRACE region-child reg=" << LI.reg().virtRegIndex()
+             << " map=" << IntvMap[I] << " blocks=" << SA->countLiveBlocks(&LI)
+             << '\n';
+    }
+  }
 
   // Sort out the new intervals created by splitting. We get four kinds:
   // - Remainder intervals should not be split again.
@@ -1339,6 +1383,21 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
           BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg)),
        NV("Cost", BestCost.getFrequency()), NV("Compact", HasCompact),
        NV("MeasuredWaveBlocks", SpillPlacer->hasMeasuredWaveBlocks())});
+  if (BestCand != NoCand && traceAllocation(*MF, *VRM, VirtReg.reg())) {
+    auto SavedConstraints = SplitConstraints;
+    SmallVector<int64_t, 0> Counts(MF->getNumBlockIDs(), 0);
+    auto &Cand = GlobalCand[BestCand];
+    if (calcSplitConstraints(Cand.Intf, nullptr, &Counts)) {
+      addGlobalSplitCost(Cand, nullptr, &Counts);
+      for (unsigned N = 0; N != Counts.size(); ++N)
+        if (Counts[N])
+          errs() << "ALLOCTRACE cost decision=" << Trace.ID << " reg="
+                 << VirtReg.reg().virtRegIndex() << " block=" << N
+                 << " count=" << Counts[N] << " frequency="
+                 << SpillPlacer->getBlockFrequency(N).getFrequency() << '\n';
+    }
+    SplitConstraints = std::move(SavedConstraints);
+  }
   bool ExtraCompactBundles = false;
   if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
       SpillPlacer->hasMeasuredWaveBlocks()) {
@@ -2534,12 +2593,49 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
 
 MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &NewVRegs) {
+  const Register TraceReg = VirtReg.reg();
+  const bool TraceThis = traceAllocation(*MF, *VRM, TraceReg);
+  if (TraceThis) {
+    printAllocationInterval("begin", VirtReg, *VRM, *MRI, *TRI,
+                            ExtraInfo->getStage(VirtReg));
+    SmallPtrSet<MachineInstr *, 32> Seen;
+    for (MachineInstr &MI : MRI->reg_nodbg_instructions(TraceReg)) {
+      if (!Seen.insert(&MI).second) continue;
+      errs() << "ALLOCTRACE instruction reg=" << TraceReg.virtRegIndex()
+             << " block=" << MI.getParent()->getNumber() << " index="
+             << LIS->getInstructionIndex(MI) << " " << MI;
+    }
+    auto Order = AllocationOrder::create(TraceReg, *VRM, RegClassInfo, Matrix);
+    for (MCRegister Phys : Order) {
+      errs() << "ALLOCTRACE option reg=" << TraceReg.virtRegIndex()
+             << " phys=" << printReg(Phys, TRI)
+             << " kind=" << unsigned(Matrix->checkInterference(VirtReg, Phys))
+             << '\n';
+      SmallPtrSet<const LiveInterval *, 32> SeenIntfs;
+      for (MCRegUnit Unit : TRI->regunits(Phys))
+        for (const LiveInterval *I : Matrix->query(VirtReg, Unit).interferingVRegs()) {
+          if (!SeenIntfs.insert(I).second) continue;
+          printAllocationInterval("interference", *I, *VRM, *MRI, *TRI,
+                                  ExtraInfo->getStage(*I));
+        }
+    }
+  }
   CutOffInfo = CO_None;
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
   RecoloringStack RecolorStack;
   MCRegister Reg =
       selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
+  if (TraceThis) {
+    errs() << "ALLOCTRACE result reg=" << TraceReg.virtRegIndex()
+           << " phys=" << printReg(Reg, TRI) << " children=";
+    for (Register R : NewVRegs) errs() << R.virtRegIndex() << ',';
+    errs() << '\n';
+    for (Register R : NewVRegs)
+      if (LIS->hasInterval(R))
+        printAllocationInterval("child", LIS->getInterval(R), *VRM, *MRI,
+                                *TRI, ExtraInfo->getOrInitStage(R));
+  }
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
     uint8_t CutOffEncountered = CutOffInfo & (CO_Depth | CO_Interf);
     if (CutOffEncountered == CO_Depth)
@@ -2942,6 +3038,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
+  if (traceAllocation(*MF, *VRM, VirtReg.reg()))
+    printAllocationInterval("spill", VirtReg, *VRM, *MRI, *TRI, Stage);
   spiller().spill(LRE, &Order);
   ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
