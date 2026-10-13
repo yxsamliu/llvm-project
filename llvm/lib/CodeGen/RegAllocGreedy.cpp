@@ -100,6 +100,13 @@ static cl::opt<std::string> RegionTraceFunction(
 static cl::opt<bool> LocalSplitTrace("regalloc-local-split-trace", cl::Hidden,
                                     cl::init(false));
 
+// Exact-state diagnostic: select one legal local window after native search.
+static cl::opt<std::string> LocalSplitReplayGuard(
+    "regalloc-local-split-replay", cl::Hidden, cl::init(""));
+static cl::opt<std::string> LocalSplitReplayWindow(
+    "regalloc-local-split-replay-window", cl::Hidden, cl::init(""));
+static thread_local unsigned LocalSplitReplayApplied = 0;
+
 static cl::opt<bool> PriorityDiag("regalloc-priority-diag", cl::Hidden,
                                 cl::init(false));
 static cl::opt<std::string> PriorityTable("regalloc-priority-table", cl::Hidden,
@@ -3083,6 +3090,31 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
       traceAllocation(*MF, *VRM, VirtReg.reg());
   MCRegister TraceBestPhys;
   auto TraceBits = [](float F) { return llvm::bit_cast<uint32_t>(F); };
+  bool ReplayLocal = false;
+  unsigned ReplayBefore = 0, ReplayAfter = 0;
+  StringRef ReplayPhysName;
+  SmallVector<float, 8> ReplayGapWeights;
+  if (!LocalSplitReplayGuard.empty() && MF->getName() == RegionTraceFunction) {
+    SmallVector<StringRef, 24> GuardParts;
+    StringRef(LocalSplitReplayGuard).split(GuardParts, '/');
+    unsigned Invocation = 0, Reg = 0;
+    if (GuardParts.size() < 3 || GuardParts[0].getAsInteger(10, Invocation) ||
+        GuardParts[1].getAsInteger(10, Reg))
+      report_fatal_error("invalid local split replay guard");
+    ReplayLocal = PriorityInvocation == Invocation &&
+                  VirtReg.reg().virtRegIndex() == Reg;
+    if (ReplayLocal) {
+      SmallVector<StringRef, 3> Parts;
+      StringRef(LocalSplitReplayWindow).split(Parts, '/');
+      if (!TraceLocal || Parts.size() != 3 ||
+          Parts[0].getAsInteger(10, ReplayBefore) ||
+          Parts[1].getAsInteger(10, ReplayAfter) ||
+          ReplayBefore >= ReplayAfter || ReplayAfter > NumGaps)
+        report_fatal_error("invalid local split replay window");
+      ReplayPhysName = Parts[2];
+    }
+  }
+
   if (TraceLocal) {
     errs() << "LOCALSPLIT begin reg=" << VirtReg.reg().virtRegIndex()
            << " root=" << VRM->getOriginal(VirtReg.reg()).virtRegIndex()
@@ -3116,6 +3148,13 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
              << " phys=" << printReg(PhysReg, TRI) << " bits=";
       for (float F : GapWeight) errs() << TraceBits(F) << ',';
       errs() << '\n';
+    }
+
+    if (ReplayLocal &&
+        StringRef(TRI->getName(PhysReg)).equals_insensitive(ReplayPhysName)) {
+      if (!ReplayGapWeights.empty())
+        report_fatal_error("duplicate local split replay physical option");
+      ReplayGapWeights.assign(GapWeight.begin(), GapWeight.end());
     }
 
     // Try to find the best sequence of gaps to close.
@@ -3225,6 +3264,54 @@ MCRegister RAGreedy::tryLocalSplit(const LiveInterval &VirtReg,
            << " phys=" << printReg(TraceBestPhys, TRI)
            << " before=" << BestBefore << " after=" << BestAfter
            << " threshold_bits=" << TraceBits(BestDiff) << '\n';
+
+  if (ReplayLocal) {
+    if (ReplayGapWeights.size() != NumGaps || LocalSplitReplayApplied != 0)
+      report_fatal_error("local split replay option unavailable or repeated");
+    const bool LiveBefore = ReplayBefore != 0 || BI.LiveIn;
+    const bool LiveAfter = ReplayAfter != NumGaps || BI.LiveOut;
+    const unsigned NewGaps = LiveBefore + ReplayAfter - ReplayBefore + LiveAfter;
+    if ((!LiveBefore && !LiveAfter) ||
+        (ProgressRequired && NewGaps >= NumGaps))
+      report_fatal_error("local split replay violates native progress");
+    const float MaxGap = *std::max_element(
+        ReplayGapWeights.begin() + ReplayBefore,
+        ReplayGapWeights.begin() + ReplayAfter);
+    const unsigned Size = Uses[ReplayBefore].distance(Uses[ReplayAfter]) +
+                          (LiveBefore + LiveAfter) * SlotIndex::InstrDist;
+    const float EstWeight =
+        normalizeSpillWeight(blockFreq * (NewGaps + 1), Size, 1);
+    const float Diff = EstWeight - MaxGap;
+    if (!(MaxGap < huge_valf && EstWeight * Hysteresis >= MaxGap &&
+          Diff > BestDiff))
+      report_fatal_error("local split replay not admitted by native comparison");
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << PriorityInvocation << '/' << VirtReg.reg().virtRegIndex() << '/'
+       << VRM->getOriginal(VirtReg.reg()).virtRegIndex() << '/'
+       << unsigned(ExtraInfo->getStage(VirtReg)) << '/' << BI.MBB->getNumber()
+       << '/' << BI.LiveIn << '/' << BI.LiveOut << '/' << ProgressRequired
+       << '/' << VirtReg.getSize() << '/' << TraceBits(VirtReg.weight())
+       << '/' << TraceBits(blockFreq) << '/' << TraceBits(Hysteresis)
+       << '/' << BestBefore << '/' << BestAfter << '/' << TraceBits(BestDiff)
+       << '/';
+    for (SlotIndex U : Uses) OS << U << ',';
+    OS << '/';
+    for (float F : ReplayGapWeights) OS << TraceBits(F) << ',';
+    OS << '/' << ReplayBefore << '/' << ReplayAfter << '/' << Size
+       << '/' << TraceBits(EstWeight) << '/' << TraceBits(MaxGap);
+    if (Key != LocalSplitReplayGuard)
+      report_fatal_error("local split replay state mismatch");
+    errs() << "LOCAL_WINDOW_REPLAY key=" << Key
+           << " witness=" << ReplayPhysName
+           << " native_phys=" << printReg(TraceBestPhys, TRI)
+           << " selected=" << ReplayBefore << ':' << ReplayAfter
+           << " difference_bits=" << TraceBits(Diff) << '\n';
+    BestBefore = ReplayBefore;
+    BestAfter = ReplayAfter;
+    BestDiff = Hysteresis * Diff;
+    ++LocalSplitReplayApplied;
+  }
 
   // Didn't find any candidates?
   if (BestBefore == NumGaps)
@@ -4734,6 +4821,10 @@ bool RAGreedy::run(MachineFunction &mf) {
     errs() << "PGO_LINEAGE_BEGIN\t1\t" << MF->getName() << '\n';
   SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
+  if (!LocalSplitReplayGuard.empty() &&
+      MF->getName() == RegionTraceFunction && PriorityInvocation == 3 &&
+      LocalSplitReplayApplied != 1)
+    report_fatal_error("local split replay did not apply exactly once");
   if (!EvictionReplayGuard.empty() &&
       MF->getName() == RegionTraceFunction && PriorityInvocation == 3 &&
       EvictionReplayApplied != 1)
