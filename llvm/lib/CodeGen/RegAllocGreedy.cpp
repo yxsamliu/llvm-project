@@ -73,10 +73,32 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
 
+extern cl::opt<std::string> WaveSpillDiagFunction;
+static cl::opt<unsigned> WaveSpillDiagSkip("wave-spill-diag-skip", cl::Hidden, cl::init(0));
+static cl::opt<bool> WaveSpillDiagSkipAll("wave-spill-diag-skip-all", cl::Hidden, cl::init(false));
+static unsigned WaveSpillDiagOrdinal = 0;
+#include "llvm/Support/SaveAndRestore.h"
+#include "llvm/ADT/ScopeExit.h"
+static cl::opt<bool> WaveChainTrace("wave-chain-trace", cl::Hidden, cl::init(false));
+static cl::opt<std::string> WaveChainScopes("wave-chain-placement-scopes", cl::Hidden, cl::init("123"));
+static cl::opt<unsigned> WaveChainBFIRoot("wave-chain-bfi-root", cl::Hidden, cl::init(0));
+static unsigned WaveChainPhase = 0;
+static SmallVector<BlockFrequency, 8> ordinaryFrequencies(MachineFunction &MF, MachineBlockFrequencyInfo &MBFI) {
+  SmallVector<BlockFrequency, 8> R(MF.getNumBlockIDs());
+  for (auto &MBB : MF) R[MBB.getNumber()] = MBFI.getBlockFreq(&MBB);
+  return R;
+}
+static cl::opt<unsigned> WaveChainVetoRegion("wave-chain-veto-region", cl::Hidden, cl::init(0));
+static cl::opt<std::string> WaveCostPrice("wave-cost-price", cl::Hidden, cl::init("none"));
+static cl::opt<bool> WaveColdEvictVeto("wave-cold-evict-veto", cl::Hidden, cl::init(false));
+static cl::opt<bool> WaveCostVetoBlockage("wave-cost-veto-blockage", cl::Hidden, cl::init(false));
+static cl::opt<unsigned> WaveCostInspectRegion("wave-cost-inspect-region", cl::Hidden, cl::init(0));
+static cl::opt<unsigned> WaveChainInspectReg("wave-chain-inspect-reg", cl::Hidden, cl::init(0));
 #define DEBUG_TYPE "regalloc"
 
 STATISTIC(NumGlobalSplits, "Number of split global live ranges");
@@ -725,6 +747,80 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 
   MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
       VirtReg, Order, CostPerUseLimit, FixedRegisters);
+  // Default-off diagnostic: a carrier used only in measured-zero blocks
+  // cannot justify evicting one with a measured nonzero access. Unknown
+  // incoming accesses keep the ordinary eviction decision.
+  if (BestPhys.isValid() && WaveColdEvictVeto &&
+      MF->getName() == WaveSpillDiagFunction &&
+      SpillPlacer->hasMeasuredWaveBlocks()) {
+    auto IsWWMCarrier = [&](const LiveInterval &LI) {
+      for (const MachineOperand &MO : MRI->reg_nodbg_operands(LI.reg())) {
+        const MachineInstr *MI = MO.getParent();
+        if (!MI || MI->isDebugInstr())
+          continue;
+        StringRef Name = TII->getName(MI->getOpcode());
+        if (Name == "SI_SPILL_S32_TO_VGPR" ||
+            Name == "SI_RESTORE_S32_FROM_VGPR")
+          return true;
+      }
+      return false;
+    };
+    auto HasPositiveMeasuredAccess =
+        [&](const LiveInterval &LI, bool RequireComplete)
+            -> std::optional<bool> {
+      bool Seen = false;
+      bool Unknown = false;
+      bool Positive = false;
+      for (const MachineOperand &MO : MRI->reg_nodbg_operands(LI.reg())) {
+        const MachineInstr *MI = MO.getParent();
+        if (!MI || MI->isDebugInstr())
+          continue;
+        std::optional<uint64_t> Count = SpillPlacer->getMeasuredWaveCount(
+            MI->getParent()->getNumber());
+        if (!Count) {
+          Unknown = true;
+          continue;
+        }
+        Seen = true;
+        Positive |= *Count != 0;
+      }
+      // A measured positive lower bound is enough for the victim. Proving
+      // zero for the incoming interval requires complete mapping.
+      if (Positive)
+        return true;
+      if (!Seen || (RequireComplete && Unknown))
+        return std::nullopt;
+      return false;
+    };
+    std::optional<bool> Incoming =
+        HasPositiveMeasuredAccess(VirtReg, true);
+    if (Incoming && !*Incoming && IsWWMCarrier(VirtReg)) {
+      bool HotVictim = false;
+      Register Victim;
+      for (MCRegUnit Unit : TRI->regunits(BestPhys)) {
+        for (const LiveInterval *Intf :
+             Matrix->query(VirtReg, Unit).interferingVRegs()) {
+          std::optional<bool> Activity =
+              HasPositiveMeasuredAccess(*Intf, false);
+          if (Activity && *Activity &&
+              ExtraInfo->getStage(*Intf) == RS_Split2 &&
+              IsWWMCarrier(*Intf)) {
+            HotVictim = true;
+            Victim = Intf->reg();
+            break;
+          }
+        }
+        if (HotVictim)
+          break;
+      }
+      if (HotVictim) {
+        errs() << "WAVE_COLD_EVICT_VETO incoming=" << VirtReg.reg().id()
+               << " victim=" << Victim.id()
+               << " phys=" << BestPhys.id() << "\n";
+        BestPhys = MCRegister::NoRegister;
+      }
+    }
+  }
   if (BestPhys.isValid())
     evictInterference(VirtReg, BestPhys, NewVRegs);
   return BestPhys;
@@ -1233,6 +1329,11 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                                     SmallVectorImpl<Register> &NewVRegs) {
   if (!TRI->shouldRegionSplitForVirtReg(*MF, VirtReg))
     return MCRegister::NoRegister;
+  if (MF->getName() == WaveSpillDiagFunction)
+    errs() << "REGION vreg=" << VirtReg.reg().id()
+           << " class=" << TRI->getRegClassName(MRI->getRegClass(VirtReg.reg()))
+           << " stage=" << unsigned(ExtraInfo->getOrInitStage(VirtReg.reg()))
+           << " weight=" << VirtReg.weight() << " blocks=" << SA->getNumLiveBlocks() << "\n";
   unsigned NumCands = 0;
   BlockFrequency SpillCost = calcBlockSplitCost();
   BlockFrequency BestCost;
@@ -1255,7 +1356,7 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                                                NumCands, false /*IgnoreCSR*/);
 
   if (HasCompact && BestCand != NoCand && BestCost >= SpillCost &&
-      SpillPlacer->hasMeasuredWaveBlocks()) {
+      SpillPlacer->usesMeasuredWaveCosts()) {
     // doRegionSplit also assigns uncovered compact bundles. The physical
     // candidate's cost is sufficient only when that union adds no bundles.
     const BitVector &Physical = GlobalCand[BestCand].LiveBundles;
@@ -1263,13 +1364,166 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
                                      [&](int I) { return !Physical.test(I); });
     if (!ExtraCompact && isWaveRegionCostHigher(GlobalCand[BestCand])) {
       LLVM_DEBUG(dbgs() << "Wave cost exceeds block splitting\n");
-      return MCRegister::NoRegister;
+      bool Skip = false;
+      if (MF->getName() == WaveSpillDiagFunction) {
+        unsigned Ordinal = ++WaveSpillDiagOrdinal;
+        Skip = WaveSpillDiagSkipAll || WaveSpillDiagSkip == Ordinal;
+        errs() << "WAVEREJECT ordinal=" << Ordinal << " vreg="
+               << VirtReg.reg().id() << " class="
+               << TRI->getRegClassName(MRI->getRegClass(VirtReg.reg()))
+               << " best=" << BestCost.getFrequency()
+               << " fallback=" << SpillCost.getFrequency()
+               << " phys=" << GlobalCand[BestCand].PhysReg.id()
+               << " skip=" << Skip << "\n";
+      }
+      if (!Skip) return MCRegister::NoRegister;
     }
   }
   // No solutions found, fall back to single block splitting.
   if (!HasCompact && BestCand == NoCand)
     return MCRegister::NoRegister;
 
+  if (MF->getName() == WaveSpillDiagFunction)
+    errs() << "REGION_CHOICE vreg=" << VirtReg.reg().id()
+           << " compact=" << HasCompact << " bestcand=" << BestCand
+           << " bestcost=" << BestCost.getFrequency() << " fallback=" << SpillCost.getFrequency()
+           << " phys=" << (BestCand == NoCand ? 0 : GlobalCand[BestCand].PhysReg.id())
+           << " bundles=" << (BestCand == NoCand ? 0 : GlobalCand[BestCand].LiveBundles.count()) << "\n";
+  if (MF->getName() == WaveSpillDiagFunction && WaveChainVetoRegion &&
+      VirtReg.reg().id() == Register::index2VirtReg(WaveChainVetoRegion).id()) {
+    errs() << "CHAIN_VETO_REGION reg=" << VirtReg.reg().id() << " orig="
+           << VRM->getOriginal(VirtReg.reg()).id() << "\n";
+    return MCRegister::NoRegister;
+  }
+  bool VetoForBlockage = false;
+  SmallVector<int64_t> ExtraSpillWork(MF->getNumBlockIDs(), 0);
+  if (MF->getName() == WaveSpillDiagFunction && WaveCostInspectRegion &&
+      (VirtReg.reg().virtRegIndex() == WaveCostInspectRegion ||
+       (WaveCostInspectRegion == ~0U && WaveChainPhase == 2)) && BestCand != NoCand) {
+    for (unsigned CI = 0; CI != NumCands; ++CI) {
+    GlobalSplitCandidate &Cand = GlobalCand[CI];
+    if (!Cand.PhysReg) continue;
+    errs() << "PROSPECT_CAND reg=" << VirtReg.reg().id() << " phys=" << printReg(Cand.PhysReg, TRI) << " index=" << CI << " selected=" << (CI == BestCand) << "\n";
+    auto InspectRange = [&](const char *Kind, const SplitAnalysis::BlockInfo &BI,
+                            SlotIndex Start, SlotIndex Stop) {
+      LiveRange Probe;
+      for (const LiveRange::Segment &Seg : VirtReg.segments) {
+        SlotIndex A = std::max(Start, Seg.start), B = std::min(Stop, Seg.end);
+        if (A < B) Probe.addSegment(LiveRange::Segment(A, B, Seg.valno));
+      }
+      unsigned Reads = 0, Writes = 0, Uses = 0;
+      float Weight = 0;
+      for (MachineInstr &MI : *BI.MBB) {
+        if (MI.isDebugInstr()) continue;
+        SlotIndex Idx = LIS->getInstructionIndex(MI).getRegSlot();
+        if (Idx < Start || Idx > Stop) continue;
+        auto RW = MI.readsWritesVirtualRegister(VirtReg.reg());
+        if (!RW.first && !RW.second) continue;
+        Reads += RW.first; Writes += RW.second; ++Uses;
+        Weight += LiveIntervals::getSpillWeight(RW.second, RW.first, MBFI, MI);
+        errs() << "PROSPECT_USE kind=" << Kind << " bb=" << BI.MBB->getNumber()
+               << " idx=" << Idx << " read=" << RW.first << " write=" << RW.second
+               << " op=" << TII->getName(MI.getOpcode()) << "\n";
+      }
+      errs() << "PROSPECT_RANGE reg=" << VirtReg.reg().id() << " kind=" << Kind
+             << " bb=" << BI.MBB->getNumber() << " start=" << Start << " stop=" << Stop
+             << " reads=" << Reads << " writes=" << Writes << " uses=" << Uses
+             << " weight_sum=" << Weight << " interior_weight="
+             << normalizeSpillWeight(Weight, Start.distance(Stop), Uses)
+             << " bfi=" << MBFI->getBlockFreq(BI.MBB).getFrequency()
+             << " placement=" << SpillPlacer->getBlockFrequency(BI.MBB->getNumber()).getFrequency()
+             << "\n";
+      float TwoCopyWeight = 2 * MBFI->getBlockFreqRelativeToEntryBlock(BI.MBB);
+      float ForecastWeight = normalizeSpillWeight(
+          (Weight + TwoCopyWeight) * 1.01F *
+              TRI->getSpillWeightScaleFactor(MRI->getRegClass(VirtReg.reg())),
+          Start.distance(Stop), Uses + 2);
+      bool AllHeavier = true;
+      unsigned NumOptions = 0;
+      for (MCRegister Phys : Order) {
+        ++NumOptions;
+        float MaxVictimWeight = 0;
+        SmallPtrSet<const LiveInterval *, 16> Seen;
+        errs() << "PROSPECT_INTF kind=" << Kind << " bb=" << BI.MBB->getNumber()
+               << " phys=" << printReg(Phys, TRI) << " victims=";
+        for (MCRegUnit Unit : TRI->regunits(Phys)) {
+          LiveIntervalUnion::Query Q(Probe, Matrix->getLiveUnions()[static_cast<unsigned>(Unit)]);
+          for (const LiveInterval *Intf : Q.interferingVRegs()) {
+            if (!Seen.insert(Intf).second) continue;
+            MaxVictimWeight = std::max(MaxVictimWeight, Intf->weight());
+            errs() << Intf->reg().id() << ":" << VRM->getOriginal(Intf->reg()).id()
+                   << ":" << Intf->weight() << ":" << unsigned(ExtraInfo->getStage(*Intf))
+                   << ":" << ExtraInfo->getCascade(Intf->reg()) << ":"
+                   << VRM->hasPreferredPhys(Intf->reg()) << ",";
+          }
+        }
+        errs() << "\n";
+        AllHeavier &= MaxVictimWeight > ForecastWeight;
+      }
+      if (CI == BestCand && StringRef(Kind) == "remainder" && Uses &&
+          NumOptions && AllHeavier) {
+        VetoForBlockage = true;
+        ExtraSpillWork[BI.MBB->getNumber()] += int64_t(Reads) + Writes;
+        errs() << "PRICED_EXTRA reg=" << VirtReg.reg().id() << " bb="
+               << BI.MBB->getNumber() << " reads=" << Reads
+               << " writes=" << Writes << "\n";
+      }
+    };
+    for (const SplitAnalysis::BlockInfo &BI : SA->getUseBlocks()) {
+      unsigned N = BI.MBB->getNumber();
+      if (!BI.LiveIn || !BI.LiveOut ||
+          !Cand.LiveBundles[Bundles->getBundle(N, false)] ||
+          !Cand.LiveBundles[Bundles->getBundle(N, true)]) continue;
+      Cand.Intf.moveToBlock(N);
+      if (!Cand.Intf.hasInterference()) continue;
+      SlotIndex Start = Cand.Intf.first(), Stop = Cand.Intf.last();
+      if (!(Indexes->getMBBStartIdx(BI.MBB) < Start &&
+            Start <= Stop && Stop < SA->getLastSplitPoint(N))) continue;
+      InspectRange("remainder", BI, Start, Stop);
+      InspectRange("block", BI, BI.FirstInstr, BI.LastInstr);
+    }
+    }
+  }
+  if (VetoForBlockage && WaveCostPrice != "none") {
+    assert((WaveCostPrice == "bfi" || WaveCostPrice == "wave") &&
+           "Unknown diagnostic price domain");
+    GlobalSplitCandidate &Cand = GlobalCand[BestCand];
+    bool ExtraCompact = HasCompact && llvm::any_of(
+        GlobalCand.front().LiveBundles.set_bits(),
+        [&](int I) { return !Cand.LiveBundles.test(I); });
+    SmallVector<int64_t> Difference(MF->getNumBlockIDs(), 0);
+    bool Modeled = !ExtraCompact &&
+                   calcSplitConstraints(Cand.Intf, nullptr, &Difference);
+    bool Reject = false;
+    if (Modeled) {
+      addGlobalSplitCost(Cand, nullptr, &Difference);
+      for (const SplitAnalysis::BlockInfo &BI : SA->getUseBlocks())
+        Difference[BI.MBB->getNumber()] -=
+            1 + unsigned(BI.LiveIn && BI.LiveOut && BI.FirstDef);
+      errs() << "PRICED_MODEL reg=" << VirtReg.reg().id() << " domain="
+             << WaveCostPrice << " base=";
+      for (unsigned I = 0; I != Difference.size(); ++I)
+        if (Difference[I]) errs() << I << ":" << Difference[I] << ",";
+      errs() << " extra=";
+      for (unsigned I = 0; I != Difference.size(); ++I) {
+        if (ExtraSpillWork[I]) errs() << I << ":" << ExtraSpillWork[I] << ",";
+        Difference[I] += ExtraSpillWork[I];
+      }
+      errs() << "\n";
+      Reject = WaveCostPrice == "wave"
+                   ? SpillPlacer->isWaveCostDifferencePositive(Difference)
+                   : SpillPlacer->isBFICostDifferencePositive(Difference);
+    }
+    errs() << "PRICED_DECISION reg=" << VirtReg.reg().id() << " domain="
+           << WaveCostPrice << " modeled=" << Modeled << " reject=" << Reject
+           << "\n";
+    if (Reject) return MCRegister::NoRegister;
+  }
+  if (WaveCostVetoBlockage && VetoForBlockage) {
+    errs() << "PROSPECT_VETO reg=" << VirtReg.reg().id()
+           << " reason=blocked-accessed-remainder\n";
+    return MCRegister::NoRegister;
+  }
   return doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
 }
 
@@ -1327,7 +1581,9 @@ unsigned RAGreedy::calculateRegionSplitCostAroundReg(MCRegister PhysReg,
   }
   LLVM_DEBUG(dbgs() << printReg(PhysReg, TRI)
                     << "\tstatic = " << printBlockFreq(*MBFI, Cost));
-  if (Cost >= BestCost) {
+  if (Cost >= BestCost && !(MF->getName() == WaveSpillDiagFunction &&
+      WaveCostInspectRegion && (SA->getParent().reg().virtRegIndex() == WaveCostInspectRegion ||
+      (WaveCostInspectRegion == ~0U && WaveChainPhase == 2)))) {
     LLVM_DEBUG({
       if (BestCand == NoCand)
         dbgs() << " worse than no bundles\n";
@@ -2378,12 +2634,35 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
 
 MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &NewVRegs) {
+  SmallVector<BlockFrequency, 8> RootFrequencies;
+  bool UseBFIRoot = MF->getName() == WaveSpillDiagFunction && WaveChainBFIRoot &&
+      VirtReg.reg().id() == Register::index2VirtReg(WaveChainBFIRoot).id() &&
+      ExtraInfo->getOrInitStage(VirtReg.reg()) == RS_Split;
+  if (UseBFIRoot) {
+    RootFrequencies = ordinaryFrequencies(*MF, *MBFI);
+    SpillPlacer->swapDiagnosticFrequencies(RootFrequencies);
+    errs() << "CHAIN_BFI_ROOT reg=" << VirtReg.reg().id() << "\n";
+  }
+  auto RestoreRoot = scope_exit([&] { if (UseBFIRoot) SpillPlacer->swapDiagnosticFrequencies(RootFrequencies); });
+  Register TraceReg = VirtReg.reg();
+  if (WaveChainTrace && MF->getName() == WaveSpillDiagFunction)
+    errs() << "CHAIN_BEGIN reg=" << TraceReg.id() << " orig=" << VRM->getOriginal(TraceReg).id()
+           << " class=" << TRI->getRegClassName(MRI->getRegClass(TraceReg))
+           << " stage=" << unsigned(ExtraInfo->getOrInitStage(TraceReg))
+           << " weight=" << VirtReg.weight() << " size=" << VirtReg.getSize() << "\n";
   CutOffInfo = CO_None;
   LLVMContext &Ctx = MF->getFunction().getContext();
   SmallVirtRegSet FixedRegisters;
   RecoloringStack RecolorStack;
   MCRegister Reg =
       selectOrSplitImpl(VirtReg, NewVRegs, FixedRegisters, RecolorStack);
+  if (WaveChainTrace && MF->getName() == WaveSpillDiagFunction) {
+    errs() << "CHAIN_END reg=" << TraceReg.id() << " phys=" << Reg.id() << " new=";
+    for (Register R : NewVRegs)
+      errs() << R.id() << ":" << VRM->getOriginal(R).id() << ":"
+             << unsigned(ExtraInfo->getOrInitStage(R)) << ",";
+    errs() << "\n";
+  }
   if (Reg == ~0U && (CutOffInfo != CO_None)) {
     uint8_t CutOffEncountered = CutOffInfo & (CO_Depth | CO_Interf);
     if (CutOffEncountered == CO_Depth)
@@ -2733,6 +3012,20 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
     return MCRegister();
 
   LiveRangeStage Stage = ExtraInfo->getStage(VirtReg);
+  if (MF->getName() == WaveSpillDiagFunction && WaveChainInspectReg &&
+      VirtReg.reg().virtRegIndex() == WaveChainInspectReg) {
+    errs() << "CHAIN_INSPECT reg=" << VirtReg.reg().id() << " weight=" << VirtReg.weight()
+           << " stage=" << unsigned(Stage) << " cascade=" << ExtraInfo->getCascadeOrCurrentNext(VirtReg.reg()) << "\n";
+    for (MCRegister Phys : Order) {
+      errs() << "CHAIN_INTF phys=" << printReg(Phys, TRI) << " kind=" << Matrix->checkInterference(VirtReg, Phys) << " victims=";
+      for (MCRegUnit Unit : TRI->regunits(Phys))
+        for (const LiveInterval *Intf : Matrix->query(VirtReg, Unit).interferingVRegs())
+          errs() << Intf->reg().id() << ":" << VRM->getOriginal(Intf->reg()).id() << ":"
+                 << Intf->weight() << ":" << unsigned(ExtraInfo->getStage(*Intf)) << ":"
+                 << ExtraInfo->getCascade(Intf->reg()) << ":" << VRM->hasPreferredPhys(Intf->reg()) << ",";
+      errs() << "\n";
+    }
+  }
   LLVM_DEBUG(dbgs() << StageName[Stage] << " Cascade "
                     << ExtraInfo->getCascade(VirtReg.reg()) << '\n');
 
@@ -2991,10 +3284,25 @@ bool RAGreedy::hasVirtRegAlloc() {
 }
 
 bool RAGreedy::run(MachineFunction &mf) {
+  SaveAndRestore<bool> TraceScope(DebugFlag, WaveChainTrace && mf.getName() == WaveSpillDiagFunction);
+  if (DebugFlag) setCurrentDebugType("regalloc");
+
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
+  SmallVector<BlockFrequency, 8> PhaseFrequencies;
+  bool UseBFIPhase = false;
+  if (MF->getName() == WaveSpillDiagFunction) {
+    unsigned Phase = ++WaveChainPhase;
+    UseBFIPhase = WaveChainScopes.getValue().find(char('0' + Phase)) == std::string::npos;
+    if (UseBFIPhase) {
+      PhaseFrequencies = ordinaryFrequencies(*MF, *MBFI);
+      SpillPlacer->swapDiagnosticFrequencies(PhaseFrequencies);
+    }
+    errs() << "CHAIN_PHASE phase=" << Phase << " ordinary=" << UseBFIPhase << "\n";
+  }
+  auto RestorePhase = scope_exit([&] { if (UseBFIPhase) SpillPlacer->swapDiagnosticFrequencies(PhaseFrequencies); });
   TII = MF->getSubtarget().getInstrInfo();
 
   if (VerifyEnabled)

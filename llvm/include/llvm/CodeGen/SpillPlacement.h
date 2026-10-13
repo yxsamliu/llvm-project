@@ -33,6 +33,9 @@
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
+#include <cstdint>
+#include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -162,6 +165,19 @@ public:
   /// Raw counts for the optional wave-guided spill-cost comparison. Their
   /// availability is independent of the spill-placement frequency policy.
   bool hasMeasuredWaveBlocks() const { return !MeasuredWaveBlocks.empty(); }
+  void swapDiagnosticFrequencies(SmallVector<BlockFrequency, 8> &Other) {
+    BlockFrequencies.swap(Other);
+  }
+  LLVM_ABI bool usesMeasuredWaveCosts() const;
+  LLVM_ABI bool isBFICostDifferencePositive(ArrayRef<int64_t> Coefficients);
+
+  // Diagnostic: retain measured zero as distinct from a missing mapping.
+  std::optional<uint64_t> getMeasuredWaveCount(unsigned Number) const {
+    if (Number >= MeasuredWaveBlocks.size() ||
+        !MeasuredWaveBlocks.test(Number))
+      return std::nullopt;
+    return MeasuredWaveCounts[Number];
+  }
 
   /// Bound a signed difference of spill executions using original wave counts.
   /// Missing acyclic blocks lie in [0, entry count]; missing cyclic blocks have

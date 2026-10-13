@@ -57,6 +57,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spill-code-placement"
 
+cl::opt<std::string> WaveSpillDiagFunction("wave-spill-diag-function", cl::Hidden, cl::init(""));
+static cl::opt<bool> WaveCostCollectRaw("wave-cost-collect-raw", cl::Hidden, cl::init(false));
+
+static cl::opt<std::string> WavePlacementDiagMode("wave-placement-diag-mode", cl::Hidden, cl::init("all"));
 static cl::opt<bool> WaveGuidedSpillPlacement(
     "wave-guided-spill-placement", cl::Hidden, cl::init(true),
     cl::desc("Use validated wave counts for spill-placement frequencies"));
@@ -290,7 +294,7 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
   unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
-      (WaveGuidedSpillPlacement || WaveGuidedSpillCosts) &&
+      (WaveGuidedSpillPlacement || WaveGuidedSpillCosts || WaveCostCollectRaw) &&
       mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
       extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
                                    EntryWaveCount) &&
@@ -321,9 +325,13 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
       }
       uint64_t Count = WaveCounts[Index++];
       // Keep the two consumers independent after validating the mapping.
-      if (WaveGuidedSpillCosts)
+      if (WaveGuidedSpillCosts || WaveCostCollectRaw)
         RawWaveCounts[&BB] = Count;
       if (!WaveGuidedSpillPlacement)
+        continue;
+      if (mf.getName() == WaveSpillDiagFunction &&
+          ((WavePlacementDiagMode == "nonzero" && Count == 0) ||
+           (WavePlacementDiagMode == "zero" && Count != 0)))
         continue;
       uint64_t Frequency =
           ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
@@ -349,6 +357,11 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
     auto Wave = WaveFrequencies.find(I.getBasicBlock());
+    if (mf.getName() == WaveSpillDiagFunction && Wave != WaveFrequencies.end())
+      errs() << "WAVEFREQ mbb=" << Num << " bb=" << I.getBasicBlock()->getName()
+             << " original=" << MBFI->getBlockFreq(&I).getFrequency()
+             << " replacement=" << Wave->second.getFrequency()
+             << " entry=" << MBFI->getEntryFreq().getFrequency() << "\n";
     // Only a validated measurement replaces the original block frequency.
     // Uniformity alone does not establish how often a block executes.
     BlockFrequencies[Num] =
@@ -372,6 +385,38 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
     errs() << "WAVE_PROFILED_SPILL\t" << mf.getName() << "\t" << HasWaveProfile
            << "\t" << WaveFrequencies.size() << "\t" << RejectedWaveBlocks
            << "\t" << ChangedWaveCosts << "\n";
+}
+
+bool SpillPlacement::usesMeasuredWaveCosts() const {
+  return WaveGuidedSpillCosts && hasMeasuredWaveBlocks();
+}
+
+bool SpillPlacement::isBFICostDifferencePositive(ArrayRef<int64_t> Coefficients) {
+  assert(Coefficients.size() == BlockFrequencies.size());
+  uint64_t Positive = 0, Negative = 0;
+  for (const MachineBasicBlock &MBB : *MF) {
+    int64_t C = Coefficients[MBB.getNumber()];
+    if (!C) continue;
+    uint64_t Frequency = MBFI->getBlockFreq(&MBB).getFrequency();
+    if (Frequency == UINT64_MAX || C == INT64_MIN) return false;
+    auto Product = checkedMulUnsigned<uint64_t>(C < 0 ? -C : C, Frequency);
+    if (!Product) return false;
+    uint64_t &Sum = C < 0 ? Negative : Positive;
+    auto Total = checkedAddUnsigned<uint64_t>(Sum, *Product);
+    if (!Total) return false;
+    Sum = *Total;
+  }
+  if (MF->getName() == WaveSpillDiagFunction) {
+    errs() << "BFICOST positive=" << Positive << " negative=" << Negative
+           << " entry=" << MBFI->getEntryFreq().getFrequency() << " terms=";
+    for (const MachineBasicBlock &MBB : *MF) {
+      unsigned I = MBB.getNumber();
+      if (Coefficients[I]) errs() << I << ":" << Coefficients[I] << ":"
+                                << MBFI->getBlockFreq(&MBB).getFrequency() << ",";
+    }
+    errs() << "\n";
+  }
+  return Positive > Negative;
 }
 
 bool SpillPlacement::isWaveCostDifferencePositive(
@@ -413,6 +458,19 @@ bool SpillPlacement::isWaveCostDifferencePositive(
     if (!Total)
       return false;
     Sum = *Total;
+  }
+  if (MF->getName() == WaveSpillDiagFunction) {
+    errs() << "WAVECOST positive=" << Positive << " negative=" << Negative
+           << " entry=" << NormalizationWaveCount << " terms=";
+    for (unsigned I = 0; I != Coefficients.size(); ++I) {
+      if (!Coefficients[I]) continue;
+      errs() << I << ":" << Coefficients[I] << ":";
+      if (MeasuredWaveBlocks.test(I)) errs() << MeasuredWaveCounts[I];
+      else if (Coefficients[I] < 0) errs() << "upper" << NormalizationWaveCount;
+      else errs() << "unknown";
+      errs() << ",";
+    }
+    errs() << "\n";
   }
   return Positive > Negative;
 }
