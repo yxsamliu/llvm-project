@@ -137,6 +137,24 @@ static bool traceAllocation(const MachineFunction &MF, const VirtRegMap &VRM,
                             VRM.getOriginal(Reg).virtRegIndex());
 }
 
+static cl::opt<bool> SpillLineage("regalloc-spill-lineage", cl::Hidden,
+                                  cl::init(false));
+static bool traceSpillLineage(const MachineFunction &MF) {
+  return SpillLineage && RegionTraceFunction == MF.getName();
+}
+
+namespace llvm {
+thread_local bool ActivePGOSpillLineage = false;
+void printPGOSplitCreation(Register New, Register Old, const VirtRegMap &VRM) {
+  if (!ActivePGOSpillLineage) return;
+  const auto &MF = VRM.getMachineFunction();
+  const auto *TRI = MF.getSubtarget().getRegisterInfo();
+  errs() << "PGO_LINEAGE_CREATE\t" << Old.virtRegIndex() << '\t'
+         << New.virtRegIndex() << '\t' << VRM.getOriginal(New).virtRegIndex()
+         << '\t' << TRI->getRegClassName(MF.getRegInfo().getRegClass(New)) << '\n';
+}
+} // namespace llvm
+
 static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
     const VirtRegMap &VRM, const MachineRegisterInfo &MRI,
     const TargetRegisterInfo &TRI, unsigned Stage) {
@@ -1442,6 +1460,10 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   }
 
   Trace.emit("RegionOutcome", {NV("Action", "region-split")});
+  if (traceSpillLineage(*MF))
+    errs() << "PGO_LINEAGE_REGION\t" << Trace.ID << '\t' << Trace.VReg
+           << '\t' << Trace.Original << '\t' << BestCost.getFrequency()
+           << '\t' << SpillCost.getFrequency() << '\n';
   size_t OldSize = NewVRegs.size();
   MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
   if (TraceEnabled)
@@ -2594,6 +2616,11 @@ bool RAGreedy::tryRecoloringCandidates(PQueue &RecoloringQueue,
 MCRegister RAGreedy::selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &NewVRegs) {
   const Register TraceReg = VirtReg.reg();
+  if (traceSpillLineage(*MF))
+    errs() << "PGO_LINEAGE_NODE\t" << TraceReg.virtRegIndex() << '\t'
+           << VRM->getOriginal(TraceReg).virtRegIndex() << '\t'
+           << unsigned(ExtraInfo->getStage(VirtReg)) << '\t'
+           << TRI->getRegClassName(MRI->getRegClass(TraceReg)) << '\n';
   const bool TraceThis = traceAllocation(*MF, *VRM, TraceReg);
   if (TraceThis) {
     printAllocationInterval("begin", VirtReg, *VRM, *MRI, *TRI,
@@ -3040,7 +3067,13 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   LiveRangeEdit LRE(&VirtReg, NewVRegs, *MF, *LIS, VRM, this, &DeadRemats);
   if (traceAllocation(*MF, *VRM, VirtReg.reg()))
     printAllocationInterval("spill", VirtReg, *VRM, *MRI, *TRI, Stage);
+  const Register LineageRequest = VirtReg.reg();
   spiller().spill(LRE, &Order);
+  if (traceSpillLineage(*MF))
+    for (Register R : spiller().getSpilledRegs())
+      errs() << "PGO_LINEAGE_SPILL\t" << LineageRequest.virtRegIndex() << '\t'
+             << R.virtRegIndex() << '\t' << VRM->getOriginal(R).virtRegIndex()
+             << '\t' << VRM->getStackSlot(R) << '\n';
   ExtraInfo->setStage(NewVRegs.begin(), NewVRegs.end(), RS_Done);
 
   // Tell LiveDebugVariables about the new ranges. Ranges not being covered by
@@ -3306,6 +3339,9 @@ bool RAGreedy::run(MachineFunction &mf) {
   GlobalCand.resize(32);  // This will grow as needed.
   SetOfBrokenHints.clear();
 
+  if (traceSpillLineage(*MF))
+    errs() << "PGO_LINEAGE_BEGIN\t1\t" << MF->getName() << '\n';
+  SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
   // A later target can belong to a subsequent allocator pass (e.g. VGPRs).
   // External replay validation must also require exactly one override receipt.
@@ -3317,6 +3353,8 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (VerifyEnabled)
     MF->verify(LIS, Indexes, "Before post optimization", &errs());
   postOptimization();
+  if (traceSpillLineage(*MF))
+    errs() << "PGO_LINEAGE_END\n";
   reportStats();
 
   releaseMemory();

@@ -21,6 +21,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+namespace llvm { void printPGOSplitCreation(Register, Register, const VirtRegMap &); }
 
 #define DEBUG_TYPE "regalloc"
 
@@ -34,8 +35,10 @@ void LiveRangeEdit::Delegate::anchor() { }
 LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(Register OldReg,
                                                      bool createSubRanges) {
   Register VReg = MRI.cloneVirtualRegister(OldReg);
-  if (VRM)
+  if (VRM) {
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
+    printPGOSplitCreation(VReg, OldReg, *VRM);
+  }
 
   LiveInterval &LI = LIS.createEmptyInterval(VReg);
   if (Parent && !Parent->isSpillable())
@@ -56,6 +59,7 @@ Register LiveRangeEdit::createFrom(Register OldReg) {
   Register VReg = MRI.cloneVirtualRegister(OldReg);
   if (VRM) {
     VRM->setIsSplitFromReg(VReg, VRM->getOriginal(OldReg));
+    printPGOSplitCreation(VReg, OldReg, *VRM);
   }
   // FIXME: Getting the interval here actually computes it.
   // In theory, this may not be what we want, but in practice
@@ -407,6 +411,8 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
       // interval must contain all the split products, and LI doesn't.
       if (Original != VReg && Original != 0)
         VRM->setIsSplitFromReg(SplitLI->reg(), Original);
+      if (VRM)
+        printPGOSplitCreation(SplitLI->reg(), VReg, *VRM);
       if (TheDelegate)
         TheDelegate->LRE_DidCloneVirtReg(SplitLI->reg(), VReg);
     }

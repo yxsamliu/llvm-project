@@ -41,6 +41,7 @@
 #include <tuple>
 
 using namespace llvm;
+namespace llvm { void printPGOSplitCreation(Register, Register, const VirtRegMap &); }
 
 #define DEBUG_TYPE "regalloc"
 
@@ -1609,8 +1610,10 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
     SmallVector<LiveInterval*, 8> SplitLIs;
     LIS.splitSeparateComponents(LI, SplitLIs);
     Register Original = VRM.getOriginal(VReg);
-    for (LiveInterval *SplitLI : SplitLIs)
+    for (LiveInterval *SplitLI : SplitLIs) {
       VRM.setIsSplitFromReg(SplitLI->reg(), Original);
+      printPGOSplitCreation(SplitLI->reg(), VReg, VRM);
+    }
 
     // The new intervals all map back to i.
     if (LRMap)
