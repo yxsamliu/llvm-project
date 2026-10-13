@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegAllocGreedy.h"
+#include <cstring>
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
@@ -4558,6 +4559,24 @@ bool RAGreedy::run(MachineFunction &mf) {
   VRAI->calculateSpillWeightsAndHints();
 
   if (TraceOrdinaryFixed && RegionTraceFunction == MF->getName()) {
+
+    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
+      Register Reg = Register::index2VirtReg(I);
+      if (MRI->reg_nodbg_empty(Reg) || !shouldAllocateRegister(Reg) ||
+          !LIS->hasInterval(Reg))
+        continue;
+      StringRef RC = TRI->getRegClassName(MRI->getRegClass(Reg));
+      if (RC != "VGPR_32" && RC != "VReg_64_Align2" &&
+          RC != "VReg_128_Align2" && RC != "AV_128_Align2")
+        continue;
+      const LiveInterval &LI = LIS->getInterval(Reg);
+      float Weight = LI.weight();
+      uint32_t Bits;
+      std::memcpy(&Bits, &Weight, sizeof(Bits));
+      errs() << "ORDINARYFIXED weight reg=" << I << " class=" << RC
+             << " bits=" << Bits << " size=" << LI.getSize()
+             << " hint=" << printReg(MRI->getSimpleHint(Reg), TRI) << "\n";
+    }
     unsigned Selected = 0;
     errs() << "ORDINARYFIXED scope function=" << MF->getName() << "\n";
     for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I) {
