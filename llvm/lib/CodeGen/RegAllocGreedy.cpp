@@ -180,6 +180,9 @@ static void printAllocationInterval(StringRef Event, const LiveInterval &LI,
 namespace llvm {
 thread_local bool FeasibilityProbe = false;
 }
+static cl::opt<bool> TraceRemainderProjection(
+    "regalloc-remainder-projection", cl::Hidden, cl::init(false));
+
 static cl::opt<bool> TraceRecoveryCost("regalloc-recovery-cost-trace", cl::Hidden,
                                       cl::init(false));
 
@@ -1591,6 +1594,121 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     return MCRegister::NoRegister;
   }
 
+  // Predict only original operand membership for supported block routes.
+  // SlotIndex handles survive renumbering; validate identity after splitting.
+  struct ProjectedOperand {
+    SlotIndex Index;
+    MachineInstr *MI;
+    unsigned OpNo, Opcode, Token;
+    int Physical, Compact;
+  };
+  SmallVector<ProjectedOperand, 0> Projection;
+  if (TraceRemainderProjection && TraceEnabled && HasCompact &&
+      traceAllocation(*MF, *VRM, VirtReg.reg())) {
+    auto Predict = [&](const MachineOperand &MO, SlotIndex Idx, bool CompactOnly,
+                       StringRef &Route) -> int {
+      const MachineInstr &MI = *MO.getParent();
+      if (MI.isBundled() || MO.isUndef()) {
+        Route = "unsupported-operand";
+        return -1;
+      }
+      const SplitAnalysis::BlockInfo *Block = nullptr;
+      for (const auto &BI : SA->getUseBlocks()) {
+        if (BI.MBB != MI.getParent() ||
+            Idx < BI.FirstInstr.getBaseIndex() ||
+            Idx > BI.LastInstr.getBoundaryIndex())
+          continue;
+        if (Block) {
+          Route = "ambiguous-use-block";
+          return -1;
+        }
+        Block = &BI;
+      }
+      if (!Block) {
+        Route = "outside-use-block";
+        return -1;
+      }
+      const auto &BI = *Block;
+      unsigned Number = BI.MBB->getNumber();
+      auto Candidate = [&](bool Out) -> unsigned {
+        unsigned B = Bundles->getBundle(Number, Out);
+        if (!CompactOnly && BestCand != NoCand &&
+            GlobalCand[BestCand].LiveBundles.test(B))
+          return BestCand;
+        if (GlobalCand.front().LiveBundles.test(B))
+          return 0u;
+        return NoCand;
+      };
+      unsigned In = BI.LiveIn ? Candidate(false) : NoCand;
+      unsigned Out = BI.LiveOut ? Candidate(true) : NoCand;
+      if (In == NoCand && Out == NoCand) {
+        bool Isolate = SA->shouldSplitSingleBlock(
+            BI, RegClassInfo.isProperSubClass(MRI->getRegClass(VirtReg.reg())));
+        // Late split-point overlap needs a separate proof.
+        if (BI.LiveOut && BI.LastInstr >= SA->getLastSplitPoint(Number)) {
+          Route = "late-single-block";
+          return -1;
+        }
+        Route = Isolate ? "isolated-local" : "unisolated-remainder";
+        return Isolate ? 1 : 0;
+      }
+      if (In == NoCand || Out == NoCand) {
+        Route = "single-edge-unmodeled";
+        return -1;
+      }
+      auto &InCand = GlobalCand[In];
+      auto &OutCand = GlobalCand[Out];
+      InCand.Intf.moveToBlock(Number);
+      SlotIndex Leave = InCand.Intf.first();
+      OutCand.Intf.moveToBlock(Number);
+      SlotIndex Enter = OutCand.Intf.last();
+      if (In == Out && !Leave && !Enter) {
+        Route = "straight-global";
+        return 1;
+      }
+      if (Leave && Enter && Leave <= Enter &&
+          !(In != Out && Leave.getBaseIndex() > Enter.getBoundaryIndex())) {
+        Route = "interference-middle";
+        // Avoid ambiguous boundary uses when the parent isn't live at entry.
+        SlotIndex From = Leave.getBaseIndex();
+        if (!VirtReg.liveAt(From) && Idx == From) {
+          Route = "not-live-at-boundary";
+          return -1;
+        }
+        return Idx >= From && Idx < Enter.getBoundaryIndex() ? 0 : 1;
+      }
+      Route = "switch-unmodeled";
+      return -1;
+    };
+    unsigned Token = 0;
+    for (MachineBasicBlock &MBB : *MF)
+      for (MachineInstr &MI : MBB) {
+        if (MI.isDebugInstr() || MI.isInsideBundle())
+          continue;
+        for (unsigned OpNo = 0; OpNo != MI.getNumOperands(); ++OpNo) {
+          const MachineOperand &MO = MI.getOperand(OpNo);
+          if (!MO.isReg() || MO.getReg() != VirtReg.reg())
+            continue;
+          SlotIndex Index = LIS->getInstructionIndex(MI);
+          SlotIndex UseIndex = (MO.isDef() || MO.isUndef())
+              ? Index.getRegSlot(MO.isEarlyClobber()) : Index;
+          StringRef PhysicalRoute, CompactRoute;
+          int Physical = Predict(MO, UseIndex, false, PhysicalRoute);
+          int Compact = Predict(MO, UseIndex, true, CompactRoute);
+          Projection.push_back({Index, &MI, OpNo, MI.getOpcode(), Token,
+                                Physical, Compact});
+          errs() << "REMPROJ before decision=" << Trace.ID << " token=" << Token++
+                 << " parent=" << Trace.VReg << " block=" << MBB.getNumber()
+                 << " opcode=" << TII->getName(MI.getOpcode()) << " operand=" << OpNo
+                 << " def=" << MO.isDef() << " reads=" << MO.readsReg()
+                 << " undef=" << MO.isUndef() << " subreg=" << MO.getSubReg()
+                 << " index=" << UseIndex << " physical=" << Physical
+                 << " compact=" << Compact << " physical_route=" << PhysicalRoute
+                 << " compact_route=" << CompactRoute << '\n';
+        }
+      }
+  }
+
   if (!RegionReplayReject.empty() && TraceEnabled &&
       Trace.ID == RegionReplayDecision) {
     std::string Key;
@@ -1639,6 +1757,32 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
   if (TraceEnabled && RegionVerifyDecision == Trace.ID)
     MF->verify(LIS, Indexes, "Before selected region split", &errs());
   MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  for (const auto &P : Projection) {
+    MachineInstr *MI = LIS->getInstructionFromIndex(P.Index);
+    if (MI != P.MI || !MI || MI->getOpcode() != P.Opcode ||
+        P.OpNo >= MI->getNumOperands() || !MI->getOperand(P.OpNo).isReg()) {
+      errs() << "REMPROJ after decision=" << Trace.ID << " token=" << P.Token
+             << " status=removed-or-replaced\n";
+      continue;
+    }
+    Register Reg = MI->getOperand(P.OpNo).getReg();
+    bool Returned = llvm::is_contained(ArrayRef(NewVRegs).drop_front(OldSize), Reg);
+    if (!Reg.isVirtual() || !Returned) {
+      errs() << "REMPROJ after decision=" << Trace.ID << " token=" << P.Token
+             << " status=not-returned-product\n";
+      continue;
+    }
+    auto Stage = ExtraInfo->getStage(Reg);
+    int Actual = Stage == RS_Spill ? 0 : 1;
+    int Predicted = BestCand == NoCand ? P.Compact : P.Physical;
+    errs() << "REMPROJ after decision=" << Trace.ID << " token=" << P.Token
+           << " status=retained" << " reg=" << Reg.virtRegIndex()
+           << " stage=" << unsigned(Stage)
+           << " class=" << TRI->getRegClassName(MRI->getRegClass(Reg))
+           << " actual=" << Actual << " predicted=" << Predicted
+           << " matches=" << (Predicted < 0 || Predicted == Actual) << '\n';
+  }
+
   if (TraceEnabled && RegionVerifyDecision == Trace.ID)
     MF->verify(LIS, Indexes, "After selected region split", &errs());
   if (TraceEnabled)
