@@ -96,6 +96,14 @@ static cl::opt<std::string> RegionReplayReject(
     "regalloc-region-replay-reject", cl::Hidden, cl::init(""),
     cl::desc("Diagnostic: reject one accepted region only if its recorded key matches"));
 
+static cl::opt<std::string> RegionReplayCompact(
+    "regalloc-region-replay-compact", cl::Hidden, cl::init(""),
+    cl::desc("Diagnostic: use compact fallback at one exactly guarded region"));
+
+static cl::opt<unsigned> RegionVerifyDecision(
+    "regalloc-region-verify-decision", cl::Hidden, cl::init(0),
+    cl::desc("Diagnostic: verify LIS and SlotIndexes around one traced region"));
+
 namespace {
 thread_local uint64_t RegionReplayDecision = 0;
 thread_local unsigned RegionReplayApplied = 0;
@@ -1531,13 +1539,36 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     return MCRegister::NoRegister;
   }
 
+  if (!RegionReplayCompact.empty() && TraceEnabled &&
+      Trace.ID == RegionReplayDecision) {
+    std::string Key;
+    raw_string_ostream OS(Key);
+    OS << Trace.ID << '/' << Trace.VReg << '/' << Trace.Original << '/'
+       << Trace.Stage << '/' << Trace.RegClass << '/'
+       << (BestCand == NoCand ? 0 : unsigned(GlobalCand[BestCand].PhysReg))
+       << '/' << SpillCost.getFrequency() << '/' << BestCost.getFrequency()
+       << '/' << unsigned(HasCompact) << '/' << unsigned(ExtraCompactBundles)
+       << '/' << SA->getUseBlocks().size();
+    if (BestCand == NoCand || !HasCompact || Key != RegionReplayCompact)
+      report_fatal_error("compact replay key or fallback mismatch");
+    if (++RegionReplayApplied != 1)
+      report_fatal_error("compact replay applied more than once");
+    Trace.emit("RegionReplay", {NV("Action", "compact-only"), NV("Key", Key)});
+    errs() << "COMPACT_REPLAY " << Key << '\n';
+    BestCand = NoCand;
+  }
+
   Trace.emit("RegionOutcome", {NV("Action", "region-split")});
   if (traceSpillLineage(*MF))
     errs() << "PGO_LINEAGE_REGION\t" << Trace.ID << '\t' << Trace.VReg
            << '\t' << Trace.Original << '\t' << BestCost.getFrequency()
            << '\t' << SpillCost.getFrequency() << '\n';
   size_t OldSize = NewVRegs.size();
+  if (TraceEnabled && RegionVerifyDecision == Trace.ID)
+    MF->verify(LIS, Indexes, "Before selected region split", &errs());
   MCRegister Result = doRegionSplit(VirtReg, BestCand, HasCompact, NewVRegs);
+  if (TraceEnabled && RegionVerifyDecision == Trace.ID)
+    MF->verify(LIS, Indexes, "After selected region split", &errs());
   if (TraceEnabled)
     for (Register Reg : ArrayRef(NewVRegs).drop_front(OldSize))
       Trace.emit("RegionChild",
@@ -3361,14 +3392,19 @@ bool RAGreedy::run(MachineFunction &mf) {
 
   MF = &mf;
   TII = MF->getSubtarget().getInstrInfo();
-  if (!RegionReplayReject.empty()) {
+  if (!RegionReplayReject.empty() && !RegionReplayCompact.empty())
+    report_fatal_error("choose only one region replay action");
+  StringRef ReplayKey = RegionReplayCompact.empty()
+                            ? StringRef(RegionReplayReject)
+                            : StringRef(RegionReplayCompact);
+  if (!ReplayKey.empty()) {
     if (RegionTraceFunction.empty() || RegionTraceFunction == "*")
       report_fatal_error("region replay requires an exact trace function");
-    if (StringRef(RegionReplayReject).split('/').first.getAsInteger(
+    if (ReplayKey.split('/').first.getAsInteger(
             10, RegionReplayDecision))
       report_fatal_error("region replay requires a numeric decision ID");
   }
-  bool ReplayFunction = !RegionReplayReject.empty() &&
+  bool ReplayFunction = !ReplayKey.empty() &&
                         RegionTraceFunction == MF->getName();
 
   if (VerifyEnabled)
