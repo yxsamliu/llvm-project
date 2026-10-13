@@ -246,6 +246,23 @@ static cl::opt<bool>
     DisablePreInliner("disable-preinline", cl::init(false), cl::Hidden,
                       cl::desc("Disable pre-instrumentation inliner"));
 
+static cl::opt<bool> DiagnosticPreInlineWithoutProfile(
+    "diagnostic-preinline-without-profile", cl::Hidden, cl::init(false),
+    cl::desc("Run preparatory inlining and cleanup without a profile"));
+
+// Diagnostic: compare always-inliner and SCC-based PGO preparation.
+static cl::opt<bool> PGOAlwaysInlinerPreparation(
+    "pgo-always-inliner-preparation", cl::Hidden, cl::init(false),
+    cl::desc("Use always-inliner and cleanup for PGO preparation"));
+
+static cl::opt<bool> PGOPreInlineMandatoryOnly(
+    "pgo-preinline-mandatory-only", cl::Hidden, cl::init(false),
+    cl::desc("Run only mandatory SCC inlining during PGO preparation"));
+
+static cl::opt<bool> PGOPreInlineCleanupAfterModule(
+    "pgo-preinline-cleanup-after-module", cl::Hidden, cl::init(false),
+    cl::desc("Run PGO preparation cleanup after the module inliner"));
+
 static cl::opt<int> PreInlineThreshold(
     "preinline-threshold", cl::Hidden, cl::init(75),
     cl::desc("Control the amount of inlining in pre-instrumentation inliner "
@@ -868,6 +885,10 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
       IP, /* MandatoryFirst */ true,
       InlineContext{LTOPhase, InlinePass::EarlyInliner});
   CGSCCPassManager &CGPipeline = MIWP.getPM();
+  if (PGOPreInlineMandatoryOnly) {
+    CGPipeline = CGSCCPassManager();
+    CGPipeline.addPass(InlinerPass(/*OnlyMandatory=*/true));
+  }
 
   FunctionPassManager FPM;
   FPM.addPass(SROAPass(SROAOptions::ModifyCFG));
@@ -877,10 +898,19 @@ void PassBuilder::addPreInlinerPasses(ModulePassManager &MPM,
   FPM.addPass(InstCombinePass()); // Combine silly sequences.
   invokePeepholeEPCallbacks(FPM, Level);
 
-  CGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
-      std::move(FPM), PTO.EagerlyInvalidateAnalyses));
-
-  MPM.addPass(std::move(MIWP));
+  if (PGOAlwaysInlinerPreparation) {
+    MPM.addPass(AlwaysInlinerPass(/*InsertLifetimeIntrinsics=*/true));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        std::move(FPM), PTO.EagerlyInvalidateAnalyses));
+  } else if (PGOPreInlineCleanupAfterModule) {
+    MPM.addPass(std::move(MIWP));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        std::move(FPM), PTO.EagerlyInvalidateAnalyses));
+  } else {
+    CGPipeline.addPass(createCGSCCToFunctionPassAdaptor(
+        std::move(FPM), PTO.EagerlyInvalidateAnalyses));
+    MPM.addPass(std::move(MIWP));
+  }
 
   // Delete anything that is now dead to make sure that we don't instrument
   // dead code. Instrumentation can end up keeping dead code around and
@@ -1275,7 +1305,8 @@ PassBuilder::buildModuleSimplificationPipeline(OptimizationLevel Level,
                                       !InstrumentColdFuncOnlyPath.empty();
 
   if (IsPGOInstrGen || IsPGOInstrUse || IsMemprofUse || IsCtxProfGen ||
-      IsCtxProfUse || IsColdFuncOnlyInstrGen)
+      IsCtxProfUse || IsColdFuncOnlyInstrGen ||
+      (!PGOOpt && DiagnosticPreInlineWithoutProfile))
     addPreInlinerPasses(MPM, Level, Phase);
 
   // Add all the requested passes for instrumentation PGO, if requested.
