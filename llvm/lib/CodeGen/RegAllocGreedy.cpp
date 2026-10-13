@@ -90,13 +90,13 @@ static cl::opt<std::string> RegionTraceFunction(
     cl::desc("Emit region allocation analysis remarks for an exact function "
              "name, or * for all functions"));
 
-static cl::opt<std::string> RegionReplayReject(
-    "regalloc-region-replay-reject", cl::Hidden, cl::init(""),
-    cl::desc("Diagnostic: reject one accepted region only if its recorded key matches"));
+static cl::list<std::string> RegionReplayReject(
+    "regalloc-region-replay-reject", cl::Hidden, cl::CommaSeparated,
+    cl::desc("Diagnostic: reject accepted regions with ordered exact keys"));
 
 namespace {
-thread_local uint64_t RegionReplayDecision = 0;
-thread_local unsigned RegionReplayApplied = 0;
+thread_local SmallVector<uint64_t, 4> RegionReplayDecisions;
+thread_local SmallVector<unsigned, 4> RegionReplayApplied;
 struct RegionTrace {
   MachineOptimizationRemarkEmitter *ORE;
   MachineFunction *MF;
@@ -1439,8 +1439,9 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
     return MCRegister::NoRegister;
   }
 
-  if (!RegionReplayReject.empty() && TraceEnabled &&
-      Trace.ID == RegionReplayDecision) {
+  for (size_t I = 0; TraceEnabled && I != RegionReplayDecisions.size(); ++I) {
+    if (Trace.ID != RegionReplayDecisions[I])
+      continue;
     std::string Key;
     raw_string_ostream OS(Key);
     OS << Trace.ID << '/' << Trace.VReg << '/' << Trace.Original << '/'
@@ -1449,9 +1450,9 @@ MCRegister RAGreedy::tryRegionSplit(const LiveInterval &VirtReg,
        << '/' << SpillCost.getFrequency() << '/' << BestCost.getFrequency()
        << '/' << unsigned(HasCompact) << '/' << unsigned(ExtraCompactBundles)
        << '/' << SA->getUseBlocks().size();
-    if (BestCand == NoCand || Key != RegionReplayReject)
+    if (BestCand == NoCand || Key != RegionReplayReject[I])
       report_fatal_error("region replay rejection key mismatch");
-    if (++RegionReplayApplied != 1)
+    if (++RegionReplayApplied[I] != 1)
       report_fatal_error("region replay applied more than once");
     Trace.emit("RegionReplay",
                {NV("Action", "reject-accepted-region"), NV("Key", Key)});
@@ -3286,9 +3287,18 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (!RegionReplayReject.empty()) {
     if (RegionTraceFunction.empty() || RegionTraceFunction == "*")
       report_fatal_error("region replay requires an exact trace function");
-    if (StringRef(RegionReplayReject).split('/').first.getAsInteger(
-            10, RegionReplayDecision))
-      report_fatal_error("region replay requires a numeric decision ID");
+    if (RegionReplayDecisions.empty()) {
+      for (const std::string &Key : RegionReplayReject) {
+        uint64_t Decision;
+        if (StringRef(Key).split('/').first.getAsInteger(10, Decision))
+          report_fatal_error("region replay requires a numeric decision ID");
+        if (!RegionReplayDecisions.empty() &&
+            Decision <= RegionReplayDecisions.back())
+          report_fatal_error("region replay requires strictly increasing decision IDs");
+        RegionReplayDecisions.push_back(Decision);
+        RegionReplayApplied.push_back(0);
+      }
+    }
   }
   bool ReplayFunction = !RegionReplayReject.empty() &&
                         RegionTraceFunction == MF->getName();
@@ -3344,10 +3354,12 @@ bool RAGreedy::run(MachineFunction &mf) {
   SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
   // A later target can belong to a subsequent allocator pass (e.g. VGPRs).
-  // External replay validation must also require exactly one override receipt.
-  if (ReplayFunction && NextRegionTraceID.load() > RegionReplayDecision &&
-      RegionReplayApplied != 1)
-    report_fatal_error("region replay did not reach the selected accepted region");
+  // External validation must require exactly one receipt for each requested key.
+  if (ReplayFunction)
+    for (size_t I = 0; I != RegionReplayDecisions.size(); ++I)
+      if (NextRegionTraceID.load() > RegionReplayDecisions[I] &&
+          RegionReplayApplied[I] != 1)
+        report_fatal_error("region replay did not reach the selected accepted region");
   tryHintsRecoloring();
 
   if (VerifyEnabled)
