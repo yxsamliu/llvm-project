@@ -210,6 +210,18 @@ static cl::opt<bool> SpillRecoveryApply("regalloc-spill-recovery-apply",
                                         cl::Hidden, cl::init(false));
 static thread_local unsigned SpillRecoveryApplied = 0;
 
+// Diagnostic eligibility experiment, independent of request identity.
+// Each allocator invocation owns a finite set of entry roots. Splitting
+// consumes a root before mutation; descendants cannot replenish the set.
+static cl::opt<bool> SpillRecoveryBounded("regalloc-spill-recovery-bounded",
+                                          cl::Hidden, cl::init(false));
+struct SpillRecoveryRunState {
+  DenseSet<Register> RemainingRoots;
+  unsigned InitialRoots = 0;
+  unsigned Applied = 0;
+};
+static thread_local SpillRecoveryRunState *ActiveSpillRecoveryRun = nullptr;
+
 static cl::opt<bool> TraceGapQuery("regalloc-gap-query", cl::Hidden, cl::init(false));
 static cl::opt<int> GapQueryBlock("regalloc-gap-query-block", cl::Hidden, cl::init(-1));
 
@@ -3910,7 +3922,8 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
   NamedRegionTimer T("spill", "Spiller", TimerGroupName,
                      TimerGroupDescription, TimePassesIsEnabled);
   bool RecoveredSpill = false;
-  if (TraceSpillRecoveryQuery && RegionTraceFunction == MF->getName()) {
+  if (SpillRecoveryBounded ||
+      (TraceSpillRecoveryQuery && RegionTraceFunction == MF->getName())) {
     Register Reg = VirtReg.reg();
     const TargetRegisterClass *RC = MRI->getRegClass(Reg);
     unsigned CopyOp = TII->getLiveRangeSplitOpcode(Reg, *MF);
@@ -4063,24 +4076,46 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
              << " local_options=" << LocalOptions.size()
              << " alternate_options=" << AltOptions.size() << " pairs=" << Pairs
              << '\n';
-      if (SpillRecoveryGuard.empty() || !Pairs)
+      if (!Pairs || (!SpillRecoveryBounded && SpillRecoveryGuard.empty()))
         return "supported";
+      if (SpillRecoveryBounded) {
+        if (Stage != RS_Spill || Depth || !NewVRegs.empty())
+          return "unsupported-allocation-context";
+        if (Whole)
+          return "whole-register-available";
+        Register Root = VRM->getOriginal(Reg);
+        if (!ActiveSpillRecoveryRun ||
+            !ActiveSpillRecoveryRun->RemainingRoots.contains(Root))
+          return "root-not-available";
+        ActiveSpillRecoveryRun->RemainingRoots.erase(Root);
+        if (++ActiveSpillRecoveryRun->Applied >
+            ActiveSpillRecoveryRun->InitialRoots)
+          report_fatal_error("spill recovery exceeded entry-root bound");
+        errs() << "SPILLRECOVERY bounded root=" << Root.virtRegIndex()
+               << " remaining=" << ActiveSpillRecoveryRun->RemainingRoots.size()
+               << " applied=" << ActiveSpillRecoveryRun->Applied << '\n';
+      }
       std::string Key;
       raw_string_ostream K(Key);
       K << Reg.virtRegIndex() << ':' << VRM->getOriginal(Reg).virtRegIndex()
         << ':' << unsigned(Stage) << ':' << MBB->getNumber() << ':' << First
         << ':' << Last << ':' << Accesses.size() << ':' << Reads << ':'
         << Writes;
-      if (Key != SpillRecoveryGuard || Depth || !NewVRegs.empty())
-        report_fatal_error("spill recovery exact request guard mismatch");
-      errs() << "SPILLRECOVERY guard key=" << Key << '\n';
-      if (!SpillRecoveryApply)
-        return "supported";
+      if (!SpillRecoveryBounded) {
+        if (Key != SpillRecoveryGuard || Depth || !NewVRegs.empty())
+          report_fatal_error("spill recovery exact request guard mismatch");
+        errs() << "SPILLRECOVERY guard key=" << Key << '\n';
+        if (!SpillRecoveryApply)
+          return "supported";
+        if (++SpillRecoveryApplied != 1)
+          report_fatal_error("spill recovery applied more than once");
+      } else {
+        // Identity is an audit receipt, never a selection predicate.
+        errs() << "SPILLRECOVERY selected key=" << Key << '\n';
+      }
 
-      // This bounded diagnostic consumes the witnessed pair immediately.
-      // It deliberately does not make descendants eligible for another split.
-      if (++SpillRecoveryApplied != 1)
-        report_fatal_error("spill recovery applied more than once");
+      // Consume the witnessed pair immediately and retain native spill
+      // fallback.
       MCPhysReg LocalPhys = 0, AltPhys = 0;
       for (MCPhysReg P : LocalOptions) {
         for (MCPhysReg Q : AltOptions)
@@ -4183,6 +4218,18 @@ MCRegister RAGreedy::selectOrSplitImpl(const LiveInterval &VirtReg,
       }
       if (Locals != 1 || Prefixes != 1 || Tails != 1)
         report_fatal_error("spill recovery incomplete interval partition");
+      if (SpillRecoveryBounded) {
+        Register Root = VRM->getOriginal(Reg);
+        if (ActiveSpillRecoveryRun->RemainingRoots.contains(Root))
+          report_fatal_error("spill recovery root allowance was replenished");
+        for (Register R : Products)
+          if (VRM->getOriginal(R) != Root ||
+              ActiveSpillRecoveryRun->RemainingRoots.contains(
+                  VRM->getOriginal(R)))
+            report_fatal_error("spill recovery descendant regained allowance");
+        errs() << "SPILLRECOVERY bound-check root=" << Root.virtRegIndex()
+               << " descendants=" << Products.size() << " eligible=0\n";
+      }
       for (auto [MO, Def] : OriginalOperands)
         if (MO->getReg() != LocalReg || MO->isDef() != Def)
           report_fatal_error("spill recovery changed original access identity");
@@ -4434,6 +4481,9 @@ bool RAGreedy::run(MachineFunction &mf) {
                     << "********** Function: " << mf.getName() << '\n');
 
   MF = &mf;
+  if (SpillRecoveryBounded &&
+      (SpillRecoveryApply || !SpillRecoveryGuard.empty()))
+    report_fatal_error("choose bounded eligibility or exact recovery");
   if (SpillRecoveryApply &&
       (!TraceSpillRecoveryQuery || SpillRecoveryGuard.empty()))
     report_fatal_error("spill recovery requires query and exact guard");
@@ -4465,6 +4515,18 @@ bool RAGreedy::run(MachineFunction &mf) {
   // physical register.
   if (!hasVirtRegAlloc())
     return false;
+
+  SpillRecoveryRunState RecoveryRun;
+  SaveAndRestore<SpillRecoveryRunState *> RecoveryScope(ActiveSpillRecoveryRun,
+                                                        &RecoveryRun);
+  if (SpillRecoveryBounded) {
+    for (unsigned I = 0, E = MRI->getNumVirtRegs(); I != E; ++I)
+      RecoveryRun.RemainingRoots.insert(
+          VRM->getOriginal(Register::index2VirtReg(I)));
+    RecoveryRun.InitialRoots = RecoveryRun.RemainingRoots.size();
+    errs() << "SPILLRECOVERY scope function=" << MF->getName()
+           << " roots=" << RecoveryRun.InitialRoots << '\n';
+  }
 
   // Renumber to get accurate and consistent results from
   // SlotIndexes::getApproxInstrDistance.
@@ -4506,6 +4568,11 @@ bool RAGreedy::run(MachineFunction &mf) {
     errs() << "PGO_LINEAGE_BEGIN\t1\t" << MF->getName() << '\n';
   SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
+  if (SpillRecoveryBounded)
+    errs() << "SPILLRECOVERY scope-end function=" << MF->getName()
+           << " roots=" << RecoveryRun.InitialRoots
+           << " remaining=" << RecoveryRun.RemainingRoots.size()
+           << " applied=" << RecoveryRun.Applied << '\n';
   // A later target can belong to a subsequent allocator pass (e.g. VGPRs).
   // External replay validation must also require exactly one override receipt.
   if (ReplayFunction && NextRegionTraceID.load() > RegionReplayDecision &&
