@@ -169,6 +169,11 @@ static cl::opt<std::string> EvictionFallbackKey(
 static cl::opt<bool> EvictionFallbackApply(
     "regalloc-eviction-fallback-apply", cl::Hidden, cl::init(false));
 static thread_local unsigned EvictionFallbackObserved = 0;
+static cl::opt<std::string> EvictionFallbackSecondKey(
+    "regalloc-eviction-fallback-second-key", cl::Hidden, cl::init(""));
+static cl::opt<bool> EvictionFallbackSecondApply(
+    "regalloc-eviction-fallback-second-apply", cl::Hidden, cl::init(false));
+static thread_local unsigned EvictionFallbackSecondObserved = 0;
 
 static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
 
@@ -974,7 +979,8 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
 
   MCRegister BestPhys = EvictAdvisor->tryFindEvictionCandidate(
       VirtReg, Order, CostPerUseLimit, FixedRegisters);
-  if (BestPhys.isValid() && !EvictionFallbackKey.empty() &&
+  if (BestPhys.isValid() &&
+      (!EvictionFallbackKey.empty() || !EvictionFallbackSecondKey.empty()) &&
       RegionTraceFunction == MF->getName()) {
     std::string Key;
     raw_string_ostream OS(Key);
@@ -984,7 +990,17 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
        << TRI->getRegClassName(MRI->getRegClass(VirtReg.reg())) << ':'
        << printReg(BestPhys, TRI) << ':';
     OS.flush();
-    if (StringRef(EvictionFallbackKey).starts_with(Key)) {
+    bool First = StringRef(EvictionFallbackKey).starts_with(Key);
+    bool Second = StringRef(EvictionFallbackSecondKey).starts_with(Key);
+    if (First && Second)
+      report_fatal_error("ambiguous eviction fallback keys");
+    if (First || Second) {
+      StringRef Expected = First ? StringRef(EvictionFallbackKey)
+                                 : StringRef(EvictionFallbackSecondKey);
+      unsigned &Observed = First ? EvictionFallbackObserved
+                                 : EvictionFallbackSecondObserved;
+      bool Apply = First ? bool(EvictionFallbackApply)
+                         : bool(EvictionFallbackSecondApply);
       auto WeightBits = [](const LiveInterval &LI) {
         float Weight = LI.weight();
         uint32_t Bits;
@@ -1009,12 +1025,14 @@ MCRegister RAGreedy::tryEvict(const LiveInterval &VirtReg,
            << unsigned(ExtraInfo->getStage(*LI)) << '/' << WeightBits(*LI)
            << ',';
       OS.flush();
-      if (Key != EvictionFallbackKey || !NewVRegs.empty() ||
-          CostPerUseLimit != uint8_t(~0u) || ++EvictionFallbackObserved != 1)
+      if (Key != Expected || !NewVRegs.empty() ||
+          CostPerUseLimit != uint8_t(~0u) ||
+          (Second && (EvictionFallbackObserved != 1 || !EvictionFallbackApply)) ||
+          ++Observed != 1)
         report_fatal_error("eviction fallback state mismatch");
       errs() << "EVICTIONFALLBACK key=" << Key
-             << " apply=" << EvictionFallbackApply << '\n';
-      if (EvictionFallbackApply)
+             << " apply=" << Apply << '\n';
+      if (Apply)
         return MCRegister();
     }
   }
