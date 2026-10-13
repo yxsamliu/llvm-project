@@ -26,6 +26,7 @@
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -662,7 +663,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
     return false;
 
   // Early exit if no AGPRs were assigned.
-  if (!LRM.isPhysRegUsed(AMDGPU::AGPR0)) {
+  if (llvm::none_of(AMDGPU::AGPR_32RegClass.getRegisters(),
+                    [&](MCPhysReg Reg) { return LRM.isPhysRegUsed(Reg); })) {
     LLVM_DEBUG(dbgs() << "skipping function that did not allocate AGPRs\n");
     return false;
   }
