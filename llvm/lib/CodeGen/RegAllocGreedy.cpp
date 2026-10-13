@@ -13,6 +13,7 @@
 
 #include "RegAllocGreedy.h"
 #include <cstring>
+#include <fstream>
 #include "AllocationOrder.h"
 #include "InterferenceCache.h"
 #include "RegAllocBase.h"
@@ -156,6 +157,25 @@ thread_local RegionTrace *ActiveRegionTrace = nullptr;
 std::atomic<uint64_t> NextRegionTraceID{0};
 } // namespace
 
+
+
+// Exact-entry causal diagnostic. Overrides only seed priorities; later queue
+// operations and all interval weights retain their native implementation.
+static cl::opt<std::string> OrdinaryPriorityFile(
+    "regalloc-ordinary-priority-file", cl::Hidden, cl::init(""));
+static cl::opt<unsigned> OrdinaryPriorityInvocation(
+    "regalloc-ordinary-priority-invocation", cl::Hidden, cl::init(3));
+struct OrdinaryPriorityEntry {
+  unsigned Root, Native, Replacement, Size, Bits;
+  std::string Hint, Class;
+};
+struct OrdinaryPriorityRun {
+  DenseMap<unsigned, OrdinaryPriorityEntry> Remaining;
+  unsigned Expected = 0, Applied = 0, Changed = 0;
+  bool Seeding = true;
+};
+static thread_local OrdinaryPriorityRun *ActiveOrdinaryPriority = nullptr;
+static thread_local unsigned OrdinaryPrioritySeen = 0;
 
 static cl::opt<bool> TraceOrdinaryDecision("regalloc-ordinary-decision-trace", cl::Hidden, cl::init(false));
 
@@ -645,6 +665,32 @@ void RAGreedy::enqueue(PQueue &CurQueue, const LiveInterval *LI) {
   }
 
   unsigned Ret = PriorityAdvisor->getPriority(*LI);
+  if (ActiveOrdinaryPriority && ActiveOrdinaryPriority->Seeding) {
+    auto &R = *ActiveOrdinaryPriority;
+    auto I = R.Remaining.find(Reg.virtRegIndex());
+    if (&CurQueue != &Queue || I == R.Remaining.end())
+      report_fatal_error("ordinary priority replay unexpected initial register");
+    const auto &E = I->second;
+    std::string Hint;
+    raw_string_ostream OS(Hint);
+    OS << printReg(MRI->getSimpleHint(Reg), TRI);
+    float Weight = LI->weight();
+    uint32_t Bits;
+    std::memcpy(&Bits, &Weight, sizeof(Bits));
+    if (Stage != RS_Assign ||
+        E.Root != VRM->getOriginal(Reg).virtRegIndex() ||
+        E.Native != Ret || E.Size != LI->getSize() || E.Bits != Bits ||
+        E.Hint != OS.str() ||
+        E.Class != TRI->getRegClassName(MRI->getRegClass(Reg)))
+      report_fatal_error("ordinary priority replay entry fingerprint mismatch");
+    errs() << "PRIORITYREPLAY apply reg=" << Reg.virtRegIndex()
+           << " native=" << Ret << " replacement=" << E.Replacement << "\n";
+    R.Changed += Ret != E.Replacement;
+    Ret = E.Replacement;
+    ++R.Applied;
+    R.Remaining.erase(I);
+  }
+
 
   // The virtual register number is a tie breaker for same-sized ranges.
   // Give lower vreg numbers higher priority to assign them first.
@@ -738,6 +784,15 @@ unsigned DummyPriorityAdvisor::getPriority(const LiveInterval &LI) const {
 const LiveInterval *RAGreedy::dequeue() { return dequeue(Queue); }
 
 const LiveInterval *RAGreedy::dequeue(PQueue &CurQueue) {
+  if (ActiveOrdinaryPriority && ActiveOrdinaryPriority->Seeding) {
+    auto &R = *ActiveOrdinaryPriority;
+    if (&CurQueue != &Queue || !R.Remaining.empty() || R.Applied != R.Expected)
+      report_fatal_error("ordinary priority replay incomplete seed population");
+    R.Seeding = false;
+    errs() << "PRIORITYREPLAY seeded applied=" << R.Applied
+           << " changed=" << R.Changed << "\n";
+  }
+
   if (CurQueue.empty())
     return nullptr;
   LiveInterval *LI = &LIS->getInterval(~CurQueue.top().second);
@@ -4577,6 +4632,33 @@ bool RAGreedy::run(MachineFunction &mf) {
                                             *VRM, *VRAI, Matrix));
 
   VRAI->calculateSpillWeightsAndHints();
+  OrdinaryPriorityRun PriorityRun;
+  SaveAndRestore<OrdinaryPriorityRun *> PriorityScope(ActiveOrdinaryPriority,
+                                                     nullptr);
+  if (!OrdinaryPriorityFile.empty()) {
+    if (RegionTraceFunction.empty() || RegionTraceFunction == "*")
+      report_fatal_error("ordinary priority replay requires an exact function");
+    if (RegionTraceFunction == MF->getName() &&
+        ++OrdinaryPrioritySeen == OrdinaryPriorityInvocation) {
+      std::ifstream Input(OrdinaryPriorityFile.getValue());
+      if (!Input)
+        report_fatal_error("cannot open ordinary priority replay file");
+      unsigned Reg;
+      OrdinaryPriorityEntry E;
+      while (Input >> Reg >> E.Root >> E.Native >> E.Replacement >>
+             E.Size >> E.Bits >> E.Hint >> E.Class) {
+        if (!PriorityRun.Remaining.try_emplace(Reg, E).second)
+          report_fatal_error("duplicate ordinary priority replay register");
+      }
+      if (!Input.eof() || PriorityRun.Remaining.empty())
+        report_fatal_error("invalid ordinary priority replay input");
+      PriorityRun.Expected = PriorityRun.Remaining.size();
+      ActiveOrdinaryPriority = &PriorityRun;
+      errs() << "PRIORITYREPLAY scope invocation=" << OrdinaryPrioritySeen
+             << " expected=" << PriorityRun.Expected << "\n";
+    }
+  }
+
 
   if (TraceOrdinaryFixed && RegionTraceFunction == MF->getName()) {
 
@@ -4649,6 +4731,14 @@ bool RAGreedy::run(MachineFunction &mf) {
     errs() << "PGO_LINEAGE_BEGIN\t1\t" << MF->getName() << '\n';
   SaveAndRestore<bool> LineageScope(ActivePGOSpillLineage, traceSpillLineage(*MF));
   allocatePhysRegs();
+  if (ActiveOrdinaryPriority) {
+    if (PriorityRun.Seeding || !PriorityRun.Remaining.empty() ||
+        PriorityRun.Applied != PriorityRun.Expected)
+      report_fatal_error("ordinary priority replay incomplete at exit");
+    errs() << "PRIORITYREPLAY end applied=" << PriorityRun.Applied
+           << " changed=" << PriorityRun.Changed << "\n";
+  }
+
   if (SpillRecoveryBounded)
     errs() << "SPILLRECOVERY scope-end function=" << MF->getName()
            << " roots=" << RecoveryRun.InitialRoots
