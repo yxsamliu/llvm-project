@@ -60,6 +60,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
+static cl::opt<std::string> EntryRematTraceFunction("entry-remat-trace-function", cl::Hidden, cl::init(""));
+
 STATISTIC(NumSpilledRanges,   "Number of spilled live ranges");
 STATISTIC(NumSnippets,        "Number of spilled snippets");
 STATISTIC(NumSpills,          "Number of spills inserted");
@@ -672,6 +674,37 @@ bool InlineSpiller::hasPhysRegAvailable(const MachineInstr &MI) {
 
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
+  const bool TraceEntry = !EntryRematTraceFunction.empty() &&
+      MI.getMF()->getName() == EntryRematTraceFunction &&
+      Original == Register::index2VirtReg(16891);
+  auto Trace = [&](const char *Reason, MachineInstr *Def = nullptr) {
+    if (!TraceEntry) return;
+    errs() << "ENTRY_REMAT reason=" << Reason << " original="
+           << printReg(Original, &TRI) << " reg=" << printReg(VirtReg.reg(), &TRI)
+           << " bb=" << MI.getParent()->getNumber() << " use="
+           << LIS.getInstructionIndex(MI) << " MI=" << MI;
+    if (!Def) return;
+    errs() << "ENTRY_REMAT def=" << *Def;
+    errs() << "ENTRY_REMAT targetRemat=" << TII.isReMaterializable(*Def) << "\n";
+    SlotIndex OI = LIS.getInstructionIndex(*Def).getRegSlot(true);
+    SlotIndex UI = LIS.getInstructionIndex(MI).getRegSlot(true);
+    for (const auto &MO : Def->operands()) {
+      if (!MO.isReg() || !MO.getReg() || !MO.readsReg()) continue;
+      errs() << "ENTRY_REMAT operand=" << MO << " origIdx=" << OI << " useIdx=" << UI;
+      if (MO.getReg().isVirtual()) {
+        const auto &L = LIS.getInterval(MO.getReg());
+        const auto *OV = L.getVNInfoAt(OI), *UV = L.getVNInfoAt(UI);
+        errs() << " origVNI=" << (OV ? int(OV->id) : -1)
+               << " useVNI=" << (UV ? int(UV->id) : -1) << " LI=" << L;
+      } else {
+        errs() << " constant=" << MRI.isConstantPhysReg(MO.getReg())
+               << " ignorable=" << TII.isIgnorableUse(*Def, Def->getOperandNo(&MO));
+      }
+      errs() << "\n";
+    }
+  };
+  Trace("attempt");
+
   // Analyze instruction
   SmallVector<std::pair<MachineInstr *, unsigned>, 8> Ops;
   VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, VirtReg.reg(), &Ops);
@@ -679,6 +712,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Defs without reads will be deleted if unused after remat is
   // completed for other users of the virtual register.
   if (!RI.Reads) {
+    Trace("def-no-read");
     LLVM_DEBUG(dbgs() << "\tskipping remat of def " << MI);
     return false;
   }
@@ -698,6 +732,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Snippets copies are ignored for remat, and will be deleted if they
   // don't feed a live user after rematerialization completes.
   if (SnippetCopies.count(&MI)) {
+    Trace("snippet-copy");
     LLVM_DEBUG(dbgs() << "\tskipping remat snippet copy for " << UseIdx << '\t'
                       << MI);
     return false;
@@ -746,6 +781,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
                         << *DefMI);
     }
     if (!DefMI) {
+      Trace("missing-def");
       markValueUsed(&VirtReg, ParentVNI);
       LLVM_DEBUG(dbgs() << "\tcannot remat missing def for " << UseIdx << '\t'
                         << MI);
@@ -756,6 +792,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   LiveRangeEdit::Remat RM(ParentVNI);
   RM.OrigMI = DefMI;
   if (!Edit->canRematerializeAt(RM, UseIdx)) {
+    Trace("cannot-remat-at", DefMI);
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;
@@ -764,6 +801,7 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // If the instruction also writes VirtReg.reg, it had better not require the
   // same register for uses and defs.
   if (RI.Tied) {
+    Trace("tied", DefMI);
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat tied reg: " << UseIdx << '\t' << MI);
     return false;
@@ -782,12 +820,14 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // If we can't guarantee that we'll be able to actually assign the new vreg,
   // we can't remat.
   if (!canGuaranteeAssignmentAfterRemat(VirtReg.reg(), MI)) {
+    Trace("assignment", DefMI);
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;
   }
 
   // Allocate a new register for the remat.
+  Trace("rematerialize", DefMI);
   Register NewVReg = Edit->createFrom(Original);
 
   // Constrain it to the register class of MI.

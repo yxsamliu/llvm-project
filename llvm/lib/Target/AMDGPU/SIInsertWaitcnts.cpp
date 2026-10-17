@@ -31,6 +31,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -3475,6 +3476,410 @@ SIInsertWaitcntsPass::run(MachineFunction &MF,
       .preserve<AAManager>();
 }
 
+
+static cl::opt<bool> CacheInvariantScalarLoads(
+    "amdgpu-cache-invariant-scalar-loads", cl::Hidden, cl::init(false));
+static cl::opt<bool> TraceInvariantScalarLoads(
+    "amdgpu-trace-invariant-scalar-loads", cl::Hidden, cl::init(false));
+
+static bool cacheInvariantScalarLoads(MachineFunction &MF) {
+  if (!CacheInvariantScalarLoads && !TraceInvariantScalarLoads)
+    return false;
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  // This experiment is qualified only for gfx950 entry functions. Frame and
+  // WWM lowering have finished; keep the owner's global reservation intact.
+  if (!ST.hasGFX950Insts() || ST.isWave32() || !MFI->isEntryFunction() ||
+      !MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::TracksLiveness) ||
+      !MF.getProperties().hasProperty(
+          MachineFunctionProperties::Property::NoVRegs))
+    return false;
+  MCRegister Cache = MFI->getSGPRForEXECCopy();
+  if (!Cache || !AMDGPU::SGPR_64RegClass.contains(Cache) ||
+      TRI->getHWRegIndex(Cache) + 2 > ST.getMaxNumSGPRs(MF) ||
+      (MFI->getLongBranchReservedReg() &&
+       TRI->regsOverlap(MFI->getLongBranchReservedReg(), Cache)))
+    return false;
+  const MCRegister CacheWords[] = {TRI->getSubReg(Cache, AMDGPU::sub0),
+                                  TRI->getSubReg(Cache, AMDGPU::sub1)};
+  struct Candidate {
+    MachineInstr *Load;
+    MachineOperand *Use;
+    MCRegister Replacement;
+  };
+  bool Modified = false;
+  for (MachineBasicBlock &MBB : MF) {
+    LivePhysRegs Live(*TRI);
+    Live.addLiveOuts(MBB);
+    bool Available = true;
+    for (MCRegAliasIterator R(Cache, TRI, true); R.isValid(); ++R)
+      Available &= !Live.contains(*R);
+    for (MachineInstr &MI : MBB.instrs())
+      Available &= !MI.readsRegister(Cache, TRI) &&
+                   !MI.modifiesRegister(Cache, TRI) && !MI.isCall() &&
+                   !MI.isInlineAsm();
+    if (!Available)
+      continue;
+    SmallVector<SmallVector<Candidate>> Groups;
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (MI.isTerminator())
+        break;
+      if ((MI.getOpcode() != AMDGPU::S_LOAD_DWORDX2_IMM_ec &&
+           MI.getOpcode() != AMDGPU::S_LOAD_DWORDX2_IMM) || MI.isBundled() ||
+          !MI.hasOneMemOperand() ||
+          MI.getNumOperands() != MI.getDesc().getNumOperands())
+        continue;
+      MachineOperand &Dst = MI.getOperand(0);
+      MachineOperand &Base = MI.getOperand(1);
+      const MachineMemOperand *MMO = *MI.memoperands_begin();
+      if (!Dst.isReg() || !Dst.isDef() || !Dst.isRenamable() ||
+          Dst.getSubReg() || !AMDGPU::SGPR_64RegClass.contains(Dst.getReg()) ||
+          !Base.isReg() || Base.getSubReg() ||
+          !AMDGPU::SGPR_64RegClass.contains(Base.getReg()) ||
+          !MMO->isLoad() || !MMO->isInvariant() || MMO->isVolatile() ||
+          MMO->isAtomic() || MMO->getSize() != LocationSize::precise(8))
+        continue;
+      // Whole-block address stability makes all group members the same value.
+      bool StableBase = true;
+      for (MachineInstr &Other : MBB.instrs())
+        StableBase &= !Other.modifiesRegister(Base.getReg(), TRI);
+      if (!StableBase)
+        continue;
+      MachineOperand NewDst = MachineOperand::CreateReg(Cache, true);
+      if (!TII->isOperandLegal(MI, 0, &NewDst))
+        continue;
+      const MCRegister Words[] = {TRI->getSubReg(Dst.getReg(), AMDGPU::sub0),
+                                  TRI->getSubReg(Dst.getReg(), AMDGPU::sub1)};
+      bool Alive[] = {true, true};
+      bool Valid = true;
+      SmallVector<std::pair<MachineOperand *, MCRegister>> Uses;
+      for (auto It = std::next(MI.getIterator()), E = MBB.instr_end(); It != E;
+           ++It) {
+        MachineInstr &Next = *It;
+        // No path may exit with an eliminated destination value.
+        if (Next.isTerminator() || Next.isCall() || Next.isInlineAsm()) {
+          Valid = false;
+          break;
+        }
+        for (unsigned OpNo = 0; OpNo != Next.getNumOperands(); ++OpNo) {
+          MachineOperand &MO = Next.getOperand(OpNo);
+          if (!MO.isReg() || !MO.isUse() || !MO.getReg())
+            continue;
+          for (unsigned Word = 0; Word != 2; ++Word) {
+            if (!Alive[Word] || !TRI->regsOverlap(MO.getReg(), Words[Word]))
+              continue;
+            // VALU sources deliberately have !isRenamable for constant-bus
+            // constraints. Only this explicitly understood source pattern is
+            // admitted; do not generalize this exception to arbitrary opcodes.
+            int Src0 = AMDGPU::getNamedOperandIdx(Next.getOpcode(),
+                                                 AMDGPU::OpName::src0);
+            int Src1 = AMDGPU::getNamedOperandIdx(Next.getOpcode(),
+                                                 AMDGPU::OpName::src1);
+            if (Next.isBundled() ||
+                Next.getOpcode() != AMDGPU::V_MUL_LO_U32_e64 ||
+                MO.isImplicit() || MO.isTied() || MO.isUndef() ||
+                MO.getSubReg() || MO.getReg() != Words[Word] ||
+                (int(OpNo) != Src0 && int(OpNo) != Src1)) {
+              Valid = false;
+              continue;
+            }
+            const MachineOperand &Other =
+                Next.getOperand(int(OpNo) == Src0 ? Src1 : Src0);
+            MachineOperand Replacement =
+                MachineOperand::CreateReg(CacheWords[Word], false);
+            if (!Other.isReg() || Other.getSubReg() ||
+                !AMDGPU::VGPR_32RegClass.contains(Other.getReg()) ||
+                !TII->isOperandLegal(Next, OpNo, &Replacement)) {
+              Valid = false;
+              continue;
+            }
+            Uses.emplace_back(&MO, CacheWords[Word]);
+          }
+        }
+        for (unsigned Word = 0; Word != 2; ++Word)
+          Alive[Word] &= !Next.modifiesRegister(Words[Word], TRI);
+        if (!Valid || (!Alive[0] && !Alive[1]))
+          break;
+      }
+      if (!Valid || Alive[0] || Alive[1] || Uses.size() != 1)
+        continue;
+      Candidate C{&MI, Uses[0].first, Uses[0].second};
+      auto SameValue = [&](const SmallVector<Candidate> &G) {
+        const MachineInstr &First = *G.front().Load;
+        if (First.getNumOperands() != MI.getNumOperands())
+          return false;
+        for (unsigned I = 1; I != MI.getNumOperands(); ++I)
+          if (!First.getOperand(I).isIdenticalTo(MI.getOperand(I)))
+            return false;
+        return true;
+      };
+      auto Group = llvm::find_if(Groups, SameValue);
+      if (Group == Groups.end())
+        Groups.push_back({C});
+      else
+        Group->push_back(C);
+    }
+    if (Groups.empty())
+      continue;
+    auto Best = llvm::max_element(Groups, [](const auto &A, const auto &B) {
+      return A.size() < B.size();
+    });
+    if (Best->size() < 2)
+      continue;
+    if (TraceInvariantScalarLoads)
+      errs() << "CACHE_GENERIC function=" << MF.getName()
+             << " block=" << MBB.getNumber() << " name=" << MBB.getName()
+             << " cache=" << printReg(Cache, TRI)
+             << " offset="
+             << TII->getNamedOperand(*Best->front().Load,
+                                    AMDGPU::OpName::offset)->getImm()
+             << " eligible=" << Best->size()
+             << " enabled=" << CacheInvariantScalarLoads << "\n";
+    if (!CacheInvariantScalarLoads)
+      continue;
+    Best->front().Load->getOperand(0).setReg(Cache);
+    Best->front().Load->getOperand(0).setIsDead(false);
+    for (Candidate &C : *Best) {
+      C.Use->setReg(C.Replacement);
+      C.Use->setIsKill(false);
+    }
+    for (Candidate &C : drop_begin(*Best))
+      C.Load->eraseFromParent();
+    Modified = true;
+  }
+  return Modified;
+}
+
+
+static cl::opt<std::string> LateSinkEntriesFunction(
+    "late-sink-entries-function", cl::Hidden, cl::init(""));
+
+static bool lateSinkEntries(MachineFunction &MF) {
+  if (MF.getName() != LateSinkEntriesFunction)
+    return false;
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
+  const auto *TRI = ST.getRegisterInfo();
+  const auto *TII = ST.getInstrInfo();
+  const auto *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  auto Reject = [&](StringRef Why) { errs() << "LATE_SINK reject=" << Why << "\n"; return false; };
+  if (!ST.hasGFX950Insts() || ST.isWave32() || !MFI->isEntryFunction() ||
+      !MF.getProperties().hasProperty(MachineFunctionProperties::Property::NoVRegs) ||
+      !MF.getProperties().hasProperty(MachineFunctionProperties::Property::TracksLiveness))
+    return Reject("target-or-properties");
+  MachineBasicBlock *Cold = nullptr;
+  for (auto &B : MF)
+    if (B.getName() == "Flow327") {
+      if (Cold) return Reject("ambiguous-region");
+      Cold = &B;
+    }
+  if (!Cold) return Reject("missing-region");
+  MachineDominatorTree MDT(MF);
+  SmallPtrSet<MachineBasicBlock *, 32> Ancestors;
+  SmallVector<MachineBasicBlock *, 32> Work{Cold};
+  while (!Work.empty()) {
+    auto *B = Work.pop_back_val();
+    if (Ancestors.insert(B).second)
+      for (auto *P : B->predecessors()) Work.push_back(P);
+  }
+  SmallPtrSet<MachineBasicBlock *, 32> Reached;
+  Work.append(Cold->succ_begin(), Cold->succ_end());
+  while (!Work.empty()) {
+    auto *B = Work.pop_back_val();
+    if (B == Cold) return Reject("region-reentered");
+    if (Reached.insert(B).second)
+      for (auto *S : B->successors()) Work.push_back(S);
+  }
+  MCRegister Base = AMDGPU::SGPR0_SGPR1;
+  MCRegister Carrier = AMDGPU::VGPR246;
+  MCRegister Scratch = MFI->getSGPRForEXECCopy();
+  if (!Scratch || !AMDGPU::SGPR_64RegClass.contains(Scratch) ||
+      TRI->getHWRegIndex(Scratch) + 2 > ST.getMaxNumSGPRs(MF) ||
+      TRI->regsOverlap(Scratch, Base) ||
+      (MFI->getLongBranchReservedReg() &&
+       TRI->regsOverlap(Scratch, MFI->getLongBranchReservedReg())))
+    return Reject("scratch-ownership");
+  LivePhysRegs Live(*TRI);
+  Live.addLiveOuts(*Cold);
+  for (auto &MI : llvm::reverse(Cold->instrs())) Live.stepBackward(MI);
+  for (MCRegAliasIterator A(Scratch, TRI, true); A.isValid(); ++A)
+    if (Live.contains(*A)) return Reject("scratch-live-at-region-entry");
+  for (auto *B : Ancestors)
+    for (auto &MI : B->instrs()) {
+      if (MI.isCall() || MI.isInlineAsm() || MI.isBundled())
+        return Reject("ancestor-barrier");
+      for (auto &MO : MI.operands())
+        if (MO.isReg() && MO.isDef() && MO.getReg() &&
+            TRI->regsOverlap(MO.getReg(), Base))
+          return Reject("argument-base-redefined");
+    }
+  // Exact workload guard; each entry is independently proved from operands.
+  const std::pair<unsigned, unsigned> Expected[] = {{4, 200}, {5, 204}, {6, 248}, {7, 252}, {8, 368}, {9, 372}, {10, 376}, {11, 380}, {12, 388}, {13, 392}, {14, 396}, {15, 400}, {16, 408}, {17, 412}, {18, 416}, {19, 420}, {20, 528}, {21, 532}, {22, 160}, {24, 188}, {25, 516}, {28, 588}, {29, 592}, {30, 596}, {32, 656}, {33, 660}, {34, 556}, {35, 560}, {36, 564}, {37, 568}, {38, 680}, {39, 684}, {40, 668}, {41, 672}};
+  DenseMap<unsigned, unsigned> Offsets;
+  for (auto P : Expected) Offsets[P.first] = P.second;
+  struct Fact { MachineInstr *Load = nullptr; unsigned Word = 0; };
+  auto WordIn = [&](MCRegister Tuple, MCRegister R) -> int {
+    if (Tuple == R) return 0;
+    for (unsigned I = 0; I != 16; ++I)
+      if (TRI->getSubReg(Tuple, SIRegisterInfo::getSubRegFromChannel(I)) == R)
+        return I;
+    return -1;
+  };
+  unsigned Budget = 0;
+  SmallPtrSet<MachineBasicBlock *, 32> Path;
+  std::function<Fact(MachineBasicBlock *, MachineBasicBlock::instr_iterator, MCRegister)> Find;
+  Find = [&](MachineBasicBlock *B, MachineBasicBlock::instr_iterator It, MCRegister R) -> Fact {
+    if (++Budget > 10000 || !Path.insert(B).second) return {};
+    auto Done = [&](Fact F) { Path.erase(B); return F; };
+    while (It != B->instr_begin()) {
+      auto &MI = *--It;
+      if (MI.isCall() || MI.isInlineAsm() || MI.isBundled()) return Done({});
+      bool Defines = llvm::any_of(MI.operands(), [&](const auto &MO) {
+        return MO.isReg() && MO.isDef() && !MO.isImplicit() && MO.getReg() &&
+               TRI->regsOverlap(MO.getReg(), R);
+      });
+      if (!Defines) continue;
+      if (!MI.getOperand(0).isReg()) return Done({});
+      int Word = WordIn(MI.getOperand(0).getReg(), R);
+      if (Word < 0) return Done({});
+      if (TII->getName(MI.getOpcode()).starts_with("S_LOAD_DWORD") &&
+          MI.getNumOperands() == 4 && MI.getOperand(1).isReg() &&
+          MI.getOperand(1).getReg() == Base && MI.getOperand(2).isImm() &&
+          MI.getOperand(3).isImm() && MI.getOperand(3).getImm() == 0 &&
+          MI.hasOneMemOperand()) {
+        auto *MMO = *MI.memoperands_begin();
+        if (MMO->isLoad() && MMO->isInvariant() && !MMO->isVolatile() &&
+            !MMO->isAtomic() && MMO->getSize().hasValue() &&
+            MMO->getSize().getValue() >= 4 * (Word + 1))
+          return Done({&MI, unsigned(Word)});
+      }
+      if ((MI.getOpcode() == AMDGPU::S_MOV_B32 || MI.getOpcode() == AMDGPU::S_MOV_B64) &&
+          MI.getOperand(1).isReg() && !MI.getOperand(1).getSubReg()) {
+        MCRegister Src = MI.getOperand(1).getReg();
+        R = AMDGPU::SGPR_32RegClass.contains(Src) ? Src :
+            TRI->getSubReg(Src, SIRegisterInfo::getSubRegFromChannel(Word));
+        if (R) continue;
+      }
+      return Done({});
+    }
+    Fact F;
+    for (auto *P : B->predecessors()) {
+      Fact PF = Find(P, P->instr_end(), R);
+      if (!PF.Load) return Done({});
+      if (!F.Load) F = PF;
+      else if (F.Load->getOperand(2).getImm() + 4 * F.Word !=
+               PF.Load->getOperand(2).getImm() + 4 * PF.Word)
+        return Done({});
+    }
+    return Done(F);
+  };
+  struct Item { MachineInstr *Store; Fact Value; unsigned Lane; };
+  SmallVector<Item, 34> Items;
+  DenseSet<unsigned> Found;
+  for (auto &B : MF) {
+    bool InRegion = MDT.dominates(Cold, &B);
+    for (auto &MI : B.instrs()) {
+      bool Reads = MI.readsRegister(Carrier, TRI);
+      bool Writes = MI.modifiesRegister(Carrier, TRI);
+      if (!Reads && !Writes) continue;
+      if (MI.isBundled() || MI.isCall() || MI.isInlineAsm()) return Reject("carrier-barrier");
+      if (MI.getOpcode() == AMDGPU::V_WRITELANE_B32 &&
+          MI.getOperand(0).getReg() == Carrier && MI.getOperand(2).isImm() &&
+          MI.getOperand(3).getReg() == Carrier) {
+        unsigned Lane = MI.getOperand(2).getImm();
+        if (!Offsets.count(Lane) || InRegion) continue;
+        if ((B.getNumber() != 0 && B.getNumber() != 1) ||
+            !MDT.dominates(&B, Cold) || !Found.insert(Lane).second ||
+            !MI.getOperand(1).isReg() || MI.getOperand(1).getSubReg() ||
+            !AMDGPU::SGPR_32RegClass.contains(MI.getOperand(1).getReg()))
+          return Reject("noncold-lane-write");
+        Budget = 0; Path.clear();
+        Fact F = Find(&B, MI.getIterator(), MI.getOperand(1).getReg());
+        if (!F.Load || F.Load->getOperand(2).getImm() + 4 * F.Word != Offsets[Lane]) {
+          errs() << "LATE_SINK failing-lane=" << Lane << "\n";
+          return Reject("entry-value-unproved");
+        }
+        Items.push_back({&MI, F, Lane});
+      } else if (MI.getOpcode() == AMDGPU::V_READLANE_B32 &&
+                 MI.getOperand(1).getReg() == Carrier && MI.getOperand(2).isImm()) {
+        if (Offsets.count(MI.getOperand(2).getImm()) && !InRegion)
+          return Reject("noncold-lane-read");
+      } else if (MI.isImplicitDef() && &B == &MF.front()) {
+        continue;
+      } else if (!InRegion) return Reject("noncold-whole-carrier-access");
+    }
+  }
+  if (Items.size() != std::size(Expected)) return Reject("missing-entry-stores");
+  MCRegister Temp = TRI->getSubReg(Scratch, AMDGPU::sub0);
+  auto Insert = Cold->begin();
+  for (const auto &I : Items) {
+    auto *MMO = MF.getMachineMemOperand(*I.Value.Load->memoperands_begin(),
+                                      4 * I.Value.Word, LocationSize::precise(4));
+    BuildMI(*Cold, Insert, I.Store->getDebugLoc(), TII->get(AMDGPU::S_LOAD_DWORD_IMM), Temp)
+        .addReg(Base).addImm(Offsets[I.Lane]).addImm(0).addMemOperand(MMO);
+    BuildMI(*Cold, Insert, I.Store->getDebugLoc(), TII->get(AMDGPU::V_WRITELANE_B32), Carrier)
+        .addReg(Temp, RegState::Kill).addImm(I.Lane).addReg(Carrier);
+    errs() << "LATE_SINK lane=" << I.Lane << " offset=" << Offsets[I.Lane]
+           << " source=" << *I.Store;
+    I.Store->eraseFromParent();
+  }
+  errs() << "LATE_SINK applied=" << Items.size() << " cold=" << Cold->getNumber()
+         << " scratch=" << printReg(Scratch, TRI) << " ancestors=" << Ancestors.size() << "\n";
+  return true;
+}
+
+
+static cl::opt<bool> PruneSunkEntryLoads(
+    "prune-sunk-entry-loads", cl::Hidden, cl::init(false));
+static bool pruneSunkEntryLoads(MachineFunction &MF) {
+  if (!PruneSunkEntryLoads || MF.getName() != LateSinkEntriesFunction)
+    return false;
+  const auto &ST = MF.getSubtarget<GCNSubtarget>();
+  const auto *TRI = ST.getRegisterInfo();
+  const auto *TII = ST.getInstrInfo();
+  bool Changed = false;
+  for (auto &B : MF) {
+    if (B.getNumber() != 0 && B.getNumber() != 1) continue;
+    SmallVector<MachineInstr *, 16> Dead;
+    for (auto &MI : B.instrs()) {
+      if (!TII->getName(MI.getOpcode()).starts_with("S_LOAD_DWORD") ||
+          MI.isBundled() || MI.getNumOperands() != 4 ||
+          !MI.hasOneMemOperand() || !MI.getOperand(0).isReg() ||
+          !MI.getOperand(0).isDef() || MI.getOperand(0).getSubReg()) continue;
+      auto *MMO = *MI.memoperands_begin();
+      if (!MMO->isLoad() || !MMO->isInvariant() || MMO->isVolatile() ||
+          MMO->isAtomic() || !MMO->getSize().hasValue()) continue;
+      unsigned Bytes = MMO->getSize().getValue();
+      if (!Bytes || Bytes > 64 || Bytes % 4) continue;
+      MCRegister Dst = MI.getOperand(0).getReg();
+      SmallVector<MCRegister, 16> Alive;
+      for (unsigned I = 0; I != Bytes / 4; ++I)
+        Alive.push_back(Bytes == 4 ? Dst :
+            TRI->getSubReg(Dst, SIRegisterInfo::getSubRegFromChannel(I)));
+      if (llvm::is_contained(Alive, MCRegister())) continue;
+      for (auto It = std::next(MI.getIterator()); It != B.instr_end(); ++It) {
+        if (It->isBundled() || It->isCall() || It->isInlineAsm() || It->isTerminator()) break;
+        if (llvm::any_of(Alive, [&](MCRegister R) { return It->readsRegister(R, TRI); })) break;
+        llvm::erase_if(Alive, [&](MCRegister R) {
+          return llvm::any_of(It->operands(), [&](const MachineOperand &MO) {
+            return MO.isReg() && MO.isDef() && !MO.isImplicit() && MO.getReg() &&
+                   TRI->regsOverlap(MO.getReg(), R);
+          });
+        });
+        if (Alive.empty()) {
+          errs() << "SUNK_DEAD_LOAD remove=" << MI;
+          Dead.push_back(&MI); break;
+        }
+      }
+    }
+    for (auto *MI : Dead) MI->eraseFromParent();
+    Changed |= !Dead.empty();
+  }
+  return Changed;
+}
+
 bool SIInsertWaitcnts::run() {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
@@ -3504,7 +3909,9 @@ bool SIInsertWaitcnts::run() {
 
   SmemAccessCounter = getCounterFromEvent(HWEvents::SMEM_ACCESS);
 
-  bool Modified = false;
+  bool Modified = lateSinkEntries(MF);
+  if (Modified) Modified |= pruneSunkEntryLoads(MF);
+  Modified |= cacheInvariantScalarLoads(MF);
 
   MachineBasicBlock &EntryBB = MF.front();
 

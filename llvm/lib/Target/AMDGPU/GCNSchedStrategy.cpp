@@ -43,9 +43,23 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/CFG.h"
+
 #define DEBUG_TYPE "machine-scheduler"
 
 using namespace llvm;
+
+static cl::opt<bool> DeferUnreadyBufferLoads(
+    "amdgpu-defer-unready-buffer-loads", cl::Hidden,
+    cl::desc("Defer future-ready buffer ushort loads when another instruction "
+             "is cycle-ready during bottom-up scheduling on gfx950"),
+    cl::init(false));
+
+static cl::opt<bool> GuardUnreadyLoadsWithWaveProfile(
+    "amdgpu-defer-unready-buffer-loads-wave-guard", cl::Hidden,
+    cl::desc("Keep the native schedule in measured-zero blocks of observed functions"),
+    cl::init(false));
 
 static cl::opt<bool> DisableUnclusterHighRP(
     "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
@@ -133,7 +147,60 @@ GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
   VGPRThresholdPercent = VGPRThresholdPercentOpt;
 }
 
+static bool hasMatchingWaveProfileBlock(
+    const MachineBasicBlock &MBB,
+    const DenseMap<const BasicBlock *, const MachineBasicBlock *> &UniqueMBBs) {
+  const BasicBlock *BB = MBB.getBasicBlock();
+  auto HasMatchingEdges = [&](auto IRBlocks, auto MachineBlocks) {
+    SmallPtrSet<const BasicBlock *, 4> Expected;
+    for (const BasicBlock *IRBlock : IRBlocks)
+      Expected.insert(IRBlock);
+    for (const MachineBasicBlock *MachineBlock : MachineBlocks) {
+      const BasicBlock *IRBlock = MachineBlock->getBasicBlock();
+      if (!IRBlock || UniqueMBBs.lookup(IRBlock) != MachineBlock ||
+          !Expected.erase(IRBlock))
+        return false;
+    }
+    return Expected.empty();
+  };
+  return HasMatchingEdges(predecessors(BB), MBB.predecessors()) &&
+         HasMatchingEdges(successors(BB), MBB.successors());
+}
+
+void GCNSchedStrategy::initializeZeroWaveBlocks(MachineFunction &F) {
+  ZeroWaveBlocks.clear();
+  if (!DeferUnreadyBufferLoads || !GuardUnreadyLoadsWithWaveProfile ||
+      !F.getSubtarget<GCNSubtarget>().hasGFX950Insts())
+    return;
+  SmallVector<uint64_t> Counts;
+  BitVector HasCount;
+  uint64_t Entry = 0;
+  if (!extractMappedBlockWaveCounts(F.getFunction(), Counts, HasCount, Entry) ||
+      Entry == 0)
+    return;
+  DenseMap<const BasicBlock *, const MachineBasicBlock *> Unique;
+  for (const MachineBasicBlock &MBB : F) {
+    const BasicBlock *BB = MBB.getBasicBlock();
+    if (!BB || BB->getParent() != &F.getFunction())
+      continue;
+    auto [It, Inserted] = Unique.try_emplace(BB, &MBB);
+    if (!Inserted)
+      It->second = nullptr;
+  }
+  unsigned I = 0;
+  for (const BasicBlock &BB : F.getFunction()) {
+    unsigned Index = I++;
+    if (!HasCount[Index] || Counts[Index] != 0)
+      continue;
+    const MachineBasicBlock *MBB = Unique.lookup(&BB);
+    if (MBB && hasMatchingWaveProfileBlock(*MBB, Unique))
+      ZeroWaveBlocks.insert(MBB);
+  }
+}
+
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
+  if (MF != &DAG->MF)
+    initializeZeroWaveBlocks(DAG->MF);
   GenericScheduler::initialize(DAG);
 
   MF = &DAG->MF;
@@ -487,7 +554,22 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   }
   LLVM_DEBUG(dbgs() << "Available Q:\n");
   ReadyQueue &AQ = Zone.Available;
+  // The target's buffered model can admit instructions to Available before
+  // their modeled ready cycle. Keep the usual selection when no cycle-ready
+  // alternative exists so that scheduling always makes progress.
+  bool HasReadyAlternative =
+      DeferUnreadyBufferLoads && IsBottomUp &&
+      DAG->MF.getSubtarget<GCNSubtarget>().hasGFX950Insts() &&
+      llvm::any_of(AQ, [&](SUnit *N) {
+        return !N->isScheduled && N->BotReadyCycle <= Zone.getCurrCycle();
+      });
   for (SUnit *SU : AQ) {
+    if (HasReadyAlternative &&
+        !ZeroWaveBlocks.contains(SU->getInstr()->getParent()) &&
+        SU->getInstr()->getOpcode() == AMDGPU::BUFFER_LOAD_USHORT_OFFEN &&
+        SU->BotReadyCycle > Zone.getCurrCycle())
+      continue;
+
 
     SchedCandidate TryCand(ZonePolicy);
     initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,

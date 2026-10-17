@@ -32,17 +32,21 @@
 
 using namespace llvm;
 static cl::opt<std::string> WeightTraceFunction("spill-weight-trace-function", cl::Hidden);
+static cl::opt<bool> WeightTracePopulation("spill-weight-trace-population", cl::Hidden, cl::init(false));
+static thread_local bool WeightPopulationBatch = false;
 static cl::list<unsigned> WeightTraceRoots("spill-weight-trace-root", cl::Hidden, cl::CommaSeparated);
 static bool traceWeight(const MachineFunction &MF, const VirtRegMap &VRM, Register Reg) {
   if (WeightTraceFunction.empty() ||
       (WeightTraceFunction != "*" && WeightTraceFunction != MF.getName()))
     return false;
-  return llvm::is_contained(WeightTraceRoots, VRM.getOriginal(Reg).virtRegIndex());
+  return WeightPopulationBatch ||
+         llvm::is_contained(WeightTraceRoots, VRM.getOriginal(Reg).virtRegIndex());
 }
 static uint32_t weightBits(float F) { return llvm::bit_cast<uint32_t>(F); }
 
 
 #define DEBUG_TYPE "calcspillweights"
+static cl::opt<bool> KeepOffsetRootWeight("offset-keep-root-weight", cl::Hidden, cl::init(false));
 
 bool VirtRegAuxInfo::getCachedOptimizeForSize() {
   if (!CachedOptForSize.has_value())
@@ -55,12 +59,19 @@ void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
                     << "********** Function: " << MF.getName() << '\n');
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  bool SavedPopulationBatch = WeightPopulationBatch;
+  WeightPopulationBatch = WeightTracePopulation && WeightTraceFunction == MF.getName();
+  if (WeightPopulationBatch)
+    errs() << "WEIGHTPOP begin vregs=" << MRI.getNumVirtRegs() << "\n";
   for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
     Register Reg = Register::index2VirtReg(I);
     if (MRI.reg_nodbg_empty(Reg))
       continue;
     calculateSpillWeightAndHint(LIS.getInterval(Reg));
   }
+  if (WeightPopulationBatch)
+    errs() << "WEIGHTPOP end vregs=" << MRI.getNumVirtRegs() << "\n";
+  WeightPopulationBatch = SavedPopulationBatch;
 }
 
 // Return the preferred allocation register for reg, given a COPY instruction.
@@ -261,6 +272,15 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   float TotalWeight = 0;
   bool TraceWeight = traceWeight(MF, VRM, LI.reg());
   unsigned TraceReg = LI.reg().virtRegIndex();
+  if (WeightPopulationBatch) {
+    MachineInstr *Def = MRI.getUniqueVRegDef(LI.reg());
+    errs() << "WEIGHTPOP meta reg=" << TraceReg
+           << " class=" << TRI.getRegClassName(MRI.getRegClass(LI.reg()))
+           << " def_opcode=" << (Def ? TII.getName(Def->getOpcode()) : StringRef("multiple"))
+           << " def_block=" << (Def ? Def->getParent()->getNumber() : -1) << "\n";
+    if (Def && Def->mayLoad())
+      errs() << "WEIGHTPOP def reg=" << TraceReg << " " << *Def;
+  }
   if (TraceWeight)
     errs() << "WEIGHTTRACE begin reg=" << TraceReg
            << " root=" << VRM.getOriginal(LI.reg()).virtRegIndex()
@@ -447,7 +467,19 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI) {
   // FIXME: this gets much more complicated once we support non-trivial
   // re-materialization.
   bool TraceRemat = isRematerializable(LI, LIS, VRM, MRI, *MF.getSubtarget().getInstrInfo());
-  if (TraceRemat)
+  bool KeepWeight = KeepOffsetRootWeight && TraceWeight &&
+      LI.reg() == Register::index2VirtReg(16891);
+  if (KeepWeight) {
+    MachineInstr *Def = MRI.getUniqueVRegDef(LI.reg());
+    if (!Def || TII.getName(Def->getOpcode()) != "S_LOAD_DWORDX8_IMM_ec" ||
+        !Def->getOperand(2).isImm() || Def->getOperand(2).getImm() != 432 ||
+        LI.getSize() != 238273 || NumInstr != 205)
+      llvm_unreachable("offset weight diagnostic guard mismatch");
+    errs() << "OFFSET_KEEP reg=" << LI.reg().virtRegIndex()
+           << " remat=" << TraceRemat << " total_bits=" << weightBits(TotalWeight)
+           << "\n";
+  }
+  if (TraceRemat && !KeepWeight)
     TotalWeight *= 0.5F;
 
   // Finally, we scale the weight by the scale factor of register class.

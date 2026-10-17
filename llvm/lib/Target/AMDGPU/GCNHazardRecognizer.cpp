@@ -26,6 +26,16 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "gcn-hazard-recognizer"
+
+// Diagnostic controls: change only final hazard interpretation, not scheduling.
+static cl::opt<std::string> ShortCostTraceFunction(
+    "short-cost-trace-function", cl::Hidden, cl::init(""));
+static cl::opt<bool> IgnoreSpillSGPRDefs(
+    "amdgpu-ignore-spill-sgpr-hazard-defs", cl::Hidden, cl::init(false));
+static bool shortCostTrace(const MachineInstr &MI) {
+  return !ShortCostTraceFunction.empty() &&
+         MI.getParent()->getParent()->getName() == ShortCostTraceFunction;
+}
 // Opt-in debug type for the per-candidate co-execution slot traces, which are
 // far too noisy for the normal debug output. Pass both types to get everything.
 #define DEBUG_TYPE_VERBOSE "gcn-hazard-recognizer-verbose"
@@ -701,6 +711,11 @@ unsigned GCNHazardRecognizer::PreEmitNoops(MachineInstr *MI) {
   CurrCycleInstr = MI;
   unsigned W = PreEmitNoopsCommon(MI);
   fixHazards(MI);
+  if (shortCostTrace(*MI) && std::max(W, NopPadding.getValue())) {
+    errs() << "SHORT_NOP\t" << MI->getParent()->getNumber() << "\t"
+           << std::max(W, NopPadding.getValue()) << "\t";
+    MI->print(errs());
+  }
   CurrCycleInstr = nullptr;
   return std::max(W, NopPadding.getValue());
 }
@@ -1169,7 +1184,13 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
 
   // If the set of defs and uses intersect then we cannot add this instruction
   // to the clause, so we have a hazard.
-  return ClauseDefs.anyCommon(ClauseUses) ? 1 : 0;
+  bool Overlap = ClauseDefs.anyCommon(ClauseUses);
+  if (Overlap && isHazardRecognizerMode() && shortCostTrace(*MEM)) {
+    errs() << "SHORT_CLAUSE\t" << MEM->getParent()->getNumber()
+           << "\txnack=" << ST.isXNACKEnabled() << "\t";
+    MEM->print(errs());
+  }
+  return Overlap ? 1 : 0;
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) const {
@@ -1576,10 +1597,27 @@ int GCNHazardRecognizer::checkVALUHazards(MachineInstr *VALU) const {
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
     Register UseReg;
-    auto IsVALUDefSGPRFn = [&UseReg, TRI](const MachineInstr &MI) {
+    auto IsVALUDefSGPRFn = [&UseReg, TRI, this, VALU](const MachineInstr &MI) {
       if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
         return false;
-      return MI.modifiesRegister(UseReg, TRI);
+      bool Matches = MI.modifiesRegister(UseReg, TRI);
+      if (Matches && isHazardRecognizerMode() &&
+          MI.getOpcode() == AMDGPU::V_WRITELANE_B32 &&
+          TRI->isSGPRReg(MF.getRegInfo(), UseReg)) {
+        // The SGPR tuple def preserves partial-spill liveness. V_WRITELANE
+        // writes only its VGPR destination; keep the machine operands intact.
+        if (shortCostTrace(*VALU)) {
+          errs() << "SHORT_SPILL_DEF\t" << VALU->getParent()->getNumber()
+                 << "\t" << UseReg.id() << "\t" << IgnoreSpillSGPRDefs
+                 << "\tproducer=";
+          MI.print(errs());
+          errs() << "SHORT_SPILL_USE\t";
+          VALU->print(errs());
+        }
+        if (IgnoreSpillSGPRDefs)
+          return false;
+      }
+      return Matches;
     };
 
     for (const MachineOperand &Use : VALU->explicit_uses()) {

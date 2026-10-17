@@ -4476,6 +4476,11 @@ bool RAGreedy::hasVirtRegAlloc() {
   return false;
 }
 
+static cl::opt<std::string> EntryPointerProbeFunction(
+    "entry-pointer-group-function", cl::Hidden, cl::init(""));
+static cl::opt<bool> EntryPointerProbe("entry-pointer-group", cl::Hidden,
+                                     cl::init(false));
+
 bool RAGreedy::run(MachineFunction &mf) {
   LLVM_DEBUG(dbgs() << "********** GREEDY REGISTER ALLOCATION **********\n"
                     << "********** Function: " << mf.getName() << '\n');
@@ -4510,6 +4515,56 @@ bool RAGreedy::run(MachineFunction &mf) {
     MF->verify(LIS, Indexes, "Before greedy register allocator", &errs());
 
   RegAllocBase::init(*this->VRM, *this->LIS, *this->Matrix);
+  // Diagnostic only: keep the known invariant load's address live at its
+  // existing cold users, before allocation; preserve instruction numbering.
+  if (EntryPointerProbe && MF->getName() == EntryPointerProbeFunction &&
+      MRI->getNumVirtRegs() > 1279) {
+    Register Root = Register::index2VirtReg(1279);
+    Register Base = Register::index2VirtReg(1253);
+    if (!MRI->reg_nodbg_empty(Root) && shouldAllocateRegister(Root)) {
+      if (!MRI->getUniqueVRegDef(Base) ||
+          !MRI->getUniqueVRegDef(Base)->isFullCopy() ||
+          !MRI->getUniqueVRegDef(Base)->getOperand(1).getReg().isPhysical() ||
+          VRM->hasPhys(Base) || LIS->getInterval(Base).hasSubRanges())
+        report_fatal_error("entry pointer group base guard mismatch");
+      auto &LI = LIS->getInterval(Base);
+      SmallVector<MachineInstr *, 8> Uses;
+      for (unsigned R : {1279u, 1280u, 15u, 16u, 17u, 1321u, 27u, 1322u, 1330u, 1331u, 1332u, 1276u, 1278u, 1320u}) {
+        Register Reg = Register::index2VirtReg(R);
+        MachineInstr *D = MRI->getUniqueVRegDef(Reg);
+        if (!D || !TII->getName(D->getOpcode()).starts_with("S_LOAD_") ||
+            D->getOperand(1).getReg() != Base || !TII->isReMaterializable(*D)) {
+          errs() << "ENTRY_POINTER skip-root=" << R << "\n";
+          continue;
+        }
+        errs() << "ENTRY_POINTER selected-root=" << R << " def=" << *D;
+        for (MachineInstr &MI : MRI->use_nodbg_instructions(Reg)) {
+          SlotIndex I = LIS->getInstructionIndex(MI).getRegSlot(true);
+          if (LI.liveAt(I) || llvm::is_contained(Uses, &MI)) continue;
+          Uses.push_back(&MI);
+        }
+      }
+      if (Uses.empty()) report_fatal_error("entry pointer group found no uses");
+      errs() << "ENTRY_POINTER group-use-count=" << Uses.size() << "\n";
+      errs() << "ENTRY_POINTER before=" << LI << "\n";
+      SmallVector<SlotIndex, 8> Points;
+      for (MachineInstr *MI : Uses) {
+        SlotIndex I = LIS->getInstructionIndex(*MI).getRegSlot();
+        if (LI.liveAt(I.getBaseIndex()))
+          report_fatal_error("entry pointer probe already live");
+        errs() << "ENTRY_POINTER use=" << I << " " << *MI;
+        MI->addOperand(*MF, MachineOperand::CreateReg(Base, false, true));
+        Points.push_back(I);
+      }
+      MRI->clearKillFlags(Base);
+      llvm::sort(Points);
+      LIS->extendToIndices(LI, Points);
+      Matrix->invalidateVirtRegs();
+      errs() << "ENTRY_POINTER after=" << LI << "\n";
+      MF->verify(LIS, Indexes, "After diagnostic pointer extension", &errs());
+    }
+  }
+
 
   // Early return if there is no virtual register to be allocated to a
   // physical register.
