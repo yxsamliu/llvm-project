@@ -30,23 +30,20 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockWaveCounts.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
-#include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/ScaledNumber.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -252,26 +249,6 @@ void SpillPlacement::releaseMemory() {
   TodoList.clear();
 }
 
-static bool hasMatchingWaveProfileBlock(
-    const MachineBasicBlock &MBB,
-    const DenseMap<const BasicBlock *, const MachineBasicBlock *> &UniqueMBBs) {
-  const BasicBlock *BB = MBB.getBasicBlock();
-  auto HasMatchingEdges = [&](auto IRBlocks, auto MachineBlocks) {
-    SmallPtrSet<const BasicBlock *, 4> Expected;
-    for (const BasicBlock *IRBlock : IRBlocks)
-      Expected.insert(IRBlock);
-    for (const MachineBasicBlock *MachineBlock : MachineBlocks) {
-      const BasicBlock *IRBlock = MachineBlock->getBasicBlock();
-      if (!IRBlock || UniqueMBBs.lookup(IRBlock) != MachineBlock ||
-          !Expected.erase(IRBlock))
-        return false;
-    }
-    return Expected.empty();
-  };
-  return HasMatchingEdges(predecessors(BB), MBB.predecessors()) &&
-         HasMatchingEdges(successors(BB), MBB.successors());
-}
-
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
                          MachineBlockFrequencyInfo *MBFI) {
   MF = &mf;
@@ -283,54 +260,26 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
-  SmallVector<uint64_t> WaveCounts;
-  BitVector HasWaveCount;
-  uint64_t EntryWaveCount = 0;
+  MachineBlockWaveCounts WaveCounts;
   DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
   DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
-  unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
       (WaveGuidedSpillPlacement || WaveGuidedSpillCosts) &&
       mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
-      extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
-                                   EntryWaveCount) &&
-      EntryWaveCount != 0;
+      extractMappedBlockWaveCounts(mf, WaveCounts) &&
+      WaveCounts.EntryCount != 0;
+  uint64_t EntryWaveCount = WaveCounts.EntryCount;
+  unsigned RejectedWaveBlocks =
+      HasWaveProfile && ReportWaveProfiledSpill ? WaveCounts.RejectedBlocks : 0;
   if (HasWaveProfile) {
-    DenseMap<const BasicBlock *, const MachineBasicBlock *> UniqueMBBs;
-    for (const MachineBasicBlock &MBB : mf) {
-      const BasicBlock *BB = MBB.getBasicBlock();
-      if (!BB || BB->getParent() != &mf.getFunction())
-        continue;
-      auto [It, Inserted] = UniqueMBBs.try_emplace(BB, &MBB);
-      if (!Inserted)
-        It->second = nullptr;
-    }
-
-    unsigned Index = 0;
-    for (const BasicBlock &BB : mf.getFunction()) {
-      if (!HasWaveCount[Index]) {
-        ++Index;
-        continue;
-      }
-      const MachineBasicBlock *MBB = UniqueMBBs.lookup(&BB);
-      if (!MBB || !hasMatchingWaveProfileBlock(*MBB, UniqueMBBs)) {
-        if (ReportWaveProfiledSpill)
-          ++RejectedWaveBlocks;
-        ++Index;
-        continue;
-      }
-      uint64_t Count = WaveCounts[Index++];
+    for (const auto &[MBB, Count] : WaveCounts.Counts) {
       // Keep the two consumers independent after validating the mapping.
       if (WaveGuidedSpillCosts)
-        RawWaveCounts[&BB] = Count;
-      if (!WaveGuidedSpillPlacement)
-        continue;
-      uint64_t Frequency =
-          ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
-              .scale(MBFI->getEntryFreq().getFrequency());
-      // A measured zero is still a reachable block. Avoid giving spills a
-      // zero-cost path through it.
-      WaveFrequencies[&BB] = BlockFrequency(std::max(Frequency, uint64_t(1)));
+        RawWaveCounts[MBB->getBasicBlock()] = Count;
+      if (WaveGuidedSpillPlacement) {
+        WaveFrequencies[MBB->getBasicBlock()] =
+            scaleWaveCount(Count, EntryWaveCount, MBFI->getEntryFreq());
+      }
     }
   }
 
