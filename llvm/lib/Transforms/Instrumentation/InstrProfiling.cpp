@@ -1970,7 +1970,7 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
     return PD.RegionCounters;
 
   if (isGPUProfTarget(M)) {
-    if (!isa<InstrProfIncrementInst>(Inc) || IsCS)
+    if (!isa<InstrProfIncrementInst>(Inc))
       report_fatal_error("wave counts require ordinary counter increments",
                          false);
     if (ProfileCorrelate != InstrProfCorrelator::NONE || isSamplingEnabled())
