@@ -27,7 +27,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -36,8 +35,10 @@
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockWaveCounts.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -284,8 +285,9 @@ void llvm::printWaveWorkMapping(const MachineFunction &MF, StringRef Phase) {
   SmallVector<uint64_t> Counts;
   BitVector Present;
   uint64_t Entry = 0;
-  bool Valid = extractMappedBlockWaveCounts(MF.getFunction(), Counts, Present,
-                                            Entry) && Entry != 0;
+  bool Valid =
+      extractMappedBlockWaveCounts(MF.getFunction(), Counts, Present, Entry) &&
+      Entry != 0;
   DenseMap<const BasicBlock *, unsigned> IRIDs;
   DenseMap<const BasicBlock *, const MachineBasicBlock *> Unique;
   unsigned Index = 0;
@@ -346,54 +348,26 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
-  SmallVector<uint64_t> WaveCounts;
-  BitVector HasWaveCount;
-  uint64_t EntryWaveCount = 0;
+  MachineBlockWaveCounts WaveCounts;
   DenseMap<const BasicBlock *, BlockFrequency> WaveFrequencies;
   DenseMap<const BasicBlock *, uint64_t> RawWaveCounts;
-  unsigned RejectedWaveBlocks = 0;
   const bool HasWaveProfile =
       (WaveGuidedSpillPlacement || WaveGuidedSpillCosts) &&
       mf.getFunction().getParent()->getTargetTriple().isAMDGPU() &&
-      extractMappedBlockWaveCounts(mf.getFunction(), WaveCounts, HasWaveCount,
-                                   EntryWaveCount) &&
-      EntryWaveCount != 0;
+      extractMappedBlockWaveCounts(mf, WaveCounts) &&
+      WaveCounts.EntryCount != 0;
+  uint64_t EntryWaveCount = WaveCounts.EntryCount;
+  unsigned RejectedWaveBlocks =
+      HasWaveProfile && ReportWaveProfiledSpill ? WaveCounts.RejectedBlocks : 0;
   if (HasWaveProfile) {
-    DenseMap<const BasicBlock *, const MachineBasicBlock *> UniqueMBBs;
-    for (const MachineBasicBlock &MBB : mf) {
-      const BasicBlock *BB = MBB.getBasicBlock();
-      if (!BB || BB->getParent() != &mf.getFunction())
-        continue;
-      auto [It, Inserted] = UniqueMBBs.try_emplace(BB, &MBB);
-      if (!Inserted)
-        It->second = nullptr;
-    }
-
-    unsigned Index = 0;
-    for (const BasicBlock &BB : mf.getFunction()) {
-      if (!HasWaveCount[Index]) {
-        ++Index;
-        continue;
-      }
-      const MachineBasicBlock *MBB = UniqueMBBs.lookup(&BB);
-      if (!MBB || !hasMatchingWaveProfileBlock(*MBB, UniqueMBBs)) {
-        if (ReportWaveProfiledSpill)
-          ++RejectedWaveBlocks;
-        ++Index;
-        continue;
-      }
-      uint64_t Count = WaveCounts[Index++];
+    for (const auto &[MBB, Count] : WaveCounts.Counts) {
       // Keep the two consumers independent after validating the mapping.
       if (WaveGuidedSpillCosts)
-        RawWaveCounts[&BB] = Count;
-      if (!WaveGuidedSpillPlacement)
-        continue;
-      uint64_t Frequency =
-          ScaledNumber<uint64_t>::getFraction(Count, EntryWaveCount)
-              .scale(MBFI->getEntryFreq().getFrequency());
-      // A measured zero is still a reachable block. Avoid giving spills a
-      // zero-cost path through it.
-      WaveFrequencies[&BB] = BlockFrequency(std::max(Frequency, uint64_t(1)));
+        RawWaveCounts[MBB->getBasicBlock()] = Count;
+      if (WaveGuidedSpillPlacement) {
+        WaveFrequencies[MBB->getBasicBlock()] =
+            scaleWaveCount(Count, EntryWaveCount, MBFI->getEntryFreq());
+      }
     }
   }
 
@@ -629,7 +603,7 @@ void SpillPlacement::iterate() {
   // Update the network energy starting at this new frontier.
   // The call to ::update will add the nodes that changed into the todolist.
   unsigned Limit = bundles->getNumBundles() * 10;
-  while(Limit-- > 0 && !TodoList.empty()) {
+  while (Limit-- > 0 && !TodoList.empty()) {
     unsigned n = TodoList.pop_back_val();
     if (!update(n))
       continue;
@@ -647,8 +621,7 @@ void SpillPlacement::prepare(BitVector &RegBundles) {
   ActiveNodes->resize(bundles->getNumBundles());
 }
 
-bool
-SpillPlacement::finish() {
+bool SpillPlacement::finish() {
   assert(ActiveNodes && "Call prepare() first");
 
   // Write preferences back to ActiveNodes.
@@ -664,20 +637,23 @@ SpillPlacement::finish() {
 
 void SpillPlacement::BlockConstraint::print(raw_ostream &OS) const {
   auto toString = [](BorderConstraint C) -> StringRef {
-    switch(C) {
-    case DontCare: return "DontCare";
-    case PrefReg: return "PrefReg";
-    case PrefSpill: return "PrefSpill";
-    case PrefBoth: return "PrefBoth";
-    case MustSpill: return "MustSpill";
+    switch (C) {
+    case DontCare:
+      return "DontCare";
+    case PrefReg:
+      return "PrefReg";
+    case PrefSpill:
+      return "PrefSpill";
+    case PrefBoth:
+      return "PrefBoth";
+    case MustSpill:
+      return "MustSpill";
     };
     llvm_unreachable("uncovered switch");
   };
 
-  dbgs() << "{" << Number << ", "
-         << toString(Entry) << ", "
-         << toString(Exit) << ", "
-         << (ChangesValue ? "changes" : "no change") << "}";
+  dbgs() << "{" << Number << ", " << toString(Entry) << ", " << toString(Exit)
+         << ", " << (ChangesValue ? "changes" : "no change") << "}";
 }
 
 void SpillPlacement::BlockConstraint::dump() const {

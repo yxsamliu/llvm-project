@@ -120,6 +120,7 @@ add_llvm_component_library(LLVMCodeGen
   LowerEmuTLS.cpp
   MachineBasicBlock.cpp
   MachineBlockFrequencyInfo.cpp
+  MachineBlockWaveCounts.cpp
   MachineBlockHashInfo.cpp
   MachineBlockPlacement.cpp
   MachineBranchProbabilityInfo.cpp

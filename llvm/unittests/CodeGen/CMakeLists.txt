@@ -34,6 +34,7 @@ add_llvm_unittest(CodeGenTests
   LowLevelTypeTest.cpp
   LexicalScopesTest.cpp
   MachineBasicBlockTest.cpp
+  MachineBlockWaveCountsTest.cpp
   MachineDomTreeUpdaterTest.cpp
   MachineInstrBundleIteratorTest.cpp
   MachineInstrTest.cpp
