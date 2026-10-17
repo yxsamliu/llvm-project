@@ -466,7 +466,8 @@ static bool
 shouldInstrumentDenseWaves(const Module &M,
                            PGOInstrumentationType InstrumentationType) {
   return PGOInstrumentDenseWaveCounts && M.getTargetTriple().isAMDGPU() &&
-         InstrumentationType == PGOInstrumentationType::FDO &&
+         (InstrumentationType == PGOInstrumentationType::FDO ||
+          InstrumentationType == PGOInstrumentationType::CSFDO) &&
          !PGOFunctionEntryCoverage && !PGOBlockCoverage &&
          !PGOTemporalInstrumentation;
 }
@@ -1232,7 +1233,7 @@ public:
                  InstrumentFuncEntry, InstrumentLoopEntries,
                  HasSingleByteCoverage),
         FreqAttr(FFA_Normal), IsCS(IsCS),
-        HasDenseWaveProfile(HasDenseWaveProfile && !IsCS &&
+        HasDenseWaveProfile(HasDenseWaveProfile &&
                             Modu->getTargetTriple().isAMDGPU()),
         VPC(Func, TLI) {}
 
@@ -1376,7 +1377,7 @@ static void setupBBInfoEdges(
 void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs,
                                ArrayRef<BasicBlock *> ExtraWaveBBs) {
   if (!PGOWaveMetadata || ProfileRecord.WaveCounts.empty() ||
-      !isGPUProfTarget(*M) || IsCS)
+      !isGPUProfTarget(*M))
     return;
   if (ProfileRecord.WaveCounts.size() != ProfileRecord.Counts.size()) {
     F.getContext().diagnose(DiagnosticInfoPGOProfile(
@@ -1389,7 +1390,7 @@ void PGOUseFunc::setWaveCounts(ArrayRef<BasicBlock *> InstrumentBBs,
 
   // Earlier profile annotations can change the instrumentation MST without
   // changing the CFG hash. Do not reuse its counter indices for wave counts.
-  if (F.getMetadata(LLVMContext::MD_prof))
+  if (!IsCS && F.getMetadata(LLVMContext::MD_prof))
     return;
 
   DenseMap<const BasicBlock *, uint64_t> MeasuredCounts;

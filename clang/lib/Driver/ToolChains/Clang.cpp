@@ -9712,6 +9712,8 @@ static bool requiresProfileRT(unsigned ID) {
   switch (ID) {
   case options::OPT_fprofile_generate:
   case options::OPT_fprofile_generate_EQ:
+  case options::OPT_fcs_profile_generate:
+  case options::OPT_fcs_profile_generate_EQ:
   case options::OPT_fprofile_instr_generate:
   case options::OPT_fprofile_instr_generate_EQ:
   case options::OPT_fcoverage_mapping:
@@ -9785,6 +9787,13 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       OPT_fmultilib_flag,
       OPT_fprofile_generate,
       OPT_fprofile_generate_EQ,
+      OPT_fcs_profile_generate,
+      OPT_fcs_profile_generate_EQ,
+      OPT_fno_profile_generate,
+      OPT_fprofile_use,
+      OPT_fprofile_use_EQ,
+      OPT_fprofile_instr_use,
+      OPT_fprofile_instr_use_EQ,
       OPT_fprofile_instr_generate,
       OPT_fprofile_instr_generate_EQ,
       OPT_fcoverage_mapping,

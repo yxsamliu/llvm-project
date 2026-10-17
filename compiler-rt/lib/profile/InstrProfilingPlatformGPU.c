@@ -14,6 +14,11 @@
 
 #if defined(__NVPTX__) || defined(__AMDGPU__)
 
+// Late LTO instrumentation also sees helpers from GPU intrinsic headers.
+// Exclude this runtime and those helper definitions from profiling.
+#pragma clang attribute push(__attribute__((no_profile_instrument_function)), \
+                             apply_to = function)
+
 #include "InstrProfiling.h"
 #include <gpuintrin.h>
 #include <stdint.h>
@@ -125,5 +130,7 @@ __llvm_profile_gpu_sections INSTR_PROF_SECT_BOUNDS_TABLE = {
     NULL, NULL, NULL,
     NULL, NULL, &INSTR_PROF_RAW_VERSION_VAR};
 #endif
+
+#pragma clang attribute pop
 
 #endif
