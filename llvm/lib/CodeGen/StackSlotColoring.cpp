@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockWaveCounts.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -32,8 +33,11 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -53,6 +57,11 @@ static cl::opt<bool>
 DisableSharing("no-stack-slot-sharing",
              cl::init(false), cl::Hidden,
              cl::desc("Suppress slot sharing during stack coloring"));
+
+static cl::opt<bool> WaveGuidedStackSlotColoring(
+    "amdgpu-wave-guided-stack-slot-coloring", cl::Hidden, cl::init(true),
+    cl::desc(
+        "Use measured wave visits to prioritize AMDGPU scalar spill slots"));
 
 static cl::opt<int> DCELimit("ssc-dce-limit", cl::init(-1), cl::Hidden);
 
@@ -212,6 +221,25 @@ struct IntervalSorter {
 /// ScanForSpillSlotRefs - Scan all the machine instructions for spill slot
 /// references and update spill slot weights.
 void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
+  DenseMap<const MachineBasicBlock *, float> WaveWeights;
+  if (WaveGuidedStackSlotColoring &&
+      MF.getFunction().getParent()->getTargetTriple().isAMDGPU()) {
+    MachineBlockWaveCounts WaveCounts;
+    if (extractMappedBlockWaveCounts(MF, WaveCounts) && WaveCounts.EntryCount &&
+        WaveCounts.EntryCount != UINT64_MAX &&
+        MBFI->getEntryFreq().getFrequency()) {
+      for (const auto &[MBB, Count] : WaveCounts.Counts) {
+        if (Count == UINT64_MAX)
+          continue;
+        uint64_t Frequency =
+            scaleWaveCount(Count, WaveCounts.EntryCount, MBFI->getEntryFreq())
+                .getFrequency();
+        WaveWeights[MBB] =
+            double(Frequency) / double(MBFI->getEntryFreq().getFrequency());
+      }
+    }
+  }
+
   SSRefs.resize(MFI->getObjectIndexEnd());
 
   // FIXME: Need the equivalent of MachineRegisterInfo for frameindex operands.
@@ -226,9 +254,14 @@ void StackSlotColoring::ScanForSpillSlotRefs(MachineFunction &MF) {
         if (!LS->hasInterval(FI))
           continue;
         LiveInterval &li = LS->getInterval(FI);
-        if (!MI.isDebugInstr())
-          li.incrementWeight(
-              LiveIntervals::getSpillWeight(false, true, MBFI, MI));
+        if (!MI.isDebugInstr()) {
+          float Weight = LiveIntervals::getSpillWeight(false, true, MBFI, MI);
+          if (MFI->getStackID(FI) == TargetStackID::SGPRSpill) {
+            if (auto It = WaveWeights.find(&MBB); It != WaveWeights.end())
+              Weight = It->second;
+          }
+          li.incrementWeight(Weight);
+        }
       }
       for (MachineMemOperand *MMO : MI.memoperands()) {
         if (const FixedStackPseudoSourceValue *FSV =
