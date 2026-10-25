@@ -48,6 +48,12 @@
 
 using namespace llvm;
 
+static cl::opt<bool> DeferUnreadyBufferLoads(
+    "amdgpu-defer-unready-buffer-loads", cl::Hidden,
+    cl::desc("Defer future-ready buffer ushort loads when another instruction "
+             "is cycle-ready during bottom-up scheduling on gfx950"),
+    cl::init(false));
+
 static cl::opt<bool> DisableUnclusterHighRP(
     "amdgpu-disable-unclustered-high-rp-reschedule", cl::Hidden,
     cl::desc("Disable unclustered high register pressure "
@@ -489,7 +495,21 @@ void GCNSchedStrategy::pickNodeFromQueue(SchedBoundary &Zone,
   }
   LLVM_DEBUG(dbgs() << "Available Q:\n");
   ReadyQueue &AQ = Zone.Available;
+  // Buffered models can admit instructions before their modeled ready cycle.
+  // Limit this opt-in policy to gfx950 ushort loads, where a benefit has been
+  // measured; buffering alone does not establish profitability elsewhere.
+  // Keep normal selection when no cycle-ready alternative exists.
+  bool HasReadyAlternative =
+      DeferUnreadyBufferLoads && IsBottomUp &&
+      DAG->MF.getSubtarget<GCNSubtarget>().hasGFX950Insts() &&
+      llvm::any_of(AQ, [&](SUnit *N) {
+        return N->BotReadyCycle <= Zone.getCurrCycle();
+      });
   for (SUnit *SU : AQ) {
+    if (HasReadyAlternative &&
+        SU->getInstr()->getOpcode() == AMDGPU::BUFFER_LOAD_USHORT_OFFEN &&
+        SU->BotReadyCycle > Zone.getCurrCycle())
+      continue;
 
     SchedCandidate TryCand(ZonePolicy);
     initCandidate(TryCand, SU, Zone.isTop(), RPTracker, SRI, SGPRPressure,
