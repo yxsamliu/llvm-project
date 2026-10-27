@@ -193,3 +193,12 @@ if config.target_os in ("AIX", "Darwin", "Linux"):
     config.available_features.add("continuous-mode")
 
 config.suffixes.append(".hip")
+
+# These tests use a mock HIP transport and do not need a GPU or a ROCm install.
+if config.target_os == "Linux":
+    profile_rocm = os.path.join(
+        config.compiler_rt_libdir, "libclang_rt.profile_rocm%s.a" % config.target_suffix
+    )
+    if os.path.exists(profile_rocm):
+        config.available_features.add("profile-rocm")
+        config.substitutions.append(("%profile_rocm", '"%s"' % profile_rocm))
