@@ -699,54 +699,26 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
 namespace {
 
 struct ProfileSectionCopy {
-  const char *Name;
   const void *DevBegin;
   size_t Size;
-  const void *&CachedDevBegin;
-  char *&CachedHost;
-  size_t &CachedSize;
   UniqueFree Owner;
   char *HostBegin = nullptr;
-  bool Reused = false;
 
-  ProfileSectionCopy(const char *Name, const void *DevBegin, size_t Size,
-                     const void *&CachedDevBegin, char *&CachedHost,
-                     size_t &CachedSize)
-      : Name(Name), DevBegin(DevBegin), Size(Size),
-        CachedDevBegin(CachedDevBegin), CachedHost(CachedHost),
-        CachedSize(CachedSize) {}
-
-  ProfileSectionCopy(const ProfileSectionCopy &) = delete;
-  ProfileSectionCopy &operator=(const ProfileSectionCopy &) = delete;
+  ProfileSectionCopy(const void *DevBegin, size_t Size)
+      : DevBegin(DevBegin), Size(Size) {}
 
   int prepare() {
     if (Size == 0)
       return 0;
-    if (DevBegin == CachedDevBegin && Size == CachedSize) {
-      HostBegin = CachedHost;
-      Reused = true;
-      if (isVerboseMode())
-        PROF_NOTE("Reusing cached %s section (%zu bytes)\n", Name, Size);
-    } else {
-      HostBegin = static_cast<char *>(malloc(Size));
-      Owner.reset(HostBegin);
-    }
+    HostBegin = static_cast<char *>(malloc(Size));
+    Owner.reset(HostBegin);
     return HostBegin ? 0 : -1;
   }
 
   int copy() {
-    if (Size == 0 || Reused)
+    if (Size == 0)
       return 0;
     return memcpyDeviceToHost(HostBegin, DevBegin, Size);
-  }
-
-  void commitCache() {
-    if (Reused || Size == 0)
-      return;
-    CachedDevBegin = DevBegin;
-    CachedHost = HostBegin;
-    CachedSize = Size;
-    Owner.release();
   }
 };
 
@@ -855,33 +827,12 @@ int __prof_rocm::processDeviceOffloadPrf(
 
   int ret = -1;
 
-  // Retain the last host copy of each linker-defined section.
-  static const void *CachedDevNamesBegin = nullptr;
-  static char *CachedHostNames = nullptr;
-  static size_t CachedNamesSize = 0;
-
-  static const void *CachedDevCntsBegin = nullptr;
-  static char *CachedHostCnts = nullptr;
-  static size_t CachedCntsSize = 0;
-
-  static const void *CachedDevDataBegin = nullptr;
-  static char *CachedHostData = nullptr;
-  static size_t CachedDataSize = 0;
-
-  static const void *CachedDevUCntsBegin = nullptr;
-  static char *CachedHostUCnts = nullptr;
-  static size_t CachedUCntsSize = 0;
-
-  ProfileSectionCopy Cnts("counters", DevCntsBegin, CountersSize,
-                          CachedDevCntsBegin, CachedHostCnts, CachedCntsSize);
-  ProfileSectionCopy Data("data", DevDataBegin, DataSize, CachedDevDataBegin,
-                          CachedHostData, CachedDataSize);
-  ProfileSectionCopy Names("names", DevNamesBegin, NamesSize,
-                           CachedDevNamesBegin, CachedHostNames,
-                           CachedNamesSize);
-  ProfileSectionCopy UCnts("ucnts", DevUniformCntsBegin, UniformCountersSize,
-                           CachedDevUCntsBegin, CachedHostUCnts,
-                           CachedUCntsSize);
+  // Repeated explicit collections must see newly executed GPU work. Do not
+  // cache counter snapshots across collection calls.
+  ProfileSectionCopy Cnts(DevCntsBegin, CountersSize);
+  ProfileSectionCopy Data(DevDataBegin, DataSize);
+  ProfileSectionCopy Names(DevNamesBegin, NamesSize);
+  ProfileSectionCopy UCnts(DevUniformCntsBegin, UniformCountersSize);
 
   UniqueFree RegisteredRangeOwner;
 
@@ -1012,13 +963,6 @@ int __prof_rocm::processDeviceOffloadPrf(
       PROF_ERR("%s\n", "failed to copy profile sections from device");
       return -1;
     }
-
-    /* Cache buffers so RDC-mode multi-shadow drains can reuse them.
-     * release() prevents the scope guards from freeing what the cache owns. */
-    Cnts.commitCache();
-    Data.commitCache();
-    Names.commitCache();
-    UCnts.commitCache();
   }
 
   if (isVerboseMode())
@@ -1214,8 +1158,9 @@ static int collectHostShadowData(void) {
   constexpr bool CollectStaticShadows = true;
 #endif
   if (CollectStaticShadows && NumShadowVariables > 0) {
-    // RDC translation units can reference the same linked sections. Write
-    // each section range only once during this collection.
+    // RDC translation units can reference the same linked sections. Dedup
+    // within this collection only; a later call overwrites the same output
+    // with fresh cumulative counters.
     ProfBoundsSet CollectedBounds;
     int OrigDevice = -1;
     hipGetDevice(&OrigDevice);
@@ -1258,8 +1203,8 @@ static int collectHostShadowData(void) {
           Target = TargetWithIdx;
         }
         if (processShadowVariable(i, Target, &CollectedBounds) != 0) {
-          // Stop on failure so another alias cannot write the same sections
-          // under a different name if deduplication bookkeeping failed.
+          // Stop before another alias writes these cumulative counters under
+          // a different name. A retry must overwrite the original TU's file.
           Ret = -1;
           break;
         }

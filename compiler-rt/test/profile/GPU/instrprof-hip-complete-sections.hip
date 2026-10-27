@@ -42,6 +42,15 @@
 // RUN: FileCheck %s --check-prefix=FALLBACK < %t/fallback-excluded.log
 // RUN: llvm-profdata merge %t/*fallback-excluded.*.profraw -o %t/fallback-excluded.profdata
 // RUN: llvm-profdata show --function=_Z11live_helperi --counts %t/fallback-excluded.profdata | FileCheck %s
+// RUN: %clang -x hip --offload-arch=%amdgpu_arch -O1 -fprofile-instr-generate \
+// RUN:   -fcoverage-mapping -DEXPLICIT_COLLECT %t/complete.hip \
+// RUN:   -L%hip_lib_path -lamdhip64 -o %t/repeat
+// RUN: env LLVM_PROFILE_FILE=%t/fallback-repeat.%%p.profraw LLVM_PROFILE_VERBOSE=1 \
+// RUN:   LD_LIBRARY_PATH=%t/fallback:%hip_lib_path:$LD_LIBRARY_PATH \
+// RUN:   %run %t/repeat > %t/fallback-repeat.log 2>&1
+// RUN: FileCheck %s --check-prefix=FALLBACK < %t/fallback-repeat.log
+// RUN: llvm-profdata merge %t/*fallback-repeat.*.profraw -o %t/fallback-repeat.profdata
+// RUN: llvm-profdata show --function=_Z11live_helperi --counts %t/fallback-repeat.profdata | FileCheck %s
 // FALLBACK: required HSA symbols missing - HSA device profiling disabled
 // CHECK: _Z11live_helperi:
 // CHECK: Function count: 128
@@ -55,6 +64,9 @@
 
 //--- main.hip
 #include <hip/hip_runtime.h>
+#ifdef EXPLICIT_COLLECT
+extern "C" int __llvm_profile_hip_collect_device_data();
+#endif
 __device__ int live_helper(int);
 __global__ void second(int *);
 __global__ void kernel(int *out) {
@@ -84,6 +96,10 @@ int main() {
     for (int i = 0; i < 64; ++i)
       if (h[i] != 11)
         return 5;
+#ifdef EXPLICIT_COLLECT
+    if (__llvm_profile_hip_collect_device_data())
+      return 6;
+#endif
   }
 #ifdef EXCLUDE
   excluded<<<1, 64>>>(p);

@@ -5,32 +5,42 @@
 // RUN: %clangxx -std=c++20 -I%S/../../lib/profile %t/main.cpp -x none \
 // RUN:   %profile_rocm -L%t -lamdhip64 -Wl,-rpath,%t -Wl,--wrap=realloc \
 // RUN:   -pthread -o %t/test
-// RUN: mkdir %t/normal %t/oom %t/copy
+// RUN: mkdir %t/normal %t/repeat %t/oom %t/copy
 // RUN: env LD_LIBRARY_PATH=%t %run %t/test normal %t/normal/out.profraw | \
 // RUN:   FileCheck %s --check-prefix=NORMAL
 // RUN: llvm-profdata merge %t/normal/*.profraw -o %t/normal.profdata
 // RUN: llvm-profdata show --all-functions --counts %t/normal.profdata | \
-// RUN:   FileCheck %s --check-prefix=COUNT
+// RUN:   FileCheck %s --check-prefix=ONCE
+// RUN: env LD_LIBRARY_PATH=%t %run %t/test repeat %t/repeat/out.profraw | \
+// RUN:   FileCheck %s --check-prefixes=NORMAL,RETRY
+// RUN: llvm-profdata merge %t/repeat/*.profraw -o %t/repeat.profdata
+// RUN: llvm-profdata show --all-functions --counts %t/repeat.profdata | \
+// RUN:   FileCheck %s --check-prefix=TWICE
 // RUN: env LD_LIBRARY_PATH=%t %run %t/test oom %t/oom/out.profraw | \
-// RUN:   FileCheck %s --check-prefix=OOM
+// RUN:   FileCheck %s --check-prefixes=OOM,RETRY
 // RUN: llvm-profdata merge %t/oom/*.profraw -o %t/oom.profdata
 // RUN: llvm-profdata show --all-functions --counts %t/oom.profdata | \
-// RUN:   FileCheck %s --check-prefix=COUNT
+// RUN:   FileCheck %s --check-prefix=TWICE
 // RUN: env LD_LIBRARY_PATH=%t %run %t/test copy %t/copy/out.profraw | \
-// RUN:   FileCheck %s --check-prefix=COPY
-// RUN: not ls %t/copy/amdgpu.*.profraw
+// RUN:   FileCheck %s --check-prefixes=COPY,RETRY
+// RUN: llvm-profdata merge %t/copy/*.profraw -o %t/copy.profdata
+// RUN: llvm-profdata show --all-functions --counts %t/copy.profdata | \
+// RUN:   FileCheck %s --check-prefix=TWICE
 
 // The mock exposes the same sections through every shadow lookup. Exercise the
 // real static collection loops, including two aliases and two used devices.
-// A failure must stop collection and restore the original device. If recording
-// the first output fails, no later alias may write a duplicate profile. Merge
-// every output to catch duplicate snapshots.
+// After a failure neither another TU nor another device may write the same
+// cumulative counters under a different filename. A retry must replace the
+// original snapshot. Merge every output to catch duplicate snapshots.
 
 // NORMAL: first=0 lookups=4 allocation_failures=0 device=1
 // OOM: first=-1 lookups=1 allocation_failures=1 device=1
 // COPY: first=-1 lookups=1 allocation_failures=0 device=1
-// COUNT: foo:
-// COUNT: Function count: 64
+// RETRY: retry=0 lookups=4 device=1
+// ONCE: foo:
+// ONCE: Function count: 64
+// TWICE: foo:
+// TWICE: Function count: 128
 
 //--- main.cpp
 extern "C" {
@@ -111,6 +121,13 @@ int main(int Argc, char **Argv) {
   assert(hipGetDevice(&Device) == 0);
   printf("first=%d lookups=%u allocation_failures=%u device=%d\n", First,
          Lookups, AllocationFailures, Device);
+  if (strcmp(Argv[1], "normal") != 0) {
+    Sections.Counter = 128;
+    Lookups = 0;
+    int Retry = __llvm_profile_hip_collect_device_data();
+    assert(hipGetDevice(&Device) == 0);
+    printf("retry=%d lookups=%u device=%d\n", Retry, Lookups, Device);
+  }
   return 0;
 }
 
