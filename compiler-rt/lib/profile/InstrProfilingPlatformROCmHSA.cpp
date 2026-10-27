@@ -216,9 +216,12 @@ static const char ProfileSectionsSymbol[] = "__llvm_profile_sections";
 
 /* Dedup of drained section-bounds tuples, shared with the host-shadow path
  * (processDeviceOffloadPrf records here on every successful drain) so each
- * unique counter set is drained exactly once across both paths.
+ * unique counter set is drained exactly once per collection across both paths.
  */
 static ProfBoundsSet SeenBounds;
+// Stable output indices are separate from per-collection deduplication.
+// Repeated snapshots of resident sections overwrite the same cumulative file.
+static ProfBoundsSet OutputBounds;
 
 /* Has this bounds tuple already been drained? Pure check, no state mutation. */
 static int profBoundsAlreadyDrained(const void *D, const void *C,
@@ -257,6 +260,7 @@ struct SymbolState {
   const char *arch;
   int found;
   int drained;
+  int failed;
 };
 } // namespace
 
@@ -325,20 +329,28 @@ static prof_hsa_status_t onSymbol(prof_hsa_executable_t, prof_hsa_agent_t,
     return PROF_HSA_STATUS_SUCCESS;
   }
 
-  // Name HSA-drained objects in their own ".hsaN" suffix space so they never
-  // collide with the host-shadow path's "arch"/"arch.<i>" filenames. The drain
-  // latch (HsaDrainCompleted) already prevents re-draining an object, so a
-  // plain per-drain counter is enough for uniqueness.
-  static int DrainIndex = 0;
+  // Keep filenames stable across collections, including when another image
+  // becomes resident between calls and changes the loader's iteration order.
+  int OutputIndex =
+      OutputBounds.find(Sec.DataStart, Sec.CountersStart, Sec.NamesStart);
+  if (OutputIndex < 0) {
+    if (!OutputBounds.record(Sec.DataStart, Sec.CountersStart,
+                             Sec.NamesStart)) {
+      PROF_ERR("%s\n", "failed to record device profile output identity");
+      S->failed = 1;
+      return PROF_HSA_STATUS_SUCCESS;
+    }
+    OutputIndex = OutputBounds.Count - 1;
+  }
   char Target[96];
-  snprintf(Target, sizeof(Target), "%s.hsa%d", S->arch, DrainIndex);
+  snprintf(Target, sizeof(Target), "%s.hsa%d", S->arch, OutputIndex);
 
-  // Record the bounds (and advance the index) only on a successful write so a
-  // transient error stays retryable on a later agent or collect call.
+  // Failed writes retain their filename but remain retryable.
   if (processDeviceOffloadPrf((void *)(uintptr_t)Addr, Target, nullptr) == 0) {
     S->drained++;
-    DrainIndex++;
     profRecordDrainedBounds(Sec.DataStart, Sec.CountersStart, Sec.NamesStart);
+  } else {
+    S->failed = 1;
   }
 
   return PROF_HSA_STATUS_SUCCESS;
@@ -370,26 +382,11 @@ static prof_hsa_status_t collectAgent(prof_hsa_agent_t Agent, void *Data) {
   return PROF_HSA_STATUS_SUCCESS;
 }
 
-/* Reentrancy guard and "drained at least once" latch (both acquire/release). */
-static int HsaDrainInProgress = 0;
-static int HsaDrainCompleted = 0;
+// The public collection entry point holds the reentrancy guard while resetting
+// this state and running both collection paths.
+void __prof_rocm::beginHsaCollection(void) { SeenBounds.Count = 0; }
 
 int __prof_rocm::drainDevicesViaHsa(void) {
-  if (__atomic_load_n(&HsaDrainCompleted, __ATOMIC_ACQUIRE))
-    return 0;
-
-  int Expected = 0;
-  if (!__atomic_compare_exchange_n(&HsaDrainInProgress, &Expected, 1,
-                                   /*weak=*/0, __ATOMIC_ACQ_REL,
-                                   __ATOMIC_ACQUIRE))
-    return 0;
-
-  struct InProgressGuard {
-    ~InProgressGuard() {
-      __atomic_store_n(&HsaDrainInProgress, 0, __ATOMIC_RELEASE);
-    }
-  } _Guard;
-
   if (loadHsaRuntimePointers() != 0)
     return 0; /* Runtime unavailable: stay retryable. */
 
@@ -492,6 +489,7 @@ int __prof_rocm::drainDevicesViaHsa(void) {
                 (unsigned long long)Segs[i].executable.handle, IterSt);
       IterFailures++;
     }
+    IterFailures += S.failed;
     W.total_found += S.found;
     W.total_drained += S.drained;
   }
@@ -504,12 +502,6 @@ int __prof_rocm::drainDevicesViaHsa(void) {
 
   free(Seen);
 
-  /* Latch only when we actually drained data. A "found nothing new" walk is
-   * deliberately not latched: an early collect can precede any kernel launch,
-   * and latching it would suppress the real exit-time drain. No-op walks are
-   * cheap to repeat. */
-  if (W.total_drained > 0)
-    __atomic_store_n(&HsaDrainCompleted, 1, __ATOMIC_RELEASE);
   return (IterFailures > 0) ? -1 : 0;
 }
 

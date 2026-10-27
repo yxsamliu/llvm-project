@@ -79,13 +79,17 @@ struct ProfBoundsSet {
   int Count = 0;
   int Cap = 0;
 
-  // True iff this exact (Data, Counters, Names) tuple was already recorded. All
+  // Find this exact (Data, Counters, Names) tuple, or return -1. All
   // three fields must match: two code objects can share, e.g., a names section.
-  bool contains(const void *D, const void *C, const void *N) const {
+  int find(const void *D, const void *C, const void *N) const {
     for (int I = 0; I < Count; ++I)
       if (Items[I].Data == D && Items[I].Counters == C && Items[I].Names == N)
-        return true;
-    return false;
+        return I;
+    return -1;
+  }
+
+  bool contains(const void *D, const void *C, const void *N) const {
+    return find(D, C, N) >= 0;
   }
 
   // Record a tuple unless already present. Returns true only when a new tuple
@@ -116,6 +120,9 @@ int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
 #if defined(__linux__)
 // Implemented in InstrProfilingPlatformROCmHSA.cpp.
+
+// Begin a serialized collection, allowing fresh snapshots of resident images.
+void beginHsaCollection(void);
 
 // Record a drained section-bounds tuple so the supplemental HSA pass skips any
 // code object the host-shadow path already drained.

@@ -1238,6 +1238,20 @@ static int collectHostShadowData(void) {
 }
 
 extern "C" int __llvm_profile_hip_collect_device_data(void) {
+  // Prevent overlapping explicit or exit-time collections of shared state.
+  static int InProgress = 0;
+  int Expected = 0;
+  if (!__atomic_compare_exchange_n(&InProgress, &Expected, 1, false,
+                                   __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE))
+    return 0;
+  struct CollectionGuard {
+    int &InProgress;
+    ~CollectionGuard() { __atomic_store_n(&InProgress, 0, __ATOMIC_RELEASE); }
+  } Guard{InProgress};
+
+#if defined(__linux__) && !defined(_WIN32)
+  beginHsaCollection();
+#endif
   int Ret = 0;
 
   if ((NumShadowVariables != 0 || NumDynamicModules != 0) && isHipAvailable() &&
