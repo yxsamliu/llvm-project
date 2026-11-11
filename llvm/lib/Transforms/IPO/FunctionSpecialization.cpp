@@ -16,6 +16,8 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/Transforms/Scalar/InferAddressSpaces.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SCCPSolver.h"
@@ -82,8 +84,20 @@ static cl::opt<unsigned> MinInliningBonus(
              "much percent of the original function size"));
 
 static cl::opt<bool> SpecializeOnAddress(
-    "funcspec-on-address", cl::init(false), cl::Hidden, cl::desc(
-    "Enable function specialization on the address of global values"));
+    "funcspec-on-address", cl::init(false), cl::Hidden,
+    cl::desc("Enable function specialization on the address of global values"));
+
+// Address-space specialization is experimental until target-specific benefit
+// estimates and code-growth policies have been qualified on larger workloads.
+static cl::opt<unsigned>
+    SpecializeAddressSpace("funcspec-for-address-space", cl::init(~0u),
+                           cl::Hidden,
+                           cl::desc("Experimentally specialize flat pointer "
+                                    "arguments for this address space"));
+
+static cl::opt<unsigned> MaxAddressSpaceFunctionSize(
+    "funcspec-max-address-space-function-size", cl::init(2000), cl::Hidden,
+    cl::desc("Maximum instruction cost of an address-space specialization"));
 
 static cl::opt<bool> SpecializeLiteralConstant(
     "funcspec-for-literal-constant", cl::init(true), cl::Hidden,
@@ -693,15 +707,26 @@ bool FunctionSpecializer::run() {
     // If the code metrics reveal that we shouldn't duplicate the function,
     // or if the code size implies that this function is easy to get inlined,
     // then we shouldn't specialize it.
-    if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid() ||
-        (RequireMinSize && Metrics.NumInsts < MinFunctionSize))
+    if (Metrics.notDuplicatable || !Metrics.NumInsts.isValid())
       continue;
+
+    bool FoundAddressSpaceSpec = false;
+    if (SpecializeAddressSpace != ~0u && !Metrics.isRecursive &&
+        Metrics.NumInsts > 0 && Metrics.NumInsts <= MaxAddressSpaceFunctionSize)
+      FoundAddressSpaceSpec = findAddressSpaceSpecialization(
+          &F, getCostValue(Metrics.NumInsts), AllSpecs, SM);
+
+    if (RequireMinSize && Metrics.NumInsts < MinFunctionSize) {
+      NumCandidates += FoundAddressSpaceSpec;
+      continue;
+    }
 
     // When specialization on literal constants is disabled, only consider
     // recursive functions when running multiple times to save wasted analysis,
     // as we will not be able to specialize on any newly found literal constant
     // return values.
-    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive)
+    if (!SpecializeLiteralConstant && !Inserted && !Metrics.isRecursive &&
+        !FoundAddressSpaceSpec)
       continue;
 
     int64_t Sz = Metrics.NumInsts.getValue();
@@ -715,7 +740,8 @@ bool FunctionSpecializer::run() {
     if (Inserted && Metrics.isRecursive)
       promoteConstantStackValues(&F);
 
-    if (!findSpecializations(&F, FuncSize, AllSpecs, SM)) {
+    if (!findSpecializations(&F, FuncSize, AllSpecs, SM) &&
+        !FoundAddressSpaceSpec) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -888,6 +914,154 @@ static Function *cloneCandidateFunction(Function *F, unsigned NSpecs) {
   Clone->setName(F->getName() + ".specialized." + Twine(NSpecs));
   removeSSACopy(*Clone);
   return Clone;
+}
+
+// Stop at the first non-flat pointer type. In particular, preserve a proven
+// cast-to-specific/cast-back fact instead of stripping both address-space
+// casts.
+static bool hasAddressSpace(Value *V, unsigned FlatAS, unsigned AS) {
+  for (unsigned Depth = 0; Depth != 16; ++Depth) {
+    unsigned CurrentAS = cast<PointerType>(V->getType())->getAddressSpace();
+    if (CurrentAS != FlatAS)
+      return CurrentAS == AS;
+    if (auto *GEP = dyn_cast<GEPOperator>(V))
+      V = GEP->getPointerOperand();
+    else if (auto *Cast = dyn_cast<Operator>(V);
+             Cast && (Cast->getOpcode() == Instruction::AddrSpaceCast ||
+                      Cast->getOpcode() == Instruction::BitCast))
+      V = Cast->getOperand(0);
+    else
+      return false;
+  }
+  return false;
+}
+
+// ABI attributes can replace the passed address with a private copy. Apply the
+// same checks during discovery and when redirecting newly exposed calls.
+static bool hasAddressSpaceArgument(CallBase &Call, unsigned ArgNo,
+                                    unsigned FlatAS, unsigned AS) {
+  return !Call.isPassPointeeByValueArgument(ArgNo) &&
+         !Call.paramHasAttr(ArgNo, Attribute::StructRet) &&
+         !Call.paramHasAttr(ArgNo, Attribute::ByRef) &&
+         hasAddressSpace(Call.getArgOperand(ArgNo), FlatAS, AS);
+}
+
+// Look through a bounded number of forwarding helpers. They need their own
+// specialization first, so that subsequent iterations can specialize the leaf.
+static unsigned countAddressSpaceUses(Argument &Arg, unsigned FlatAS,
+                                      unsigned &Budget, unsigned Depth = 0) {
+  SmallVector<Value *> Worklist{&Arg};
+  SmallPtrSet<Value *, 32> Visited;
+  unsigned Count = 0;
+  while (!Worklist.empty() && Visited.size() < 256) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    for (Use &U : V->uses()) {
+      if (Budget == 0)
+        return Count;
+      --Budget;
+      User *Usr = U.getUser();
+      if (auto *Load = dyn_cast<LoadInst>(Usr)) {
+        Count += Load->getPointerOperand() == V && !Load->isVolatile() &&
+                 Load->getPointerAddressSpace() == FlatAS;
+      } else if (auto *Store = dyn_cast<StoreInst>(Usr)) {
+        Count += Store->getPointerOperand() == V && !Store->isVolatile() &&
+                 Store->getPointerAddressSpace() == FlatAS;
+      } else if (isa<GetElementPtrInst>(Usr) || isa<BitCastInst>(Usr)) {
+        Worklist.push_back(cast<Value>(Usr));
+      } else if (auto *CB = dyn_cast<CallBase>(Usr);
+                 CB && Depth < 2 && CB->isArgOperand(&U)) {
+        Function *Callee = CB->getCalledFunction();
+        unsigned ArgNo = CB->getArgOperandNo(&U);
+        if (Callee && !Callee->isDeclaration() && !Callee->isInterposable() &&
+            Callee != Arg.getParent() && ArgNo < Callee->arg_size())
+          Count += countAddressSpaceUses(*Callee->getArg(ArgNo), FlatAS, Budget,
+                                         Depth + 1);
+      }
+    }
+  }
+  return Count;
+}
+
+// Redirecting an entire static call site preserves its converged group; there
+// is no new runtime condition. Convergent alone therefore does not preclude
+// specialization. Keep operand-bundle and duplication restrictions
+// conservative.
+static bool canSpecializeAddressSpaceCall(CallBase &Call) {
+  auto *CI = dyn_cast<CallInst>(&Call);
+  return CI && CI->getCalledFunction() &&
+         CI->getFunctionType() == CI->getCalledFunction()->getFunctionType() &&
+         !CI->cannotDuplicate() && !CI->isMustTailCall() &&
+         !CI->hasOperandBundles() && !CI->hasFnAttr(Attribute::MinSize) &&
+         !CI->hasFnAttr(Attribute::Cold) && !CI->getFunction()->hasOptSize();
+}
+
+bool FunctionSpecializer::findAddressSpaceSpecialization(
+    Function *F, unsigned FuncSize, SmallVectorImpl<Spec> &AllSpecs,
+    SpecMap &SM) {
+  unsigned FlatAS = GetTTI(*F).getFlatAddressSpace();
+  if (!FAM || FlatAS == ~0u || SpecializeAddressSpace == FlatAS ||
+      AddressSpaceSpecialized.contains(F) || F->isVarArg() ||
+      FunctionGrowth[F] + FuncSize > MaxCodeSizeGrowth * uint64_t(FuncSize))
+    return false;
+
+  SmallVector<std::pair<unsigned, unsigned>> Args;
+  for (Argument &Arg : F->args()) {
+    if (!Arg.getType()->isPointerTy() ||
+        Arg.getType()->getPointerAddressSpace() != FlatAS ||
+        Arg.hasPointeeInMemoryValueAttr())
+      continue;
+    unsigned Budget = 512;
+    if (unsigned Uses = countAddressSpaceUses(Arg, FlatAS, Budget))
+      Args.emplace_back(Arg.getArgNo(), Uses);
+  }
+  if (Args.empty())
+    return false;
+
+  DenseMap<SpecSig, unsigned> Groups;
+  SmallVector<Spec> Candidates;
+  unsigned NumCalls = 0;
+  for (User *U : F->users()) {
+    auto *Call = dyn_cast<CallInst>(U);
+    if (!Call || Call->getCalledFunction() != F ||
+        Call->getFunctionType() != F->getFunctionType() ||
+        !Solver.isBlockExecutable(Call->getParent()))
+      continue;
+    ++NumCalls;
+    if (!canSpecializeAddressSpaceCall(*Call))
+      continue;
+    SpecSig Sig;
+    unsigned Score = 0;
+    for (auto [ArgNo, Uses] : Args) {
+      if (!hasAddressSpaceArgument(*Call, ArgNo, FlatAS,
+                                   SpecializeAddressSpace))
+        continue;
+      Sig.AddressSpaces.emplace_back(ArgNo, SpecializeAddressSpace);
+      Score += Uses;
+    }
+    if (Sig.AddressSpaces.empty())
+      continue;
+    auto [It, Inserted] = Groups.try_emplace(Sig, Candidates.size());
+    if (Inserted)
+      Candidates.emplace_back(F, Sig, Score, FuncSize);
+    Candidates[It->second].CallSites.push_back(Call);
+  }
+  if (Candidates.empty())
+    return false;
+
+  // At most one AS clone per original function. Calls with other signatures
+  // retain the generic body. Pure all-AS callers are handled by inference.
+  auto Best = llvm::max_element(Candidates, [](const Spec &A, const Spec &B) {
+    return A.Score < B.Score;
+  });
+  if (Best->CallSites.size() == NumCalls && F->hasLocalLinkage() &&
+      !F->hasAddressTaken())
+    return false;
+  unsigned Index = AllSpecs.size();
+  AllSpecs.push_back(std::move(*Best));
+  SM[F] = {Index, Index + 1};
+  return true;
 }
 
 bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
@@ -1077,7 +1251,26 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
   // Initialize the lattice state of the arguments of the function clone,
   // marking the argument on which we specialized the function constant
   // with the given value.
-  Solver.setLatticeValueForSpecializationArguments(Clone, S.Args);
+  if (!S.AddressSpaces.empty()) {
+    AddressSpaceSpecialized.insert(F);
+    IRBuilder<> Builder(&*Clone->getEntryBlock().getFirstInsertionPt());
+    for (auto [ArgNo, AS] : S.AddressSpaces) {
+      Argument *Arg = Clone->getArg(ArgNo);
+      Value *Specific = Builder.CreateAddrSpaceCast(
+          Arg, PointerType::get(Clone->getContext(), AS),
+          Arg->getName() + ".as");
+      Value *Flat = Builder.CreateAddrSpaceCast(Specific, Arg->getType());
+      Arg->replaceUsesWithIf(
+          Flat, [Specific](Use &U) { return U.getUser() != Specific; });
+    }
+    PreservedAnalyses PA = InferAddressSpacesPass().run(*Clone, *FAM);
+    FAM->invalidate(*Clone, PA);
+  }
+  if (!S.Args.empty())
+    Solver.setLatticeValueForSpecializationArguments(Clone, S.Args);
+  else
+    for (Argument &Arg : Clone->args())
+      Solver.trackValueOfArgument(&Arg);
   Solver.markBlockExecutable(&Clone->front());
   Solver.addArgumentTrackedFunction(Clone);
   Solver.addTrackedFunction(Clone);
@@ -1230,6 +1423,17 @@ void FunctionSpecializer::updateCallSites(Function *F, const Spec *Begin,
             return getCandidateConstant(CS->getArgOperand(ArgNo)) != Arg.Actual;
           }))
         continue;
+
+      if (!S.Sig.AddressSpaces.empty()) {
+        if (!canSpecializeAddressSpaceCall(*CS))
+          continue;
+        unsigned FlatAS = GetTTI(*F).getFlatAddressSpace();
+        if (any_of(S.Sig.AddressSpaces, [CS, FlatAS](auto ArgAS) {
+              return !hasAddressSpaceArgument(*CS, ArgAS.first, FlatAS,
+                                              ArgAS.second);
+            }))
+          continue;
+      }
 
       BestSpec = &S;
     }

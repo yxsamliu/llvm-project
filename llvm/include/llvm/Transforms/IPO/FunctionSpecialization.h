@@ -111,15 +111,17 @@ struct SpecSig {
   // Hashing support, used to distinguish between ordinary and empty keys.
   unsigned Key = 0;
   SmallVector<ArgInfo, 4> Args;
+  SmallVector<std::pair<unsigned, unsigned>, 4> AddressSpaces;
 
   bool operator==(const SpecSig &Other) const {
     if (Key != Other.Key)
       return false;
-    return Args == Other.Args;
+    return Args == Other.Args && AddressSpaces == Other.AddressSpaces;
   }
 
   friend hash_code hash_value(const SpecSig &S) {
-    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args));
+    return hash_combine(hash_value(S.Key), hash_combine_range(S.Args),
+                        hash_combine_range(S.AddressSpaces));
   }
 };
 
@@ -246,6 +248,7 @@ class FunctionSpecializer {
 
   SmallPtrSet<Function *, 32> Specializations;
   SmallPtrSet<Function *, 32> DeadFunctions;
+  SmallPtrSet<Function *, 16> AddressSpaceSpecialized;
   DenseMap<Function *, CodeMetrics> FunctionMetrics;
   DenseMap<Function *, unsigned> FunctionGrowth;
   unsigned NGlobals = 0;
@@ -297,6 +300,10 @@ private:
   /// @return True, if any potential specializations were found
   bool findSpecializations(Function *F, unsigned FuncSize,
                            SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
+
+  bool findAddressSpaceSpecialization(Function *F, unsigned FuncSize,
+                                      SmallVectorImpl<Spec> &AllSpecs,
+                                      SpecMap &SM);
 
   /// Compute the inlining bonus for replacing argument \p A with constant \p C.
   unsigned getInliningBonus(Argument *A, Constant *C);
