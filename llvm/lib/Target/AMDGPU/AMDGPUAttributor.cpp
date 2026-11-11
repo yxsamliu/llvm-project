@@ -1705,14 +1705,27 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   CallGraphUpdater CGUpdater;
   BumpPtrAllocator Allocator;
   AMDGPUInformationCache InfoCache(M, AG, Allocator, nullptr, TM);
-  DenseSet<const char *> Allowed(
-      {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
-       &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
-       &AAAMDMaxNumWorkgroups::ID, &AAAMDWavesPerEU::ID,
-       &AAAMDGPUMinAGPRAlloc::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-       &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID,
-       &AANoAliasAddrSpace::ID, &AAAddressSpace::ID, &AAIndirectCallInfo::ID,
-       &AAAMDGPUClusterDims::ID, &AAAMDGPUNoLDSDMA::ID, &AAAlign::ID});
+  // Track nonconstant call arguments with AAInstanceInfo and its dependencies.
+  DenseSet<const char *> Allowed({&AAAMDAttributes::ID,
+                                  &AAUniformWorkGroupSize::ID,
+                                  &AAPotentialValues::ID,
+                                  &AAInstanceInfo::ID,
+                                  &AANoRecurse::ID,
+                                  &AAInterFnReachability::ID,
+                                  &AAAMDFlatWorkGroupSize::ID,
+                                  &AAAMDMaxNumWorkgroups::ID,
+                                  &AAAMDWavesPerEU::ID,
+                                  &AAAMDGPUMinAGPRAlloc::ID,
+                                  &AACallEdges::ID,
+                                  &AAPointerInfo::ID,
+                                  &AAPotentialConstantValues::ID,
+                                  &AAUnderlyingObjects::ID,
+                                  &AANoAliasAddrSpace::ID,
+                                  &AAAddressSpace::ID,
+                                  &AAIndirectCallInfo::ID,
+                                  &AAAMDGPUClusterDims::ID,
+                                  &AAAMDGPUNoLDSDMA::ID,
+                                  &AAAlign::ID});
 
   AttributorConfig AC(CGUpdater);
   AC.IsClosedWorldModule = Options.IsClosedWorld;

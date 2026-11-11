@@ -5,11 +5,9 @@
 
 define internal fastcc i1 @widget(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@widget
-; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr [[ARG]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = call fastcc double @baz(ptr [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call fastcc double @baz(ptr undef)
 ; CHECK-NEXT:    ret i1 false
 ;
 bb:
@@ -21,17 +19,13 @@ bb:
 
 define internal fastcc double @baz(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@baz
-; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARG]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call double [[TMP1]]()
-; CHECK-NEXT:    br label [[BB3:%.*]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr [[ARG]], i64 0, i32 1
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = call fastcc i1 @widget(ptr [[TMP6]])
+; CHECK-NEXT:    [[TMP7:%.*]] = call fastcc i1 @widget(ptr undef)
 ; CHECK-NEXT:    br label [[BB5]]
 ;
 bb:
@@ -50,7 +44,8 @@ bb5:                                              ; preds = %bb5, %bb3
 }
 
 define amdgpu_kernel void @entry() {
-; CHECK-LABEL: define {{[^@]+}}@entry() {
+; CHECK-LABEL: define {{[^@]+}}@entry
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[TMP0:%.*]], align 8, addrspace(5)
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[ARST:%.*]] = call double @baz(ptr [[CAST]])
@@ -61,3 +56,7 @@ define amdgpu_kernel void @entry() {
   %arst = call double @baz(ptr %cast)
   ret void
 }
+;.
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+; CHECK: attributes #[[ATTR1]] = { norecurse "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-dma" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-no-wwm" }
+;.
